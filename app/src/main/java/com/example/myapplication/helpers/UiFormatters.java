@@ -7,10 +7,12 @@ import java.util.Locale;
 
 public class UiFormatters {
 
-    private static final DecimalFormat DECIMAL_FORMAT = new DecimalFormat("0.00000");
+    private static final DecimalFormat DECIMAL_FORMAT = new DecimalFormat("0.0000");
     private static final DecimalFormat SPEED_FORMAT = new DecimalFormat("0.0");
-    private static final SimpleDateFormat DATE_FORMAT =
-            new SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault());
+    private static final SimpleDateFormat TIME_ONLY_FORMAT =
+            new SimpleDateFormat("h:mm a", Locale.getDefault());
+    private static final SimpleDateFormat DATE_TIME_FORMAT =
+            new SimpleDateFormat("MMM d, h:mm a", Locale.getDefault());
 
     public static String decimal(double value) {
         return DECIMAL_FORMAT.format(value);
@@ -21,13 +23,18 @@ public class UiFormatters {
     }
 
     public static String dateTime(Date date) {
-        return date == null ? "—" : DATE_FORMAT.format(date);
+        return date == null ? "—" : DATE_TIME_FORMAT.format(date);
+    }
+
+    public static String timeOnly(Date date) {
+        return date == null ? "Ongoing" : TIME_ONLY_FORMAT.format(date);
     }
 
     public static String duration(Date start, Date end) {
-        if (start == null || end == null) return "—";
+        if (start == null) return "—";
 
-        long diffMs = Math.max(0, end.getTime() - start.getTime());
+        Date effectiveEnd = (end != null) ? end : new Date();
+        long diffMs = Math.max(0, effectiveEnd.getTime() - start.getTime());
         long totalMinutes = diffMs / 60000;
         long hours = totalMinutes / 60;
         long minutes = totalMinutes % 60;

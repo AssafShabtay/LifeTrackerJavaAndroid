@@ -16,7 +16,7 @@ roomRuntime = "2.8.4"
 roomCompiler = "2.8.4"
 roomRuntimeJvm = "2.8.4"
 ksp = "2.0.0-1.0.21"
-playServicesMaps = "20.0.0"
+playServicesMaps = "19.0.0"
 
 [libraries]
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activityCompose" }

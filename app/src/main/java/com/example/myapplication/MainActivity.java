@@ -1,26 +1,21 @@
 package com.example.myapplication;
 
-import android.Manifest;
-import android.app.AlertDialog;
 import android.app.PendingIntent;
 import android.content.Intent;
-import android.content.SharedPreferences;
-import android.content.pm.PackageManager;
-import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.provider.Settings;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
+import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
-import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -46,8 +41,8 @@ import java.util.concurrent.Executors;
 public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = "MainActivity";
-    private static final String PREFS_NAME = "permission_prefs";
-    private static final String KEY_PERMISSION_REQUESTED_PREFIX = "requested_";
+
+    private static final long UPDATE_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
     private View permissionBlocker;
     private Button permissionAction;
@@ -67,11 +62,24 @@ public class MainActivity extends AppCompatActivity {
     private MapManager mapManager;
     private CalendarManager calendarManager;
 
+    private PermissionManager permissionManager;
+
+
+    //refresh ui every 5 minutes
+    private final Handler refreshHandler = new Handler(Looper.getMainLooper());
+    private final Runnable refreshRunnable = new Runnable() {
+        public void run() {
+            Log.d(TAG, "ui refreshed😁:)))");
+            loadTimelineData(calendarManager.getSelectedDate());
+            refreshHandler.postDelayed(this, UPDATE_INTERVAL_MS);
+        }
+    };
+    //Permissions handling
     private final ActivityResultLauncher<String[]> permissionLauncher =
             registerForActivityResult(new ActivityResultContracts.RequestMultiplePermissions(), result -> {
                 boolean allGranted = true;
                 for (String permission : requiredPermissions) {
-                    markPermissionRequested(permission);
+                    permissionManager.markPermissionRequested(permission);
                     Boolean granted = result.get(permission);
                     if (granted == null || !granted) {
                         allGranted = false;
@@ -85,19 +93,69 @@ public class MainActivity extends AppCompatActivity {
                     return;
                 }
 
-                if (shouldShowAnyPermissionRationale()) {
-                    showPermissionRationaleDialog(this::requestPermissions, () -> Log.d(TAG, "Permissions denied"));
-                } else if (isAnyPermissionPermanentlyDenied()) {
-                    showGoToSettingsDialog(this::openAppSettings, () -> Log.d(TAG, "Permissions denied"));
+                if (permissionManager.shouldShowAnyPermissionRationale()) {
+                    permissionManager.showPermissionRationaleDialog(this::requestPermissions, () -> Log.d(TAG, "Permissions denied"));
+                } else if (permissionManager.isAnyPermissionPermanentlyDenied()) {
+                    permissionManager.showGoToSettingsDialog(permissionManager::openAppSettings, () -> Log.d(TAG, "Permissions denied"));
                 }
             });
+    private void requestPermissions() {
+        permissionLauncher.launch(requiredPermissions);
+    }
+
+    private void onAllPermissionsGranted() {
+        requestTransitions();
+        startTrackingService();
+    }
+
+    private void refreshPermissionUi(boolean hasPerms) {
+        //control what you see depending on whether  you accepted permissions
+        View timelineLabel = findViewById(R.id.tv_timeline_label);
+        if(hasPerms){// are permissions granted?
+            permissionBlocker.setVisibility(View.GONE);
+            headerLayout.setVisibility(View.VISIBLE);
+            rvTimeline.setVisibility(View.VISIBLE);
+            if (mapManager != null) {
+                mapManager.setVisibility(View.VISIBLE);
+            }
+            if (timelineLabel != null) {
+                timelineLabel.setVisibility(View.VISIBLE);
+            }
+        }
+        else{
+            permissionBlocker.setVisibility(View.VISIBLE);
+            headerLayout.setVisibility(View.GONE);
+            rvTimeline.setVisibility(View.GONE);
+            if (mapManager != null) {
+                mapManager.setVisibility(View.GONE);
+            }
+            if (timelineLabel != null) {
+                timelineLabel.setVisibility(View.GONE);
+            }
+
+            //Ask for permissions again
+            boolean permanent = permissionManager.isAnyPermissionPermanentlyDenied();
+            permissionSubtitle.setText(permanent
+                    ? "Permissions were denied. Please enable them in Settings to continue"
+                    : "Please grant permissions to continue.");
+            permissionAction.setText(permanent ? "Open Settings" : "Grant");
+            permissionAction.setOnClickListener(v -> {
+                if (permanent) {
+                    permissionManager.openAppSettings();
+                } else {
+                    requestPermissions();
+                }
+            });
+        }
+    }
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        requiredPermissions = buildRequiredPermissions();
+        requiredPermissions = PermissionManager.buildRequiredPermissions();
+        permissionManager = new PermissionManager(this, requiredPermissions);
 
         permissionBlocker = findViewById(R.id.permission_blocker);
         permissionAction = findViewById(R.id.permission_action);
@@ -114,11 +172,44 @@ public class MainActivity extends AppCompatActivity {
             loadTimelineData(calendarManager.getSelectedDate());
         });
 
-        // Initialize Map
         mapManager = new MapManager(this, R.id.map);
         mapManager.init();
+        View mapView = findViewById(R.id.map);
+        if (mapView != null) {
+            final float[] downX = new float[1];
+            final float[] downY = new float[1];
+            final int CLICK_THRESHOLD = 10;
 
-        // Initialize Calendar
+            mapView.setOnTouchListener((v, event) -> {
+                switch (event.getAction()) {
+                    case MotionEvent.ACTION_DOWN:
+                        downX[0] = event.getX();
+                        downY[0] = event.getY();
+                        v.getParent().requestDisallowInterceptTouchEvent(true);
+                        break;
+
+                    case MotionEvent.ACTION_MOVE:
+                        v.getParent().requestDisallowInterceptTouchEvent(true);
+                        break;
+
+                    case MotionEvent.ACTION_UP:
+                        v.getParent().requestDisallowInterceptTouchEvent(false);
+
+                        float dx = Math.abs(event.getX() - downX[0]);
+                        float dy = Math.abs(event.getY() - downY[0]);
+                        if (dx < CLICK_THRESHOLD && dy < CLICK_THRESHOLD) {
+                            v.performClick();
+                        }
+                        break;
+
+                    case MotionEvent.ACTION_CANCEL:
+                        v.getParent().requestDisallowInterceptTouchEvent(false);
+                        break;
+                }
+                return false;
+            });
+        }
+
         calendarManager = new CalendarManager(findViewById(android.R.id.content), date -> {
             loadTimelineData(date);
         });
@@ -126,7 +217,7 @@ public class MainActivity extends AppCompatActivity {
         setupRecyclerView();
         loadTimelineData(calendarManager.getSelectedDate());
 
-        boolean hasPerms = hasAllPermissions();
+        boolean hasPerms = permissionManager.hasAllPermissions();
         refreshPermissionUi(hasPerms);
         if (!hasPerms) {
             requestPermissions();
@@ -147,6 +238,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void loadTimelineData(Date date) {
+        if (date == null) return;
+        //get start of the day
         Calendar cal = Calendar.getInstance();
         cal.setTime(date);
         cal.set(Calendar.HOUR_OF_DAY, 0);
@@ -154,14 +247,14 @@ public class MainActivity extends AppCompatActivity {
         cal.set(Calendar.SECOND, 0);
         cal.set(Calendar.MILLISECOND, 0);
         Date start = cal.getTime();
-
+        //get end of the day
         cal.set(Calendar.HOUR_OF_DAY, 23);
         cal.set(Calendar.MINUTE, 59);
         cal.set(Calendar.SECOND, 59);
         cal.set(Calendar.MILLISECOND, 999);
         Date end = cal.getTime();
 
-        Executors.newSingleThreadExecutor().execute(() -> {
+        Executors.newSingleThreadExecutor().execute(() -> { // runs on a background thread
             List<StillLocation> stills = dao.getStillForRange(start, end);
             List<MovementActivity> movements = dao.getMovementForRange(start, end);
 
@@ -169,20 +262,22 @@ public class MainActivity extends AppCompatActivity {
             combined.addAll(stills);
             combined.addAll(movements);
 
-            // Sort by start time descending (newest first)
+            // Sort by start time, from earliest to latest
             Collections.sort(combined, (a, b) -> {
-                if (a.getStartTime() == null || b.getStartTime() == null) return 0;
-                return b.getStartTime().compareTo(a.getStartTime());
+                if (a.getStartTime() == null || b.getStartTime() == null) return 0; // If either item has no start time, treat them as equal
+                return a.getStartTime().compareTo(b.getStartTime());
             });
 
-            runOnUiThread(() -> timelineAdapter.submitList(combined));
+            runOnUiThread(() -> timelineAdapter.submitList(combined)); // switch back to the main thread and updates the list
         });
     }
 
-    @Override
+    // handling when screen is exited
+
     protected void onResume() {
+        // checks for permissions and then loads the timeline data and resumes everything else
         super.onResume();
-        boolean hasPerms = hasAllPermissions();
+        boolean hasPerms = permissionManager.hasAllPermissions();
         refreshPermissionUi(hasPerms);
         if (hasPerms) {
             onAllPermissionsGranted();
@@ -190,133 +285,32 @@ public class MainActivity extends AppCompatActivity {
             if (mapManager != null) {
                 mapManager.onResume();
             }
+            startPeriodicRefresh();
         }
     }
 
-    private void onAllPermissionsGranted() {
-        requestTransitions();
-        startTrackingService();
+    @Override
+    protected void onPause() {
+        super.onPause();
+        stopPeriodicRefresh();
     }
 
-    private String[] buildRequiredPermissions() {
-        ArrayList<String> perms = new ArrayList<>();
-        perms.add(Manifest.permission.ACCESS_COARSE_LOCATION);
-        perms.add(Manifest.permission.ACCESS_FINE_LOCATION);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            perms.add(Manifest.permission.ACTIVITY_RECOGNITION);
-        }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            perms.add(Manifest.permission.POST_NOTIFICATIONS);
-        }
-        return perms.toArray(new String[0]);
+    private void startPeriodicRefresh() {
+        refreshHandler.removeCallbacks(refreshRunnable);
+        refreshHandler.postDelayed(refreshRunnable, UPDATE_INTERVAL_MS);
     }
 
-    private void requestPermissions() {
-        permissionLauncher.launch(requiredPermissions);
+    private void stopPeriodicRefresh() {
+        refreshHandler.removeCallbacks(refreshRunnable);
     }
 
-    private boolean hasAllPermissions() {
-        for (String permission : requiredPermissions) {
-            if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
-                return false;
-            }
-        }
-        return true;
-    }
 
-    private SharedPreferences getPermissionPrefs() {
-        return getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-    }
 
-    private void markPermissionRequested(String permission) {
-        getPermissionPrefs().edit().putBoolean(KEY_PERMISSION_REQUESTED_PREFIX + permission, true).apply();
-    }
 
-    private boolean wasPermissionRequested(String permission) {
-        return getPermissionPrefs().getBoolean(KEY_PERMISSION_REQUESTED_PREFIX + permission, false);
-    }
 
-    private boolean shouldShowAnyPermissionRationale() {
-        for (String permission : requiredPermissions) {
-            if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED
-                    && shouldShowRequestPermissionRationale(permission)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private boolean isPermanentlyDenied(String permission) {
-        boolean denied = ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED;
-        boolean noRationale = !shouldShowRequestPermissionRationale(permission);
-        return denied && wasPermissionRequested(permission) && noRationale;
-    }
-
-    private boolean isAnyPermissionPermanentlyDenied() {
-        for (String permission : requiredPermissions) {
-            if (isPermanentlyDenied(permission)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private void refreshPermissionUi(boolean hasPerms) {
-        permissionBlocker.setVisibility(hasPerms ? View.GONE : View.VISIBLE);
-        headerLayout.setVisibility(hasPerms ? View.VISIBLE : View.GONE);
-        rvTimeline.setVisibility(hasPerms ? View.VISIBLE : View.GONE);
-        
-        if (mapManager != null) {
-            mapManager.setVisibility(hasPerms ? View.VISIBLE : View.GONE);
-        }
-        
-        View timelineLabel = findViewById(R.id.tv_timeline_label);
-        if (timelineLabel != null) {
-            timelineLabel.setVisibility(hasPerms ? View.VISIBLE : View.GONE);
-        }
-
-        if (!hasPerms) {
-            boolean permanent = isAnyPermissionPermanentlyDenied();
-            permissionSubtitle.setText(permanent
-                    ? "Permissions are permanently denied. Enable them in Settings."
-                    : "Please grant permissions to continue.");
-            permissionAction.setText(permanent ? "Open Settings" : "Grant");
-            permissionAction.setOnClickListener(v -> {
-                if (permanent) {
-                    openAppSettings();
-                } else {
-                    requestPermissions();
-                }
-            });
-        }
-    }
-
-    private void showPermissionRationaleDialog(Runnable onRetry, Runnable onCancel) {
-        new AlertDialog.Builder(this)
-                .setTitle("Permission required")
-                .setMessage("We need these permissions to use the app.")
-                .setPositiveButton("Allow", (d, w) -> onRetry.run())
-                .setNegativeButton("Not now", (d, w) -> onCancel.run())
-                .show();
-    }
-
-    private void showGoToSettingsDialog(Runnable onOpenSettings, Runnable onCancel) {
-        new AlertDialog.Builder(this)
-                .setTitle("Enable permissions in Settings")
-                .setMessage("Permissions are denied permanently. Please enable them in Settings to continue.")
-                .setPositiveButton("Open Settings", (d, w) -> onOpenSettings.run())
-                .setNegativeButton("Cancel", (d, w) -> onCancel.run())
-                .show();
-    }
-
-    private void openAppSettings() {
-        Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                Uri.fromParts("package", getPackageName(), null));
-        startActivity(intent);
-    }
 
     private void requestTransitions() {
-        if (!hasAllPermissions()) {
+        if (!permissionManager.hasAllPermissions()) { //check if permissions are granted
             Log.w(TAG, "Aborting requestTransitions: permissions not fully granted.");
             return;
         }
@@ -348,24 +342,34 @@ public class MainActivity extends AppCompatActivity {
 
         ActivityTransitionRequest request = new ActivityTransitionRequest(transitions);
         Intent intent = new Intent(this, ActivityTransitionReceiver.class);
+        
+
+        int flags = PendingIntent.FLAG_UPDATE_CURRENT;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            flags |= PendingIntent.FLAG_MUTABLE;
+        }
+        
         PendingIntent pendingIntent = PendingIntent.getBroadcast(
                 this,
                 0,
                 intent,
-                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+                flags
         );
 
         try {
             ActivityRecognition.getClient(this)
                     .requestActivityTransitionUpdates(request, pendingIntent)
-                    .addOnSuccessListener(unused -> transitionsRegistered = true)
+                    .addOnSuccessListener(unused -> {
+                        transitionsRegistered = true;
+                        Log.d(TAG, "Activity transitions registered successfully");
+                    })
                     .addOnFailureListener(e -> {
                         transitionsRegistered = false;
                         Log.e(TAG, "Registration failed", e);
                     });
         } catch (SecurityException e) {
             transitionsRegistered = false;
-            Log.e(TAG, "SecurityException: missing permission for transitions", e);
+            Log.e(TAG, "missing permission for transitions", e);
         }
     }
 
