@@ -1,4 +1,4 @@
-package com.example.myapplication;
+package com.example.myapplication.locationTracking;
 
 import android.Manifest;
 import android.app.Notification;
@@ -20,10 +20,11 @@ import androidx.core.app.NotificationCompat;
 import androidx.core.app.ServiceCompat;
 import androidx.core.content.ContextCompat;
 
-import com.example.myapplication.db.ActivityDao;
-import com.example.myapplication.db.ActivityDatabase;
-import com.example.myapplication.db.MovementActivity;
-import com.example.myapplication.db.StillLocation;
+import com.example.myapplication.MainActivity;
+import com.example.myapplication.database.ActivityDao;
+import com.example.myapplication.database.ActivityDatabase;
+import com.example.myapplication.database.MovementActivity;
+import com.example.myapplication.database.StillLocation;
 import com.google.android.gms.location.ActivityTransition;
 import com.google.android.gms.location.DetectedActivity;
 import com.google.android.gms.location.FusedLocationProviderClient;

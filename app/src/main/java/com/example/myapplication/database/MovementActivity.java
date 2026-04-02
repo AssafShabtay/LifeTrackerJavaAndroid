@@ -1,25 +1,23 @@
-package com.example.myapplication.db;
+package com.example.myapplication.database;
 
 import androidx.room.Entity;
 import androidx.room.PrimaryKey;
 
 import java.util.Date;
 
-@Entity(tableName = "still_locations")
-public class StillLocation implements TimelineItem {
+@Entity(tableName = "movement_activities")
+public class MovementActivity implements TimelineItem {
     @PrimaryKey(autoGenerate = true)
     public long id;
 
-    public Double lat;
-    public Double lng;
+    public String activityType;
+    public Double startLat;
+    public Double startLng;
+    public Double endLat;
+    public Double endLng;
+
     public Date startTimeDate;
     public Date endTimeDate;
-
-    public String wasSupposedToBeActivity;
-    public String placeId;
-    public String placeName;
-    public String placeCategory;
-    public String placeAddress;
 
     @Override
     public Date getStartTime() {

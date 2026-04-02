@@ -1,7 +1,6 @@
-package com.example.myapplication;
+package com.example.myapplication.mainScreen;
 
 import android.Manifest;
-import android.annotation.SuppressLint;
 import android.content.pm.PackageManager;
 import android.util.Log;
 import android.view.MotionEvent;
@@ -11,9 +10,10 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
-import com.example.myapplication.db.MovementActivity;
-import com.example.myapplication.db.StillLocation;
-import com.example.myapplication.db.TimelineItem;
+import com.example.myapplication.R;
+import com.example.myapplication.database.MovementActivity;
+import com.example.myapplication.database.StillLocation;
+import com.example.myapplication.database.TimelineItem;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -34,7 +34,7 @@ public class MapManager implements OnMapReadyCallback {
         this.fragmentId = fragmentId;
     }
 
-    @SuppressLint("ClickableViewAccessibility")
+
     public void init() {
         mapFragmentView = activity.findViewById(fragmentId);
         SupportMapFragment mapFragment = (SupportMapFragment) activity.getSupportFragmentManager()
@@ -45,7 +45,7 @@ public class MapManager implements OnMapReadyCallback {
 
         // Setup touch overlay to handle scrolling interference
         View touchOverlay = activity.findViewById(R.id.map_touch_overlay);
-        
+
         if (touchOverlay != null) {
             touchOverlay.setOnTouchListener((v, event) -> {
                 if (v.getParent() != null) {

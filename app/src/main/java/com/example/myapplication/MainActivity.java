@@ -19,12 +19,17 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.example.myapplication.databaseviewer.TimelineAdapter;
-import com.example.myapplication.db.ActivityDao;
-import com.example.myapplication.db.ActivityDatabase;
-import com.example.myapplication.db.MovementActivity;
-import com.example.myapplication.db.StillLocation;
-import com.example.myapplication.db.TimelineItem;
+import com.example.myapplication.helpers.PermissionManager;
+import com.example.myapplication.locationTracking.ActivityTransitionReceiver;
+import com.example.myapplication.locationTracking.LocationService;
+import com.example.myapplication.mainScreen.CalendarManager;
+import com.example.myapplication.mainScreen.MapManager;
+import com.example.myapplication.mainScreen.TimelineAdapter;
+import com.example.myapplication.database.ActivityDao;
+import com.example.myapplication.database.ActivityDatabase;
+import com.example.myapplication.database.MovementActivity;
+import com.example.myapplication.database.StillLocation;
+import com.example.myapplication.database.TimelineItem;
 import com.example.myapplication.helpers.ExampleData;
 import com.google.android.gms.location.ActivityRecognition;
 import com.google.android.gms.location.ActivityTransition;
@@ -272,7 +277,6 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    // handling when screen is exited
 
     protected void onResume() {
         // checks for permissions and then loads the timeline data and resumes everything else
@@ -303,10 +307,6 @@ public class MainActivity extends AppCompatActivity {
     private void stopPeriodicRefresh() {
         refreshHandler.removeCallbacks(refreshRunnable);
     }
-
-
-
-
 
 
     private void requestTransitions() {

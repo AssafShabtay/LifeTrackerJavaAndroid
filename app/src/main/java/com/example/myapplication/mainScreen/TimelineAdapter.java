@@ -1,6 +1,5 @@
-package com.example.myapplication.databaseviewer;
+package com.example.myapplication.mainScreen;
 
-import android.graphics.Color;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -11,9 +10,9 @@ import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.myapplication.R;
-import com.example.myapplication.db.MovementActivity;
-import com.example.myapplication.db.StillLocation;
-import com.example.myapplication.db.TimelineItem;
+import com.example.myapplication.database.MovementActivity;
+import com.example.myapplication.database.StillLocation;
+import com.example.myapplication.database.TimelineItem;
 import com.example.myapplication.helpers.UiFormatters;
 
 import java.util.ArrayList;

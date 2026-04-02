@@ -1,4 +1,4 @@
-package com.example.myapplication.db;
+package com.example.myapplication.database;
 
 import androidx.room.TypeConverter;
 

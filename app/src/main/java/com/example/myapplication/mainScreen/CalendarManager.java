@@ -1,4 +1,4 @@
-package com.example.myapplication;
+package com.example.myapplication.mainScreen;
 
 import android.content.Context;
 import android.graphics.Color;
@@ -14,10 +14,11 @@ import android.widget.TextView;
 
 import androidx.core.content.ContextCompat;
 
-import com.example.myapplication.db.ActivityDao;
-import com.example.myapplication.db.ActivityDatabase;
-import com.example.myapplication.db.MovementActivity;
-import com.example.myapplication.db.StillLocation;
+import com.example.myapplication.R;
+import com.example.myapplication.database.ActivityDao;
+import com.example.myapplication.database.ActivityDatabase;
+import com.example.myapplication.database.MovementActivity;
+import com.example.myapplication.database.StillLocation;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;

@@ -2,9 +2,9 @@ package com.example.myapplication.helpers;
 
 import android.util.Log;
 
-import com.example.myapplication.db.ActivityDao;
-import com.example.myapplication.db.MovementActivity;
-import com.example.myapplication.db.StillLocation;
+import com.example.myapplication.database.ActivityDao;
+import com.example.myapplication.database.MovementActivity;
+import com.example.myapplication.database.StillLocation;
 
 import java.util.Date;
 import java.util.concurrent.ExecutorService;

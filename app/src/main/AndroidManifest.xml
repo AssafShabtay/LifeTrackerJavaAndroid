@@ -31,11 +31,11 @@
         </activity>
 
         <receiver
-            android:name=".ActivityTransitionReceiver"
+            android:name=".locationTracking.ActivityTransitionReceiver"
             android:exported="false" />
 
         <service
-            android:name=".LocationService"
+            android:name=".locationTracking.LocationService"
             android:exported="false"
             android:foregroundServiceType="location" />
 
