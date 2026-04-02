@@ -26,6 +26,9 @@ public interface ActivityDao {
     @Query("SELECT * FROM still_locations WHERE id = :id LIMIT 1")
     StillLocation getStillLocationById(long id);
 
+    @Query("SELECT * FROM still_locations WHERE endTimeDate IS NULL ORDER BY startTimeDate DESC LIMIT 1")
+    StillLocation getActiveStillLocation();
+
     @Insert
     long insertMovementActivity(MovementActivity movementActivity);
 
@@ -37,6 +40,12 @@ public interface ActivityDao {
 
     @Query("UPDATE movement_activities SET endTimeDate = :endTimeDate WHERE id = :id")
     void updateMovementEndTime(long id, Date endTimeDate);
+
+    @Query("SELECT * FROM movement_activities WHERE id = :id LIMIT 1")
+    MovementActivity getMovementActivityById(long id);
+
+    @Query("SELECT * FROM movement_activities WHERE endTimeDate IS NULL")
+    List<MovementActivity> getActiveMovementActivities();
 
     // Any record that overlaps the requested interval should be returned.
     @Query("SELECT * FROM still_locations WHERE startTimeDate <= :end AND (endTimeDate IS NULL OR endTimeDate >= :start)")
@@ -50,5 +59,11 @@ public interface ActivityDao {
     default void replaceStillWithMovement(long id, MovementActivity movement) {
         deleteStillLocation(id);
         insertMovementActivity(movement);
+    }
+
+    @Transaction
+    default void replaceMovementWithStill(long id, StillLocation still) {
+        deleteMovementActivity(id);
+        insertStillLocation(still);
     }
 }

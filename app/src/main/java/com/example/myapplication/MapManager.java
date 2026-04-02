@@ -1,8 +1,10 @@
 package com.example.myapplication;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.content.pm.PackageManager;
 import android.util.Log;
+import android.view.MotionEvent;
 import android.view.View;
 
 import androidx.annotation.NonNull;
@@ -32,6 +34,7 @@ public class MapManager implements OnMapReadyCallback {
         this.fragmentId = fragmentId;
     }
 
+    @SuppressLint("ClickableViewAccessibility")
     public void init() {
         mapFragmentView = activity.findViewById(fragmentId);
         SupportMapFragment mapFragment = (SupportMapFragment) activity.getSupportFragmentManager()
@@ -39,11 +42,43 @@ public class MapManager implements OnMapReadyCallback {
         if (mapFragment != null) {
             mapFragment.getMapAsync(this);
         }
+
+        // Setup touch overlay to handle scrolling interference
+        View touchOverlay = activity.findViewById(R.id.map_touch_overlay);
+        
+        if (touchOverlay != null) {
+            touchOverlay.setOnTouchListener((v, event) -> {
+                if (v.getParent() != null) {
+                    switch (event.getAction()) {
+                        case MotionEvent.ACTION_DOWN:
+                            // Disallow parent views to intercept touch events immediately
+                            v.getParent().requestDisallowInterceptTouchEvent(true);
+                            break;
+                        case MotionEvent.ACTION_UP:
+                        case MotionEvent.ACTION_CANCEL:
+                            // Allow parent views to intercept again
+                            v.getParent().requestDisallowInterceptTouchEvent(false);
+                            break;
+                    }
+                }
+                // Return false so the touch event still reaches the map underneath
+                return false;
+            });
+        }
     }
 
     @Override
     public void onMapReady(@NonNull GoogleMap googleMap) {
         mMap = googleMap;
+        
+        // Enable all gestures and zoom controls
+        mMap.getUiSettings().setAllGesturesEnabled(true);
+        mMap.getUiSettings().setZoomControlsEnabled(true);
+        mMap.getUiSettings().setScrollGesturesEnabled(true);
+        mMap.getUiSettings().setZoomGesturesEnabled(true);
+        mMap.getUiSettings().setTiltGesturesEnabled(true);
+        mMap.getUiSettings().setRotateGesturesEnabled(true);
+        
         updateMyLocationEnabled();
     }
 
@@ -54,6 +89,10 @@ public class MapManager implements OnMapReadyCallback {
     public void setVisibility(int visibility) {
         if (mapFragmentView != null) {
             mapFragmentView.setVisibility(visibility);
+        }
+        View touchOverlay = activity.findViewById(R.id.map_touch_overlay);
+        if (touchOverlay != null) {
+            touchOverlay.setVisibility(visibility);
         }
     }
 

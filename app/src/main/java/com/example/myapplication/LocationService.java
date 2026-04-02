@@ -17,7 +17,6 @@ import android.util.Log;
 
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
-import androidx.core.app.NotificationManagerCompat;
 import androidx.core.app.ServiceCompat;
 import androidx.core.content.ContextCompat;
 
@@ -33,21 +32,23 @@ import com.google.android.gms.location.Priority;
 import com.google.android.gms.tasks.Tasks;
 
 import java.util.Date;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 public class LocationService extends Service {
 
-    private int currentActivity = DetectedActivity.UNKNOWN;
+    private static volatile int currentActivity = DetectedActivity.UNKNOWN;
+    private static volatile Long currentStillTrackingId = null;
+    private static final Map<Integer, Long> currentMovementTrackingIds = new ConcurrentHashMap<>();
+    private static volatile boolean isInitializing = false;
+
     private FusedLocationProviderClient fusedLocationClient;
     private ActivityDao dao;
-    private Long currentStillTrackingId = null;
-    private final Map<Integer, Long> currentMovementTrackingIds = new HashMap<>();
 
     private final ExecutorService io = Executors.newSingleThreadExecutor();
 
@@ -69,7 +70,41 @@ public class LocationService extends Service {
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
         dao = ActivityDatabase.getDatabase(getApplicationContext()).activityDao();
         createNotificationChannel();
-        Log.d(TAG, "Service created");
+        Log.d(TAG, "Service created. Current activity: " + currentActivity);
+
+        // Recover active tracking state from DB on restart
+        io.execute(() -> {
+            StillLocation activeStill = dao.getActiveStillLocation();
+            if (activeStill != null) {
+                currentStillTrackingId = activeStill.id;
+                currentActivity = DetectedActivity.STILL;
+                Log.d(TAG, "Recovered active still tracking ID: " + currentStillTrackingId);
+            }
+            
+            for (MovementActivity m : dao.getActiveMovementActivities()) {
+                // Approximate the activity type from the name
+                int type = getActivityTypeFromName(m.activityType);
+                if (type != DetectedActivity.UNKNOWN) {
+                    currentMovementTrackingIds.put(type, m.id);
+                    currentActivity = type;
+                    Log.d(TAG, "Recovered active movement tracking ID: " + m.id + " for type: " + m.activityType);
+                }
+            }
+            updateNotificationSafe();
+        });
+    }
+
+    private int getActivityTypeFromName(String name) {
+        if (name == null) return DetectedActivity.UNKNOWN;
+        switch (name) {
+            case "Driving": return DetectedActivity.IN_VEHICLE;
+            case "Cycling": return DetectedActivity.ON_BICYCLE;
+            case "Running": return DetectedActivity.RUNNING;
+            case "Walking": return DetectedActivity.WALKING;
+            case "On Foot": return DetectedActivity.ON_FOOT;
+            case "Still": return DetectedActivity.STILL;
+            default: return DetectedActivity.UNKNOWN;
+        }
     }
 
     @Override
@@ -80,12 +115,14 @@ public class LocationService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        startForegroundSafe();
-
         if (intent != null && ActivityTransitionReceiver.ACTION_ACTIVITY_UPDATE.equals(intent.getAction())) {
             int activityType = intent.getIntExtra(ActivityTransitionReceiver.EXTRA_ACTIVITY_TYPE, DetectedActivity.UNKNOWN);
             int transitionType = intent.getIntExtra(ActivityTransitionReceiver.EXTRA_TRANSITION_TYPE, -1);
-            io.execute(() -> handleActivityUpdate(activityType, transitionType));
+            long timestampNanos = intent.getLongExtra(ActivityTransitionReceiver.EXTRA_TIMESTAMP_NANOS, System.nanoTime());
+            Log.d(TAG, "Received activity update: " + activityType + " transition: " + transitionType);
+            io.execute(() -> handleActivityUpdate(activityType, transitionType, timestampNanos));
+        } else {
+            startForegroundSafe();
         }
         return START_STICKY;
     }
@@ -96,29 +133,33 @@ public class LocationService extends Service {
         return null;
     }
 
-    private void handleActivityUpdate(int activityType, int transitionType) {
+    private void handleActivityUpdate(int activityType, int transitionType, long timestampNanos) {
         if (activityType == DetectedActivity.UNKNOWN) {
-            Log.d(TAG, "Ignoring unknown activity update");
             return;
         }
 
+        // Calculate event time based on elapsed realtime nanos to be accurate
+        Date eventTime = new Date(System.currentTimeMillis() - TimeUnit.NANOSECONDS.toMillis(android.os.SystemClock.elapsedRealtimeNanos() - timestampNanos));
+
         if (transitionType == ActivityTransition.ACTIVITY_TRANSITION_ENTER) {
             currentActivity = activityType;
+            isInitializing = true;
+            updateNotificationSafe();
+
             if (activityType == DetectedActivity.STILL) {
-                startStillTracking();
+                startStillTracking(eventTime);
             } else if (MOVEMENT_ACTIVITIES.contains(activityType)) {
-                startMovementTracking(activityType);
+                startMovementTracking(activityType, eventTime);
             }
+            isInitializing = false;
         } else if (transitionType == ActivityTransition.ACTIVITY_TRANSITION_EXIT) {
+            Log.d(TAG, "EXIT detected for: " + activityType);
             if (activityType == DetectedActivity.STILL) {
-                endStillTracking();
+                endStillTracking(eventTime);
             } else if (MOVEMENT_ACTIVITIES.contains(activityType)) {
-                endMovementTracking(activityType);
+                endMovementTracking(activityType, eventTime);
             }
             updateCurrentActivityAfterExit(activityType);
-        } else {
-            Log.w(TAG, "Ignoring unsupported transition type: " + transitionType);
-            return;
         }
 
         updateNotificationSafe();
@@ -145,13 +186,18 @@ public class LocationService extends Service {
 
     private Location getLocationOnceBlocking() {
         try {
-            return Tasks.await(
-                    fusedLocationClient.getCurrentLocation(Priority.PRIORITY_BALANCED_POWER_ACCURACY, null),
-                    15,
+            Log.d(TAG, "Requesting high accuracy location...");
+            Location loc = Tasks.await(
+                    fusedLocationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null),
+                    10,
                     TimeUnit.SECONDS
             );
+            if (loc == null) {
+                loc = Tasks.await(fusedLocationClient.getLastLocation(), 2, TimeUnit.SECONDS);
+            }
+            return loc;
         } catch (Throwable t) {
-            Log.e(TAG, "getCurrentLocation failed", t);
+            Log.e(TAG, "Location request failed", t);
             return null;
         }
     }
@@ -178,15 +224,11 @@ public class LocationService extends Service {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
             return;
         }
-
         NotificationChannel channel = new NotificationChannel(
                 CHANNEL_ID,
                 "Location Tracking",
                 NotificationManager.IMPORTANCE_LOW
         );
-        channel.setDescription("Location Tracking");
-        channel.setShowBadge(false);
-
         NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         if (manager != null) {
             manager.createNotificationChannel(channel);
@@ -194,21 +236,17 @@ public class LocationService extends Service {
     }
 
     private Notification buildNotification() {
-        String activityLabel = (currentActivity == DetectedActivity.UNKNOWN)
-                ? "Unknown"
-                : getActivityName(currentActivity);
-
+        String activityLabel = (currentActivity == DetectedActivity.UNKNOWN) ? "Waiting..." : getActivityName(currentActivity);
         boolean activelyTracking = currentStillTrackingId != null || !currentMovementTrackingIds.isEmpty();
-        String contentText = activelyTracking
-                ? "Recording: " + activityLabel
-                : "Idle • Waiting for activity updates…";
+        
+        String contentText = isInitializing ? "Initializing..." : (activelyTracking ? "Tracking: " + activityLabel : "Idle • Waiting for activity");
 
         Intent openAppIntent = new Intent(this, MainActivity.class);
         int flags = PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE;
         PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, openAppIntent, flags);
 
         return new NotificationCompat.Builder(this, CHANNEL_ID)
-                .setContentTitle("Tracking")
+                .setContentTitle("Activity Tracker")
                 .setContentText(contentText)
                 .setSmallIcon(android.R.drawable.ic_menu_mylocation)
                 .setContentIntent(pendingIntent)
@@ -224,73 +262,49 @@ public class LocationService extends Service {
                 != PackageManager.PERMISSION_GRANTED) {
             return;
         }
-
         try {
-            NotificationManagerCompat.from(this).notify(NOTIFICATION_ID, buildNotification());
-        } catch (Throwable t) {
-            Log.w(TAG, "Failed to update notification", t);
-        }
+            NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+            if (manager != null) manager.notify(NOTIFICATION_ID, buildNotification());
+        } catch (Throwable ignored) {}
     }
 
-    private void startStillTracking() {
-        if (currentStillTrackingId != null) {
-            Log.d(TAG, "Still tracking already active; ignoring duplicate enter");
-            return;
-        }
-
+    private void startStillTracking(Date startTime) {
+        if (currentStillTrackingId != null) return;
         Location currentLocation = getLocationOnceBlocking();
         StillLocation still = new StillLocation();
         still.lat = currentLocation != null ? currentLocation.getLatitude() : null;
         still.lng = currentLocation != null ? currentLocation.getLongitude() : null;
-        still.startTimeDate = new Date();
+        still.startTimeDate = startTime;
         still.endTimeDate = null;
-
         try {
             currentStillTrackingId = dao.insertStillLocation(still);
+            Log.d(TAG, "STILL started: ID=" + currentStillTrackingId);
         } catch (Exception e) {
-            Log.e(TAG, "Failed to insert start still location", e);
             currentStillTrackingId = null;
         }
     }
 
-    private void endStillTracking() {
+    private void endStillTracking(Date endTime) {
         long id = currentStillTrackingId == null ? -1L : currentStillTrackingId;
-        if (id <= 0L) {
-            return;
-        }
-
+        if (id <= 0L) return;
         Location currentLocation = getLocationOnceBlocking();
         StillLocation still;
         try {
             still = dao.getStillLocationById(id);
         } catch (Exception e) {
-            Log.e(TAG, "DB read failed for still id=" + id, e);
             currentStillTrackingId = null;
             return;
         }
-
         if (still == null) {
-            Log.e(TAG, "StillLocation missing for id=" + id);
             currentStillTrackingId = null;
             return;
         }
-
         Double startLat = still.lat;
         Double startLng = still.lng;
         Date startTime = still.startTimeDate;
-        Date endTime = new Date();
-
         try {
             if (startLat != null && startLng != null && currentLocation != null) {
-                String resolved = checkIfStillIsMovement(
-                        startLat,
-                        startLng,
-                        startTime,
-                        endTime,
-                        currentLocation.getLatitude(),
-                        currentLocation.getLongitude()
-                );
-
+                String resolved = checkIfStillIsMovement(startLat, startLng, startTime, endTime, currentLocation.getLatitude(), currentLocation.getLongitude());
                 if ("Still".equalsIgnoreCase(resolved)) {
                     dao.endStillLocation(id, endTime);
                 } else {
@@ -307,81 +321,80 @@ public class LocationService extends Service {
             } else {
                 dao.endStillLocation(id, endTime);
             }
-        } catch (Exception e) {
-            Log.e(TAG, "Failed to end still tracking", e);
+            Log.d(TAG, "STILL ended: ID=" + id);
+        } catch (Exception ignored) {
         } finally {
             currentStillTrackingId = null;
         }
     }
 
-    private void startMovementTracking(int activityType) {
-        if (currentMovementTrackingIds.containsKey(activityType)) {
-            Log.d(TAG, "Movement tracking already active for type=" + activityType);
-            return;
-        }
-
+    private void startMovementTracking(int activityType, Date startTime) {
+        if (currentMovementTrackingIds.containsKey(activityType)) return;
         Location currentLocation = getLocationOnceBlocking();
-
         MovementActivity movement = new MovementActivity();
         movement.activityType = getActivityName(activityType);
         movement.startLat = currentLocation != null ? currentLocation.getLatitude() : null;
         movement.startLng = currentLocation != null ? currentLocation.getLongitude() : null;
-        movement.startTimeDate = new Date();
+        movement.startTimeDate = startTime;
         movement.endTimeDate = null;
-
         try {
             long id = dao.insertMovementActivity(movement);
             currentMovementTrackingIds.put(activityType, id);
-        } catch (Exception e) {
-            Log.e(TAG, "Failed to insert start movement activity", e);
-        }
+            Log.d(TAG, "MOVEMENT started: " + movement.activityType + " ID=" + id);
+        } catch (Exception ignored) {}
     }
 
-    private void endMovementTracking(int activityType) {
+    private void endMovementTracking(int activityType, Date endTime) {
         Long id = currentMovementTrackingIds.get(activityType);
-        if (id == null) {
-            return;
-        }
-
+        if (id == null) return;
         Location currentLocation = getLocationOnceBlocking();
+        
+        io.execute(() -> {
+            MovementActivity movement = dao.getMovementActivityById(id);
+            if (movement == null) {
+                currentMovementTrackingIds.remove(activityType);
+                return;
+            }
 
-        try {
-            dao.endMovementActivity(
-                    id,
-                    currentLocation != null ? currentLocation.getLatitude() : null,
-                    currentLocation != null ? currentLocation.getLongitude() : null,
-                    new Date()
-            );
-        } catch (Exception e) {
-            Log.e(TAG, "Failed to end movement activity", e);
-        } finally {
-            currentMovementTrackingIds.remove(activityType);
-        }
+            Double startLat = movement.startLat;
+            Double startLng = movement.startLng;
+            Date startTime = movement.startTimeDate;
+
+            try {
+                if (startLat != null && startLng != null && currentLocation != null) {
+                    String resolved = checkIfStillIsMovement(startLat, startLng, startTime, endTime, currentLocation.getLatitude(), currentLocation.getLongitude());
+                    if ("Still".equalsIgnoreCase(resolved)) {
+                        StillLocation still = new StillLocation();
+                        still.lat = startLat;
+                        still.lng = startLng;
+                        still.startTimeDate = startTime;
+                        still.endTimeDate = endTime;
+                        dao.replaceMovementWithStill(id, still);
+                        Log.d(TAG, "MOVEMENT resolved as STILL: ID=" + id);
+                    } else {
+                        // It's still a movement, but we keep the original detected type
+                        dao.endMovementActivity(id, currentLocation.getLatitude(), currentLocation.getLongitude(), endTime);
+                        Log.d(TAG, "MOVEMENT ended normally: ID=" + id);
+                    }
+                } else {
+                    dao.endMovementActivity(id, currentLocation != null ? currentLocation.getLatitude() : null, currentLocation != null ? currentLocation.getLongitude() : null, endTime);
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "Error ending movement tracking", e);
+            } finally {
+                currentMovementTrackingIds.remove(activityType);
+            }
+        });
     }
 
-    private String checkIfStillIsMovement(
-            double startLatitude,
-            double startLongitude,
-            Date startTime,
-            Date endTime,
-            double endLatitude,
-            double endLongitude
-    ) {
-        float distanceMeters = distanceInMeters(startLatitude, startLongitude, endLatitude, endLongitude);
-
-        long durationMillis = endTime.getTime() - startTime.getTime();
-        float durationSeconds = durationMillis > 0 ? (durationMillis / 1000f) : 0f;
-        float speedMps = durationSeconds > 0 ? (distanceMeters / durationSeconds) : 0f;
-
-        if (distanceMeters < 100f || speedMps < 0.3f) {
-            return "Still";
-        }
-        if (speedMps < 2f) {
-            return "Walking";
-        }
-        if (speedMps < 15f) {
-            return "Running";
-        }
+    private String checkIfStillIsMovement(double startLat, double startLng, Date startTime, Date endTime, double endLat, double endLng) {
+        float distance = distanceInMeters(startLat, startLng, endLat, endLng);
+        long durationMs = endTime.getTime() - startTime.getTime();
+        float durationSec = durationMs / 1000f;
+        float speed = durationSec > 5 ? (distance / durationSec) : 0f;
+        if (distance < 50f || (distance < 150f && speed < 0.5f)) return "Still";
+        if (speed < 2.5f) return "Walking";
+        if (speed < 8f) return "Running";
         return "Driving";
     }
 
@@ -393,21 +406,13 @@ public class LocationService extends Service {
 
     private String getActivityName(int activityType) {
         switch (activityType) {
-            case DetectedActivity.IN_VEHICLE:
-                return "Driving";
-            case DetectedActivity.ON_BICYCLE:
-                return "Cycling";
-            case DetectedActivity.ON_FOOT:
-                return "On Foot";
-            case DetectedActivity.RUNNING:
-                return "Running";
-            case DetectedActivity.WALKING:
-                return "Walking";
-            case DetectedActivity.STILL:
-                return "Still";
-            case DetectedActivity.UNKNOWN:
-            default:
-                return "Unknown";
+            case DetectedActivity.IN_VEHICLE: return "Driving";
+            case DetectedActivity.ON_BICYCLE: return "Cycling";
+            case DetectedActivity.ON_FOOT: return "On Foot";
+            case DetectedActivity.RUNNING: return "Running";
+            case DetectedActivity.WALKING: return "Walking";
+            case DetectedActivity.STILL: return "Still";
+            default: return "Unknown";
         }
     }
 }

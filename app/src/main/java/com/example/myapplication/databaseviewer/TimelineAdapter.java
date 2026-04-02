@@ -1,11 +1,13 @@
 package com.example.myapplication.databaseviewer;
 
+import android.graphics.Color;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.myapplication.R;
@@ -74,20 +76,29 @@ public class TimelineAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
         if (holder instanceof StillViewHolder) {
             StillLocation still = (StillLocation) item;
             StillViewHolder h = (StillViewHolder) holder;
-            h.tvTitle.setText("Still Session #" + still.id);
-            h.tvCoords.setText("Lat: " + UiFormatters.decimal(still.lat) +
-                    "   Lng: " + UiFormatters.decimal(still.lng));
-            h.tvTimeRange.setText(UiFormatters.dateTime(still.startTimeDate) + " → " +
-                    UiFormatters.dateTime(still.endTimeDate));
-            h.tvDuration.setText("Duration: " + UiFormatters.duration(still.startTimeDate, still.endTimeDate));
+            h.tvTitle.setText("Stationary");
+            h.tvCoords.setText(UiFormatters.decimal(still.lat) + ", " + UiFormatters.decimal(still.lng));
+            h.tvTimeRange.setText(UiFormatters.timeOnly(still.startTimeDate) + " — " +
+                    UiFormatters.timeOnly(still.endTimeDate));
+            h.tvDuration.setText(UiFormatters.duration(still.startTimeDate, still.endTimeDate));
+            h.indicator.setBackgroundColor(ContextCompat.getColor(h.itemView.getContext(), R.color.activity_still));
         } else {
             MovementActivity movement = (MovementActivity) item;
             MovementViewHolder h = (MovementViewHolder) holder;
-            h.tvTitle.setText(movement.activityType != null ? movement.activityType : "Movement");
-            h.tvTimeRange.setText(UiFormatters.dateTime(movement.startTimeDate) + " → " +
-                    UiFormatters.dateTime(movement.endTimeDate));
-            h.tvDuration.setText("Duration: " + UiFormatters.duration(movement.startTimeDate, movement.endTimeDate));
+            String type = movement.activityType != null ? movement.activityType : "Movement";
+            h.tvTitle.setText(type);
+            h.tvTimeRange.setText(UiFormatters.timeOnly(movement.startTimeDate) + " — " +
+                    UiFormatters.timeOnly(movement.endTimeDate));
+            h.tvDuration.setText(UiFormatters.duration(movement.startTimeDate, movement.endTimeDate));
             h.tvSpeed.setVisibility(View.GONE);
+            
+            int colorRes = R.color.activity_walking;
+            if (type.equalsIgnoreCase("IN_VEHICLE")) {
+                colorRes = R.color.activity_vehicle;
+            } else if (type.equalsIgnoreCase("WALKING") || type.equalsIgnoreCase("ON_FOOT") || type.equalsIgnoreCase("RUNNING")) {
+                colorRes = R.color.activity_walking;
+            }
+            h.indicator.setBackgroundColor(ContextCompat.getColor(h.itemView.getContext(), colorRes));
         }
     }
 
@@ -98,6 +109,7 @@ public class TimelineAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
 
     static class StillViewHolder extends RecyclerView.ViewHolder {
         TextView tvTitle, tvCoords, tvTimeRange, tvDuration;
+        View indicator;
 
         StillViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -105,11 +117,13 @@ public class TimelineAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
             tvCoords = itemView.findViewById(R.id.tvCoords);
             tvTimeRange = itemView.findViewById(R.id.tvTimeRange);
             tvDuration = itemView.findViewById(R.id.tvDuration);
+            indicator = itemView.findViewById(R.id.indicator);
         }
     }
 
     static class MovementViewHolder extends RecyclerView.ViewHolder {
         TextView tvTitle, tvSpeed, tvTimeRange, tvDuration;
+        View indicator;
 
         MovementViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -117,6 +131,7 @@ public class TimelineAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
             tvSpeed = itemView.findViewById(R.id.tvSpeed);
             tvTimeRange = itemView.findViewById(R.id.tvTimeRange);
             tvDuration = itemView.findViewById(R.id.tvDuration);
+            indicator = itemView.findViewById(R.id.indicator);
         }
     }
 }
