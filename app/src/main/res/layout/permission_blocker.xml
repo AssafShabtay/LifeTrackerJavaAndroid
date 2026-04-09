@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/permission_blocker"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:padding="32dp"
+    android:visibility="gone"
+    android:background="?attr/android:windowBackground"
+    android:clickable="true"
+    android:focusable="true">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Permissions needed"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:textColor="?attr/colorOnSurface"
+        android:paddingBottom="8dp"/>
+
+    <TextView
+        android:id="@+id/permission_subtitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Please grant permissions to track your daily timeline."
+        android:textSize="16sp"
+        android:gravity="center"
+        android.textColor="?attr/colorOnSurfaceVariant"
+        android:paddingBottom="32dp"/>
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/permission_action"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Grant Permissions"
+        app:cornerRadius="12dp"
+        android:paddingHorizontal="32dp"/>
+</LinearLayout>

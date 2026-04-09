@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Primary - Indigo -->
+    <color name="primary">#3F51B5</color>
+    <color name="primary_light">#757de8</color>
+    <color name="primary_dark">#002984</color>
+    <color name="on_primary">#FFFFFF</color>
+
+    <!-- Secondary - Amber/Gold for movement -->
+    <color name="secondary">#FFC107</color>
+    <color name="secondary_light">#fff350</color>
+    <color name="secondary_dark">#c79100</color>
+    <color name="on_secondary">#000000</color>
+
+    <!-- Surface/Background -->
+    <color name="background">#F8F9FA</color>
+    <color name="surface">#FFFFFF</color>
+    <color name="on_surface">#1A1C1E</color>
+    <color name="on_surface_variant">#44474E</color>
+    <color name="outline">#E0E0E0</color>
+    
+    <!-- Accent colors for activity types -->
+    <color name="activity_still">#4CAF50</color> <!-- Green -->
+    <color name="activity_walking">#2196F3</color> <!-- Blue -->
+    <color name="activity_vehicle">#9C27B0</color> <!-- Purple -->
+
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+</resources>
