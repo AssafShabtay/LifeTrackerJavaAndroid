@@ -4,9 +4,9 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
-import android.os.SystemClock;
 import android.util.Log;
 
+import com.example.myapplication.helpers.Logger;
 import com.google.android.gms.location.ActivityTransitionEvent;
 import com.google.android.gms.location.ActivityTransitionResult;
 
@@ -18,20 +18,20 @@ public class ActivityTransitionReceiver extends BroadcastReceiver {
     public static final String EXTRA_TRANSITION_TYPE = "transition_type";
     public static final String EXTRA_TIMESTAMP_NANOS = "timestamp_nanos";
 
-
-    // Entire source code taken from google
     @Override
     public void onReceive(Context context, Intent intent) {
-
-
-        Log.d(TAG, "onReceive triggered");
+        String msg = "onReceive: Activity transition broadcast received";
+        Log.d(TAG, msg);
+        Logger.saveLog(context, msg);
         
         if (ActivityTransitionResult.hasResult(intent)) {
             ActivityTransitionResult result = ActivityTransitionResult.extractResult(intent);
             if (result != null) {
-                long receiptTimestampNanos = SystemClock.elapsedRealtimeNanos();
+                long receiptTimestampNanos = android.os.SystemClock.elapsedRealtimeNanos();
                 for (ActivityTransitionEvent event : result.getTransitionEvents()) {
-                    Log.d(TAG, "Transition: " + event.getActivityType() + " Type: " + event.getTransitionType());
+                    String eventMsg = "onReceive: Processing transition for " + event.getActivityType() + " (Type: " + event.getTransitionType() + ")";
+                    Log.d(TAG, eventMsg);
+                    Logger.saveLog(context, eventMsg);
                     notifyService(context, event.getActivityType(), event.getTransitionType(), receiptTimestampNanos);
                 }
             }
@@ -39,6 +39,10 @@ public class ActivityTransitionReceiver extends BroadcastReceiver {
     }
 
     private void notifyService(Context context, int activityType, int transitionType, long timestampNanos) {
+        String msg = "notifyService: Sending activity update to LocationService for DB processing";
+        Log.d(TAG, msg);
+        Logger.saveLog(context, msg);
+        
         Intent serviceIntent = new Intent(context, LocationService.class);
         serviceIntent.setAction(ACTION_ACTIVITY_UPDATE);
         serviceIntent.putExtra(EXTRA_ACTIVITY_TYPE, activityType);
@@ -52,7 +56,9 @@ public class ActivityTransitionReceiver extends BroadcastReceiver {
                 context.startService(serviceIntent);
             }
         } catch (Exception e) {
-            Log.e(TAG, "Failed to start service from receiver", e);
+            String errorMsg = "notifyService: Failed to start service from receiver: " + e.getMessage();
+            Log.e(TAG, errorMsg);
+            Logger.saveLog(context, errorMsg);
         }
     }
 }

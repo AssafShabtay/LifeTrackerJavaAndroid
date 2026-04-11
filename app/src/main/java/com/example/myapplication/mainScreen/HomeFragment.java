@@ -26,7 +26,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.myapplication.MainActivity;
 import com.example.myapplication.database.Place;
 import com.example.myapplication.database.PlaceDao;
-import com.example.myapplication.helpers.PermissionManager;
+import com.example.myapplication.helpers.PermissionManagerCN;
 import com.example.myapplication.locationTracking.ActivityTransitionReceiver;
 import com.example.myapplication.locationTracking.GeofenceManager;
 import com.example.myapplication.locationTracking.LocationService;
@@ -76,7 +76,7 @@ public class HomeFragment extends Fragment implements MainActivity.OnPermissions
     private MapManager mapManager;
     private CalendarManager calendarManager;
 
-    private PermissionManager permissionManager;
+    private PermissionManagerCN permissionManagerCN;
 
 
     //refresh ui every 5 minutes
@@ -129,14 +129,14 @@ public class HomeFragment extends Fragment implements MainActivity.OnPermissions
             }
 
             //Ask for permissions again
-            boolean permanent = permissionManager.isAnyPermissionPermanentlyDenied();
+            boolean permanent = permissionManagerCN.isAnyPermissionPermanentlyDenied();
             permissionSubtitle.setText(permanent
                     ? "Permissions were denied. Please enable them in Settings to continue"
                     : "Please grant permissions to continue.");
             permissionAction.setText(permanent ? "Open Settings" : "Grant");
             permissionAction.setOnClickListener(v -> {
                 if (permanent) {
-                    permissionManager.openAppSettings();
+                    permissionManagerCN.openAppSettings();
                 } else {
                     ((MainActivity) requireActivity()).requestPermissions();
                 }
@@ -155,7 +155,7 @@ public class HomeFragment extends Fragment implements MainActivity.OnPermissions
         super.onViewCreated(view, savedInstanceState);
 
         MainActivity mainActivity = (MainActivity) requireActivity();
-        permissionManager = mainActivity.getPermissionManager();
+        permissionManagerCN = mainActivity.getPermissionManager();
         mainActivity.setOnPermissionsGrantedListener(this);
 
         permissionBlocker = view.findViewById(R.id.permission_blocker);
@@ -229,7 +229,8 @@ public class HomeFragment extends Fragment implements MainActivity.OnPermissions
             }
         });
         timelineAdapter.setOnLabelClickListener(still -> {
-            showLabelDialog(still);
+            PlaceLabelSheet sheet = PlaceLabelSheet.newInstance(still, this::savePlaceAndRegisterGeofence);
+            sheet.show(getChildFragmentManager(), "PlaceLabelSheet");
         });
         rvTimeline.setLayoutManager(new LinearLayoutManager(requireContext()));
         rvTimeline.setAdapter(timelineAdapter);
@@ -344,7 +345,7 @@ public class HomeFragment extends Fragment implements MainActivity.OnPermissions
     public void onResume() {
         // checks for permissions and then loads the timeline data and resumes everything else
         super.onResume();
-        boolean hasPerms = permissionManager.hasAllPermissions();
+        boolean hasPerms = permissionManagerCN.hasAllPermissions();
         refreshPermissionUi(hasPerms);
         if (hasPerms) {
             if (!areServicesInitialized) {
@@ -356,8 +357,6 @@ public class HomeFragment extends Fragment implements MainActivity.OnPermissions
                 mapManager.onResume();
             }
             startPeriodicRefresh();
-        } else {
-            ((MainActivity) requireActivity()).requestPermissions();
         }
     }
 
@@ -378,7 +377,7 @@ public class HomeFragment extends Fragment implements MainActivity.OnPermissions
 
 
     private void requestTransitions() {
-        if (!permissionManager.hasAllPermissions()) { //check if permissions are granted
+        if (!permissionManagerCN.hasAllPermissions()) { //check if permissions are granted
             Log.w(TAG, "Aborting requestTransitions: permissions not fully granted.");
             return;
         }

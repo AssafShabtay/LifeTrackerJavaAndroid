@@ -20,9 +20,10 @@ public class GeofenceBroadcastReceiver extends BroadcastReceiver {
 
     @Override
     public void onReceive(Context context, Intent intent) {
+
         GeofencingEvent geofencingEvent = GeofencingEvent.fromIntent(intent);
         if (geofencingEvent == null || geofencingEvent.hasError()) {
-            Log.e(TAG, "Geofencing error or null event");
+            Log.e(TAG, "geofence error or null event");
             return;
         }
 

@@ -27,6 +27,7 @@ import com.example.myapplication.database.MovementActivity;
 import com.example.myapplication.database.Place;
 import com.example.myapplication.database.PlaceDao;
 import com.example.myapplication.database.StillLocation;
+import com.example.myapplication.helpers.Logger;
 import com.google.android.gms.location.ActivityTransition;
 import com.google.android.gms.location.DetectedActivity;
 import com.google.android.gms.location.FusedLocationProviderClient;
@@ -64,6 +65,7 @@ public class LocationService extends Service {
     public static final String TAG = "LocationService";
 
     public static final Set<Integer> MOVEMENT_ACTIVITIES = new HashSet<Integer>() {{
+        // HashSet with all possible movement activities
         add(DetectedActivity.IN_VEHICLE);
         add(DetectedActivity.RUNNING);
         add(DetectedActivity.WALKING);
@@ -81,7 +83,6 @@ public class LocationService extends Service {
         geofenceManager = new GeofenceManager(this);
 
         createNotificationChannel();
-        Log.d(TAG, "Service created. Current activity: " + currentActivity);
 
         io.execute(() -> {
             StillLocation activeStill = dao.getActiveStillLocation();
@@ -186,6 +187,9 @@ public class LocationService extends Service {
                 still.placeAddress = place.address;
                 still.lat = place.lat;
                 still.lng = place.lng;
+                String msg = "DB Update from updateActiveStillWithPlace: Updating still location " + still.id + " with place " + place.name;
+                Log.d(TAG, msg);
+                Logger.saveLog(this, msg);
                 dao.updateStillLocation(still);
             }
         }
@@ -307,6 +311,9 @@ public class LocationService extends Service {
             float distance = distanceInMeters(currentLocation.getLatitude(), currentLocation.getLongitude(), lastStill.lat, lastStill.lng);
             if (distance < 100f) { // 100 meter threshold for merging
                 currentStillTrackingId = lastStill.id;
+                String msg = "DB Update from startStillTracking: Merging with last still " + currentStillTrackingId;
+                Log.d(TAG, msg);
+                Logger.saveLog(this, msg);
                 dao.updateStillEndTime(currentStillTrackingId, null);
                 Log.d(TAG, "STILL merged with last: ID=" + currentStillTrackingId);
                 return;
@@ -331,6 +338,9 @@ public class LocationService extends Service {
         }
         
         try {
+            String msg = "DB Update from startStillTracking: Inserting new still location";
+            Log.d(TAG, msg);
+            Logger.saveLog(this, msg);
             currentStillTrackingId = dao.insertStillLocation(still);
             Log.d(TAG, "STILL started: ID=" + currentStillTrackingId);
         } catch (Exception e) {
@@ -360,13 +370,14 @@ public class LocationService extends Service {
             return;
         }
 
-        Double startLat = still.lat;
-        Double startLng = still.lng;
-        Date startTime = still.startTimeDate;
+        Double startLat = still.lat; Double startLng = still.lng; Date startTime = still.startTimeDate;
 
         if (startLat != null && startLng != null && currentLocation != null) {
             String resolved = checkIfStillIsMovement(startLat, startLng, startTime, endTime, currentLocation.getLatitude(), currentLocation.getLongitude());
             if ("Still".equalsIgnoreCase(resolved)) {
+                String msg = "DB Update from endStillTracking: Ending still location " + id;
+                Log.d(TAG, msg);
+                Logger.saveLog(this, msg);
                 dao.endStillLocation(id, endTime);
             } else {
                 MovementActivity movement = new MovementActivity();
@@ -377,9 +388,15 @@ public class LocationService extends Service {
                 movement.endLng = currentLocation.getLongitude();
                 movement.startTimeDate = startTime;
                 movement.endTimeDate = endTime;
+                String msg = "DB Update from endStillTracking: Replacing still " + id + " with movement " + resolved;
+                Log.d(TAG, msg);
+                Logger.saveLog(this, msg);
                 dao.replaceStillWithMovement(id, movement);
             }
         } else {
+            String msg = "DB Update from endStillTracking: Ending still location " + id + " (no location info)";
+            Log.d(TAG, msg);
+            Logger.saveLog(this, msg);
             dao.endStillLocation(id, endTime);
         }
         currentStillTrackingId = null;
@@ -396,6 +413,9 @@ public class LocationService extends Service {
         movement.startTimeDate = startTime;
         
         try {
+            String msg = "DB Update from startMovementTracking: Inserting movement activity " + movement.activityType;
+            Log.d(TAG, msg);
+            Logger.saveLog(this, msg);
             long id = dao.insertMovementActivity(movement);
             currentMovementTrackingIds.put(activityType, id);
         } catch (Exception ignored) {}
@@ -408,10 +428,46 @@ public class LocationService extends Service {
         
         io.execute(() -> {
             try {
-                dao.endMovementActivity(id, 
-                        currentLocation != null ? currentLocation.getLatitude() : null, 
-                        currentLocation != null ? currentLocation.getLongitude() : null, 
-                        endTime);
+                MovementActivity movement = dao.getMovementActivityById(id);
+                if (movement != null && movement.startLat != null && movement.startLng != null && currentLocation != null) {
+                    String resolved = checkIfStillIsMovement(movement.startLat, movement.startLng, movement.startTimeDate, endTime, currentLocation.getLatitude(), currentLocation.getLongitude());
+                    
+                    if ("Still".equalsIgnoreCase(resolved)) {
+                        // It was actually just noise or staying in place
+                        StillLocation still = new StillLocation();
+                        still.lat = movement.startLat;
+                        still.lng = movement.startLng;
+                        still.startTimeDate = movement.startTimeDate;
+                        still.endTimeDate = endTime;
+                        
+                        Place nearby = findNearbyPlace(still.lat, still.lng);
+                        if (nearby != null) {
+                            still.placeId = String.valueOf(nearby.id);
+                            still.placeName = nearby.name;
+                            still.placeCategory = nearby.category;
+                            still.placeAddress = nearby.address;
+                        }
+                        
+                        String msg = "DB Update from endMovementTracking: Replacing movement " + id + " with still location";
+                        Log.d(TAG, msg);
+                        Logger.saveLog(this, msg);
+                        dao.replaceMovementWithStill(id, still);
+                        Log.d(TAG, "Movement " + id + " re-classified as STILL");
+                    } else {
+                        String msg = "DB Update from endMovementTracking: Ending movement activity " + id;
+                        Log.d(TAG, msg);
+                        Logger.saveLog(this, msg);
+                        dao.endMovementActivity(id, currentLocation.getLatitude(), currentLocation.getLongitude(), endTime);
+                    }
+                } else {
+                    String msg = "DB Update from endMovementTracking: Ending movement activity " + id + " (no location info)";
+                    Log.d(TAG, msg);
+                    Logger.saveLog(this, msg);
+                    dao.endMovementActivity(id, 
+                            currentLocation != null ? currentLocation.getLatitude() : null, 
+                            currentLocation != null ? currentLocation.getLongitude() : null, 
+                            endTime);
+                }
             } catch (Exception e) {
                 Log.e(TAG, "Error ending movement activity: " + id, e);
             } finally {

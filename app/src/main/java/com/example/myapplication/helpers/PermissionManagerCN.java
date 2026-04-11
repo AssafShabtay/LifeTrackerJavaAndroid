@@ -17,13 +17,16 @@ import androidx.core.content.ContextCompat;
 
 import java.util.ArrayList;
 
-public class PermissionManager {
+
+
+//TODO FIX PERMISISONS DECLINED
+public class PermissionManagerCN {
     private final Activity activity;
     private final SharedPreferences prefs;
     private final String[] requiredPermissions;
     private static final String KEY_PERMISSION_REQUESTED_PREFIX = "requested_";
 
-    public PermissionManager(Activity activity, String[] requiredPermissions) {
+    public PermissionManagerCN(Activity activity, String[] requiredPermissions) {
         this.activity = activity;
         this.requiredPermissions = requiredPermissions;
         this.prefs = activity.getSharedPreferences("permission_prefs", Context.MODE_PRIVATE);
@@ -43,11 +46,14 @@ public class PermissionManager {
         return perms.toArray(new String[0]);
     }
 
+    public boolean hasPermission(String permission) {
+        return ContextCompat.checkSelfPermission(activity, permission) == PackageManager.PERMISSION_GRANTED;
+    }
 
     public boolean hasAllPermissions() {
         if (requiredPermissions == null) return false;
         for (String permission : requiredPermissions) {
-            if (ContextCompat.checkSelfPermission(activity, permission) != PackageManager.PERMISSION_GRANTED) {
+            if (!hasPermission(permission)) {
                 return false;
             }
         }
@@ -67,8 +73,12 @@ public class PermissionManager {
     }
 
     public boolean shouldShowAnyPermissionRationale() {
-        if (requiredPermissions == null) return false;
-        for (String permission : requiredPermissions) {
+        return shouldShowRationale(requiredPermissions);
+    }
+
+    public boolean shouldShowRationale(String[] permissions) {
+        if (permissions == null) return false;
+        for (String permission : permissions) {
             if (ContextCompat.checkSelfPermission(activity, permission) != PackageManager.PERMISSION_GRANTED
                     && shouldShowRequestPermissionRationale(activity, permission)) {
                 return true;
@@ -77,26 +87,30 @@ public class PermissionManager {
         return false;
     }
 
-    private boolean isPermanentlyDenied(String permission) {
+    public boolean isPermanentlyDenied(String permission) {
         boolean denied = ContextCompat.checkSelfPermission(activity, permission) != PackageManager.PERMISSION_GRANTED;
         boolean noRationale = !shouldShowRequestPermissionRationale(activity, permission);
         return denied && wasPermissionRequested(permission) && noRationale;
     }
 
     public boolean isAnyPermissionPermanentlyDenied() {
-        if (requiredPermissions == null) return false;
-        for (String permission : requiredPermissions) {
+        return isAnyPermanentlyDenied(requiredPermissions);
+    }
+
+    public boolean isAnyPermanentlyDenied(String[] permissions) {
+        if (permissions == null) return false;
+        for (String permission : permissions) {
             if (isPermanentlyDenied(permission)) {
                 return true;
             }
         }
         return false;
     }
-//TODO CHANGE TITLES
+
     public void showPermissionRationaleDialog(Runnable onRetry, Runnable onCancel) {
         new AlertDialog.Builder(activity)
-                .setTitle("Permission required")
-                .setMessage("We need these permissions to use the app.")
+                .setTitle("Permissions Required")
+                .setMessage("This app needs location, activity recognition, and notification permissions to track your timeline automatically.")
                 .setPositiveButton("Allow", (d, w) -> onRetry.run())
                 .setNegativeButton("Not now", (d, w) -> onCancel.run())
                 .show();
@@ -104,8 +118,8 @@ public class PermissionManager {
 
     public void showGoToSettingsDialog(Runnable onOpenSettings, Runnable onCancel) {
         new AlertDialog.Builder(activity)
-                .setTitle("Enable permissions in Settings")
-                .setMessage("Permissions were denied. Please enable them in Settings to continue.")
+                .setTitle("Permissions Denied")
+                .setMessage("Some essential permissions were permanently denied. Please enable them in Settings to use the app's tracking features.")
                 .setPositiveButton("Open Settings", (d, w) -> onOpenSettings.run())
                 .setNegativeButton("Cancel", (d, w) -> onCancel.run())
                 .show();
