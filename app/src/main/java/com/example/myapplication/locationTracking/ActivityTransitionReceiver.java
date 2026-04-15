@@ -7,8 +7,10 @@ import android.os.Build;
 import android.util.Log;
 
 import com.example.myapplication.helpers.Logger;
+import com.google.android.gms.location.ActivityTransition;
 import com.google.android.gms.location.ActivityTransitionEvent;
 import com.google.android.gms.location.ActivityTransitionResult;
+import com.google.android.gms.location.DetectedActivity;
 
 public class ActivityTransitionReceiver extends BroadcastReceiver {
 
@@ -29,12 +31,32 @@ public class ActivityTransitionReceiver extends BroadcastReceiver {
             if (result != null) {
                 long receiptTimestampNanos = android.os.SystemClock.elapsedRealtimeNanos();
                 for (ActivityTransitionEvent event : result.getTransitionEvents()) {
-                    String eventMsg = "onReceive: Processing transition for " + event.getActivityType() + " (Type: " + event.getTransitionType() + ")";
+                    String eventMsg = "onReceive: Processing transition for " + getActivityName(event.getActivityType()) + " (" + getTransitionName(event.getTransitionType()) + ")";
                     Log.d(TAG, eventMsg);
                     Logger.saveLog(context, eventMsg);
                     notifyService(context, event.getActivityType(), event.getTransitionType(), receiptTimestampNanos);
                 }
             }
+        }
+    }
+
+    private String getActivityName(int activityType) {
+        switch (activityType) {
+            case DetectedActivity.IN_VEHICLE: return "Driving";
+            case DetectedActivity.ON_BICYCLE: return "Cycling";
+            case DetectedActivity.ON_FOOT: return "On Foot";
+            case DetectedActivity.RUNNING: return "Running";
+            case DetectedActivity.WALKING: return "Walking";
+            case DetectedActivity.STILL: return "Still";
+            default: return "Unknown (" + activityType + ")";
+        }
+    }
+
+    private String getTransitionName(int transitionType) {
+        switch (transitionType) {
+            case ActivityTransition.ACTIVITY_TRANSITION_ENTER: return "ENTER";
+            case ActivityTransition.ACTIVITY_TRANSITION_EXIT: return "EXIT";
+            default: return "UNKNOWN (" + transitionType + ")";
         }
     }
 
