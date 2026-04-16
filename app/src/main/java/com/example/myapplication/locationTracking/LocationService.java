@@ -12,7 +12,9 @@ import android.content.pm.PackageManager;
 import android.content.pm.ServiceInfo;
 import android.location.Location;
 import android.os.Build;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 import android.util.Log;
 
 import androidx.annotation.Nullable;
@@ -28,7 +30,9 @@ import com.example.myapplication.database.Place;
 import com.example.myapplication.database.PlaceDao;
 import com.example.myapplication.database.StillLocation;
 import com.example.myapplication.helpers.Logger;
+import com.google.android.gms.location.ActivityRecognition;
 import com.google.android.gms.location.ActivityTransition;
+import com.google.android.gms.location.ActivityTransitionRequest;
 import com.google.android.gms.location.DetectedActivity;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.Geofence;
@@ -36,6 +40,7 @@ import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.location.Priority;
 import com.google.android.gms.tasks.Tasks;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
@@ -59,19 +64,34 @@ public class LocationService extends Service {
     private GeofenceManager geofenceManager;
 
     private final ExecutorService io = Executors.newSingleThreadExecutor();
+    private final Handler mainHandler = new Handler(Looper.getMainLooper());
+    
+    // Re-register every 30 minutes to stay fresh
+    private static final long RE_REGISTRATION_INTERVAL = TimeUnit.MINUTES.toMillis(30);
+    // Heartbeat interval for basic activity updates
+    private static final long HEARTBEAT_INTERVAL_MS = TimeUnit.MINUTES.toMillis(5);
 
     public static final int NOTIFICATION_ID = 101;
     public static final String CHANNEL_ID = "LocationServiceChannel";
     public static final String TAG = "LocationService";
 
     public static final Set<Integer> MOVEMENT_ACTIVITIES = new HashSet<Integer>() {{
-        // HashSet with all possible movement activities
         add(DetectedActivity.IN_VEHICLE);
         add(DetectedActivity.RUNNING);
         add(DetectedActivity.WALKING);
         add(DetectedActivity.ON_FOOT);
         add(DetectedActivity.ON_BICYCLE);
     }};
+
+    private final Runnable reRegistrationRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if (checkActivityPermission()) {
+                requestTransitionsAndHeartbeat();
+            }
+            mainHandler.postDelayed(this, RE_REGISTRATION_INTERVAL);
+        }
+    };
 
     @Override
     public void onCreate() {
@@ -83,6 +103,7 @@ public class LocationService extends Service {
         geofenceManager = new GeofenceManager(this);
 
         createNotificationChannel();
+        startForegroundSafe();
 
         io.execute(() -> {
             StillLocation activeStill = dao.getActiveStillLocation();
@@ -103,6 +124,74 @@ public class LocationService extends Service {
             syncGeofences();
             updateNotificationSafe();
         });
+
+        // Initial registration and start periodic re-registration
+        mainHandler.post(reRegistrationRunnable);
+    }
+
+    private boolean checkActivityPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            return ContextCompat.checkSelfPermission(this, Manifest.permission.ACTIVITY_RECOGNITION) == PackageManager.PERMISSION_GRANTED;
+        }
+        return true;
+    }
+
+    private void requestTransitionsAndHeartbeat() {
+        String logMsg = "Refreshing activity recognition (Transitions + Heartbeat)";
+        Log.d(TAG, logMsg);
+        Logger.saveLog(this, logMsg);
+
+        // 1. Setup Transition Updates
+        ArrayList<ActivityTransition> transitions = new ArrayList<>();
+        int[] types = new int[]{
+                DetectedActivity.STILL,
+                DetectedActivity.WALKING,
+                DetectedActivity.RUNNING,
+                DetectedActivity.IN_VEHICLE,
+                DetectedActivity.ON_BICYCLE,
+                DetectedActivity.ON_FOOT
+        };
+
+        for (int type : types) {
+            transitions.add(new ActivityTransition.Builder()
+                    .setActivityType(type)
+                    .setActivityTransition(ActivityTransition.ACTIVITY_TRANSITION_ENTER)
+                    .build());
+            transitions.add(new ActivityTransition.Builder()
+                    .setActivityType(type)
+                    .setActivityTransition(ActivityTransition.ACTIVITY_TRANSITION_EXIT)
+                    .build());
+        }
+
+        ActivityTransitionRequest request = new ActivityTransitionRequest(transitions);
+        Intent transitionIntent = new Intent(this, ActivityTransitionReceiver.class);
+        
+        int flags = PendingIntent.FLAG_UPDATE_CURRENT;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            flags |= PendingIntent.FLAG_MUTABLE;
+        }
+        
+        PendingIntent transitionPendingIntent = PendingIntent.getBroadcast(this, 1, transitionIntent, flags);
+
+        try {
+            // Request transitions
+            ActivityRecognition.getClient(this)
+                    .requestActivityTransitionUpdates(request, transitionPendingIntent)
+                    .addOnSuccessListener(unused -> Log.d(TAG, "Transitions refreshed successfully"))
+                    .addOnFailureListener(e -> Logger.saveLog(this, "Transitions refresh failed: " + e.getMessage()));
+
+            // 2. Request slow regular updates as a "heartbeat" to keep the engine awake
+            // We use the same receiver but different intent action if needed, 
+            // but the transition receiver is specifically for transitions.
+            // For simple activity updates, the system sends an intent with DetectedActivity list.
+            ActivityRecognition.getClient(this)
+                    .requestActivityUpdates(HEARTBEAT_INTERVAL_MS, transitionPendingIntent)
+                    .addOnSuccessListener(unused -> Log.d(TAG, "Activity heartbeat active"))
+                    .addOnFailureListener(e -> Log.e(TAG, "Heartbeat failure", e));
+
+        } catch (SecurityException e) {
+            Log.e(TAG, "Missing permission for activity recognition", e);
+        }
     }
 
     private void syncGeofences() {
@@ -128,6 +217,7 @@ public class LocationService extends Service {
     @Override
     public void onDestroy() {
         super.onDestroy();
+        mainHandler.removeCallbacks(reRegistrationRunnable);
         io.shutdownNow();
     }
 
@@ -305,11 +395,10 @@ public class LocationService extends Service {
         if (currentStillTrackingId != null) return;
         Location currentLocation = getLocationOnceBlocking();
         
-        // Merge with last still if close enough
         StillLocation lastStill = dao.getLastCompletedStillLocation();
         if (lastStill != null && lastStill.lat != null && lastStill.lng != null && currentLocation != null) {
             float distance = distanceInMeters(currentLocation.getLatitude(), currentLocation.getLongitude(), lastStill.lat, lastStill.lng);
-            if (distance < 100f) { // 100 meter threshold for merging
+            if (distance < 100f) {
                 currentStillTrackingId = lastStill.id;
                 String msg = "DB Update from startStillTracking: Merging with last still " + currentStillTrackingId;
                 Log.d(TAG, msg);
@@ -433,7 +522,6 @@ public class LocationService extends Service {
                     String resolved = checkIfStillIsMovement(movement.startLat, movement.startLng, movement.startTimeDate, endTime, currentLocation.getLatitude(), currentLocation.getLongitude());
                     
                     if ("Still".equalsIgnoreCase(resolved)) {
-                        // It was actually just noise or staying in place
                         StillLocation still = new StillLocation();
                         still.lat = movement.startLat;
                         still.lng = movement.startLng;
