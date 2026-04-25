@@ -45,7 +45,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Home"
-            app:chipIcon="@android:drawable/ic_menu_mylocation" />
+            app:chipIcon="@drawable/ic_home" />
 
         <com.google.android.material.chip.Chip
             android:id="@+id/chipWork"
@@ -53,7 +53,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Work"
-            app:chipIcon="@android:drawable/ic_menu_myplaces" />
+            app:chipIcon="@drawable/ic_work" />
 
         <com.google.android.material.chip.Chip
             android:id="@+id/chipGym"
@@ -61,7 +61,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Gym"
-            app:chipIcon="@android:drawable/ic_lock_power_off" />
+            app:chipIcon="@drawable/ic_gym" />
 
         <com.google.android.material.chip.Chip
             android:id="@+id/chipSchool"
@@ -69,7 +69,23 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="School"
-            app:chipIcon="@android:drawable/ic_menu_today" />
+            app:chipIcon="@drawable/ic_school" />
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipRestaurant"
+            style="@style/Widget.Material3.Chip.Suggestion"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Restaurant"
+            app:chipIcon="@drawable/ic_restaurant" />
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipCafe"
+            style="@style/Widget.Material3.Chip.Suggestion"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Cafe"
+            app:chipIcon="@drawable/ic_coffee" />
 
     </com.google.android.material.chip.ChipGroup>
 

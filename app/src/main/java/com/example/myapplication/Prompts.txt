@@ -1,0 +1,3 @@
+add to the settings fragment those settings options:
+light or dark theme: light or dark or device default
+

@@ -25,9 +25,12 @@ public class TimelineAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
     private static final int TYPE_MOVEMENT = 1;
 
     private final List<TimelineItem> items = new ArrayList<>();
-    private OnItemClickListener listener;
-    private OnItemLongClickListener longClickListener;
-    private OnLabelClickListener labelClickListener;
+    private OnItemClickListener listener; // the action to perform when an item is clicked
+    private OnItemLongClickListener longClickListener; // the action to perform when an item is clicked
+    private OnLabelClickListener labelClickListener; // the action to perform when an item is clicked
+
+
+    // Interface for handling clicks on timeline items
 
     public interface OnItemClickListener {
         void onItemClick(TimelineItem item);
@@ -41,11 +44,13 @@ public class TimelineAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
         void onLabelClick(StillLocation still);
     }
 
+    // functions to set what happens when an item is clicked
+
     public void setOnItemClickListener(OnItemClickListener listener) {
         this.listener = listener;
     }
 
-    public void setOnItemLongClickListener(OnItemLongClickListener longClickListener) {
+    public void setOnItemLongClickListener(OnItemLongClickListener longClickListener) {//TODO REMOVE
         this.longClickListener = longClickListener;
     }
 
@@ -54,13 +59,15 @@ public class TimelineAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
     }
 
     public void submitList(List<TimelineItem> newItems) {
+        // updates the timeline items to the new ones
         items.clear();
         if (newItems != null) items.addAll(newItems);
-        notifyDataSetChanged();
+        notifyDataSetChanged(); // function to refresh ui, which apperantly isnt efficient so TODO
     }
 
     @Override
     public int getItemViewType(int position) {
+        // Return view type based on the class of the item
         if (items.get(position) instanceof StillLocation) {
             return TYPE_STILL;
         } else {
@@ -71,6 +78,7 @@ public class TimelineAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
     @NonNull
     @Override
     public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+        // Inflate the corresponding layout for the view type
         if (viewType == TYPE_STILL) {
             View view = LayoutInflater.from(parent.getContext())
                     .inflate(R.layout.item_still_location, parent, false);
@@ -84,7 +92,12 @@ public class TimelineAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
 
     @Override
     public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
+        // adds the data to view holder
+
+        // Get the item at the current position
         TimelineItem item = items.get(position);
+
+        // Setup click listeners
         holder.itemView.setOnClickListener(v -> {
             if (listener != null) {
                 listener.onItemClick(item);
@@ -99,53 +112,105 @@ public class TimelineAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
             return false;
         });
 
-        if (holder instanceof StillViewHolder) {
-            StillLocation still = (StillLocation) item;
-            StillViewHolder h = (StillViewHolder) holder;
-            
-            String title = still.placeName != null ? still.placeName : "Stationary";
-            h.tvTitle.setText(title);
-            
-            if (still.placeAddress != null) {
-                h.tvCoords.setText(still.placeAddress);
-            } else {
-                h.tvCoords.setText(UiFormatters.decimal(still.lat) + ", " + UiFormatters.decimal(still.lng));
-            }
-            
-            h.tvTimeRange.setText(UiFormatters.timeOnly(still.startTimeDate) + " — " +
-                    UiFormatters.timeOnly(still.endTimeDate));
-            h.tvDuration.setText(UiFormatters.duration(still.startTimeDate, still.endTimeDate));
-            h.indicator.setBackgroundColor(ContextCompat.getColor(h.itemView.getContext(), R.color.activity_still));
 
-            h.btnLabel.setOnClickListener(v -> {
+        if (holder instanceof StillViewHolder) {
+            //if item is still, show still template
+            StillLocation still = (StillLocation) item;
+            StillViewHolder stillHolder = (StillViewHolder) holder;
+
+            String title;
+            if (still.placeName != null) {
+                title = still.placeName;
+            } else {
+                title = "Stationary";
+            }
+
+            // Title
+            stillHolder.itemTitle.setText(title);
+
+            // Coords
+            if (still.placeCoords != null) {//TODO Remove coords
+                stillHolder.itemCoords.setText(still.placeCoords);
+            } else {
+                stillHolder.itemCoords.setText(UiFormatters.decimal(still.lat) + ", " + UiFormatters.decimal(still.lng));
+            }
+
+            // Time Range
+            stillHolder.itemTimeRange.setText(UiFormatters.timeOnly(still.startTimeDate) + " — " +
+                    UiFormatters.timeOnly(still.endTimeDate));
+
+            // Item Duration
+            stillHolder.itemDuration.setText(UiFormatters.duration(still.startTimeDate, still.endTimeDate));
+
+            // Color TODO CORRECT COLORS
+            stillHolder.color.setBackgroundColor(ContextCompat.getColor(stillHolder.itemView.getContext(), R.color.activity_still));
+
+            // Set icon based on activity
+            int iconRes = R.drawable.ic_still;
+            if (still.icon != null) {
+                String icon = still.icon.toLowerCase();
+                if (icon.contains("home")) iconRes = R.drawable.ic_home;
+                else if (icon.contains("work")) iconRes = R.drawable.ic_work;
+                else if (icon.contains("gym")) iconRes = R.drawable.ic_gym;
+                else if (icon.contains("school")) iconRes = R.drawable.ic_school;
+                else if (icon.contains("restaurant")) iconRes = R.drawable.ic_restaurant;
+                else if (icon.contains("cafe") || icon.contains("coffee")) iconRes = R.drawable.ic_coffee;
+            }
+            stillHolder.itemIcon.setImageResource(iconRes);
+
+            // Label place button
+            stillHolder.btnLabel.setOnClickListener(v -> {
                 if (labelClickListener != null) {
                     labelClickListener.onLabelClick(still);
                 }
             });
-            
-            // Hide the button if it's already labeled
+
+            // change the button if it's already labeled
             if (still.placeName != null && !still.placeName.equals("Stationary")) {
-                h.btnLabel.setText("Edit Label");
+                stillHolder.btnLabel.setText("Edit Label");
             } else {
-                h.btnLabel.setText("Label Place");
+                stillHolder.btnLabel.setText("Label Place");
             }
+
         } else {
+            // If item is movement, show movement template
             MovementActivity movement = (MovementActivity) item;
-            MovementViewHolder h = (MovementViewHolder) holder;
-            String type = movement.activityType != null ? movement.activityType : "Movement";
-            h.tvTitle.setText(type);
-            h.tvTimeRange.setText(UiFormatters.timeOnly(movement.startTimeDate) + " — " +
+            MovementViewHolder movementHolder = (MovementViewHolder) holder;
+
+            String type;
+            if (movement.activityType != null) {
+                type = movement.activityType;
+            } else {
+                type = "Movement";
+            }
+
+            // Title
+            movementHolder.itemTitle.setText(type);
+
+            // Time Range
+            movementHolder.itemTimeRange.setText(UiFormatters.timeOnly(movement.startTimeDate) + " — " +
                     UiFormatters.timeOnly(movement.endTimeDate));
-            h.tvDuration.setText(UiFormatters.duration(movement.startTimeDate, movement.endTimeDate));
-            h.tvSpeed.setVisibility(View.GONE);
-            
+
+            // Item Duration
+            movementHolder.itemDuration.setText(UiFormatters.duration(movement.startTimeDate, movement.endTimeDate));
+
+            movementHolder.itemSpeed.setVisibility(View.GONE);//TODO WHY IS THAT HERE
+
+            // Set icon based on activity TODO CORRECT COLORS
             int colorRes = R.color.activity_walking;
+            int iconRes = R.drawable.ic_walk;
             if (type.equalsIgnoreCase("Driving") || type.equalsIgnoreCase("IN_VEHICLE")) {
                 colorRes = R.color.activity_vehicle;
+                iconRes = R.drawable.ic_car;
             } else if (type.equalsIgnoreCase("WALKING") || type.equalsIgnoreCase("ON_FOOT") || type.equalsIgnoreCase("RUNNING") || type.equalsIgnoreCase("Walking")) {
                 colorRes = R.color.activity_walking;
+                iconRes = R.drawable.ic_walk;
+            } else if (type.equalsIgnoreCase("Cycling") || type.equalsIgnoreCase("ON_BICYCLE")) {
+                colorRes = R.color.activity_walking;
+                iconRes = R.drawable.ic_bike;
             }
-            h.indicator.setBackgroundColor(ContextCompat.getColor(h.itemView.getContext(), colorRes));
+            movementHolder.color.setBackgroundColor(ContextCompat.getColor(movementHolder.itemView.getContext(), colorRes));
+            movementHolder.itemIcon.setImageResource(iconRes);
         }
     }
 
@@ -155,32 +220,36 @@ public class TimelineAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
     }
 
     static class StillViewHolder extends RecyclerView.ViewHolder {
-        TextView tvTitle, tvCoords, tvTimeRange, tvDuration;
-        View indicator;
+        TextView itemTitle, itemCoords, itemTimeRange, itemDuration;
+        View color;
+        android.widget.ImageView itemIcon;
         Button btnLabel;
 
         StillViewHolder(@NonNull View itemView) {
             super(itemView);
-            tvTitle = itemView.findViewById(R.id.tvTitle);
-            tvCoords = itemView.findViewById(R.id.tvCoords);
-            tvTimeRange = itemView.findViewById(R.id.tvTimeRange);
-            tvDuration = itemView.findViewById(R.id.tvDuration);
-            indicator = itemView.findViewById(R.id.indicator);
+            itemTitle = itemView.findViewById(R.id.itemTitle);
+            itemCoords = itemView.findViewById(R.id.itemCoords);
+            itemTimeRange = itemView.findViewById(R.id.itemTimeRange);
+            itemDuration = itemView.findViewById(R.id.itemDuration);
+            color = itemView.findViewById(R.id.color);
+            itemIcon = itemView.findViewById(R.id.itemIcon);
             btnLabel = itemView.findViewById(R.id.btnLabel);
         }
     }
 
     static class MovementViewHolder extends RecyclerView.ViewHolder {
-        TextView tvTitle, tvSpeed, tvTimeRange, tvDuration;
-        View indicator;
+        TextView itemTitle, itemSpeed, itemTimeRange, itemDuration;
+        View color;
+        android.widget.ImageView itemIcon;
 
         MovementViewHolder(@NonNull View itemView) {
             super(itemView);
-            tvTitle = itemView.findViewById(R.id.tvTitle);
-            tvSpeed = itemView.findViewById(R.id.tvSpeed);
-            tvTimeRange = itemView.findViewById(R.id.tvTimeRange);
-            tvDuration = itemView.findViewById(R.id.tvDuration);
-            indicator = itemView.findViewById(R.id.indicator);
+            itemTitle = itemView.findViewById(R.id.itemTitle);
+            itemSpeed = itemView.findViewById(R.id.itemSpeed);
+            itemTimeRange = itemView.findViewById(R.id.itemTimeRange);
+            itemDuration = itemView.findViewById(R.id.itemDuration);
+            color = itemView.findViewById(R.id.color);
+            itemIcon = itemView.findViewById(R.id.itemIcon);
         }
     }
 }

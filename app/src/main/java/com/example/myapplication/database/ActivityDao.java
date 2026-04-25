@@ -27,6 +27,9 @@ public interface ActivityDao {
     @Query("UPDATE still_locations SET endTimeDate = :endTimeDate WHERE id = :id")
     void updateStillEndTime(long id, Date endTimeDate);
 
+    @Query("UPDATE still_locations SET startTimeDate = :startTimeDate WHERE id = :id")
+    void updateStillStartTime(long id, Date startTimeDate);
+
     @Query("SELECT * FROM still_locations WHERE id = :id LIMIT 1")
     StillLocation getStillLocationById(long id);
 
@@ -54,6 +57,9 @@ public interface ActivityDao {
     @Query("SELECT * FROM movement_activities WHERE endTimeDate IS NULL")
     List<MovementActivity> getActiveMovementActivities();
 
+    @Query("SELECT * FROM still_locations")
+    List<StillLocation> getAllStillLocations();
+
     @Query("SELECT * FROM still_locations WHERE startTimeDate <= :end AND (endTimeDate IS NULL OR endTimeDate >= :start)")
     List<StillLocation> getStillForRange(Date start, Date end);
 
@@ -70,5 +76,17 @@ public interface ActivityDao {
     default void replaceMovementWithStill(long id, StillLocation still) {
         deleteMovementActivity(id);
         insertStillLocation(still);
+    }
+
+    @Transaction
+    default void deleteMovementAndExtendStill(long movementId, long stillId, Date newEndTime) {
+        deleteMovementActivity(movementId);
+        updateStillEndTime(stillId, newEndTime);
+    }
+
+    @Transaction
+    default void deleteMovementAndPrependToStill(long movementId, long stillId, Date newStartTime) {
+        deleteMovementActivity(movementId);
+        updateStillStartTime(stillId, newStartTime);
     }
 }

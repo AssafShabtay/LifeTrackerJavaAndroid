@@ -74,9 +74,7 @@ public class PlaceLabelSheet extends BottomSheetDialogFragment {
         chipGroup.setOnCheckedStateChangeListener((group, checkedIds) -> {
             if (!checkedIds.isEmpty()) {
                 Chip chip = view.findViewById(checkedIds.get(0));
-                if (etCustom.getText().toString().trim().isEmpty()) {
-                    etCustom.setText(chip.getText());
-                }
+                etCustom.setText(chip.getText());
             }
         });
     }

@@ -284,17 +284,30 @@ public class HomeFragment extends Fragment implements MainActivity.OnPermissions
             
             long placeId = placeDao.insertPlace(place);
             
-            // 2. Update the StillLocation record
-            still.placeId = String.valueOf(placeId);
-            still.placeName = name;
-            still.placeCategory = category;
-            dao.updateStillLocation(still);
+            // 2. Update ALL StillLocation records within this geofence
+            List<StillLocation> allStills = dao.getAllStillLocations();
+            int updatedCount = 0;
+            float[] results = new float[1];
+            
+            for (StillLocation s : allStills) {
+                if (s.lat != null && s.lng != null) {
+                    android.location.Location.distanceBetween(s.lat, s.lng, place.lat, place.lng, results);
+                    if (results[0] <= place.radius) {
+                        s.placeId = String.valueOf(placeId);
+                        s.placeName = name;
+                        s.icon = category;
+                        dao.updateStillLocation(s);
+                        updatedCount++;
+                    }
+                }
+            }
             
             // 3. Register the geofence
             geofenceManager.addGeofence("place_" + placeId, place.lat, place.lng, place.radius);
             
+            int finalUpdatedCount = updatedCount;
             requireActivity().runOnUiThread(() -> {
-                Toast.makeText(requireContext(), "Saved " + name + " and added geofence", Toast.LENGTH_SHORT).show();
+                Toast.makeText(requireContext(), "Saved " + name + " and updated " + finalUpdatedCount + " locations", Toast.LENGTH_SHORT).show();
                 loadTimelineData(calendarManager.getSelectedDate());
                 
                 // Also notify the service to refresh its geofence list if it's running
@@ -423,6 +436,14 @@ public class HomeFragment extends Fragment implements MainActivity.OnPermissions
                 flags
         );
 
+        // Also request regular activity updates for a quick initial detection
+        PendingIntent activityUpdatePendingIntent = PendingIntent.getBroadcast(//TODO THIS CHUNK MIGHT BE USELESS
+                requireContext(),
+                1, // Different request code
+                intent,
+                flags
+        );
+
         try {
             ActivityRecognition.getClient(requireContext())
                     .requestActivityTransitionUpdates(request, pendingIntent)
@@ -434,6 +455,13 @@ public class HomeFragment extends Fragment implements MainActivity.OnPermissions
                         transitionsRegistered = false;
                         Log.e(TAG, "Registration failed", e);
                     });
+            
+            // Initial quick detection to avoid "idle" state
+            ActivityRecognition.getClient(requireContext()) //TODO THIS CHUNK MIGHT BE USELESS
+                    .requestActivityUpdates(5000, activityUpdatePendingIntent)
+                    .addOnSuccessListener(unused -> Log.d(TAG, "Initial activity updates requested"))
+                    .addOnFailureListener(e -> Log.e(TAG, "Failed to request initial activity updates", e));
+            
         } catch (SecurityException e) {
             transitionsRegistered = false;
             Log.e(TAG, "missing permission for transitions", e);
