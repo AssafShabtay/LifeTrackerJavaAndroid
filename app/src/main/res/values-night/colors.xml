@@ -1,9 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Surface/Background for Dark Mode -->
-    <color name="background">#1A1C1E</color>
-    <color name="surface">#1A1C1E</color>
-    <color name="on_surface">#E2E2E6</color>
-    <color name="on_surface_variant">#C4C6D0</color>
-    <color name="outline">#44474E</color>
+    <!-- Modern Dark Palette -->
+    <color name="primary">#AECBFA</color> <!-- Lighter Blue for Dark Mode -->
+    <color name="on_primary">#042B5E</color>
+    <color name="primary_container">#174EA6</color>
+    <color name="on_primary_container">#D2E3FC</color>
+
+    <color name="secondary">#9AA0A6</color>
+    <color name="on_secondary">#202124</color>
+
+    <color name="background">#1F1F1F</color>
+    <color name="surface">#2B2B2B</color>
+    <color name="on_surface">#E3E3E3</color>
+    <color name="on_surface_variant">#C4C7C5</color>
+    <color name="outline">#8E918F</color>
+    <color name="outline_variant">#444746</color>
+
+    <!-- Activity Colors for Dark Mode (Slightly desaturated) -->
+    <color name="activity_still">#81C995</color>
+    <color name="activity_walking">#8AB4F8</color>
+    <color name="activity_vehicle">#D7AEFB</color>
+    <color name="activity_running">#F28B82</color>
+    <color name="activity_cycling">#FDE293</color>
+
+    <color name="timeline_line">#3C4043</color>
 </resources>

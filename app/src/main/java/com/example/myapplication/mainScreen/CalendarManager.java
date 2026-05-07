@@ -307,47 +307,40 @@ public class CalendarManager {
         cal.set(Calendar.MINUTE, 0);
         cal.set(Calendar.SECOND, 0);
         cal.set(Calendar.MILLISECOND, 0);
-        Date startOfDay = cal.getTime();
+        long startOfDayMillis = cal.getTimeInMillis();
 
         cal.set(Calendar.HOUR_OF_DAY, 23);
         cal.set(Calendar.MINUTE, 59);
         cal.set(Calendar.SECOND, 59);
         cal.set(Calendar.MILLISECOND, 999);
-        Date endOfDay = cal.getTime();
+        long endOfDayMillis = cal.getTimeInMillis();
 
-        List<StillLocation> stills = dao.getStillForRange(startOfDay, endOfDay);
-        List<MovementActivity> movements = dao.getMovementForRange(startOfDay, endOfDay);
-
-        long totalStillMillis = 0;
-        for (StillLocation still : stills) {
-            totalStillMillis += calculateDurationInRange(still.startTimeDate, still.endTimeDate, startOfDay, endOfDay);
-        }
-
-        Map<String, Long> movementDurations = new HashMap<>();
-        for (MovementActivity movement : movements) {
-            String type = movement.activityType != null ? movement.activityType : "Unknown";
-            long duration = calculateDurationInRange(movement.startTimeDate, movement.endTimeDate, startOfDay, endOfDay);
-            movementDurations.put(type, movementDurations.getOrDefault(type, 0L) + duration);
-        }
+        List<StillLocation> stills = dao.getStillForRange(new Date(startOfDayMillis), new Date(endOfDayMillis));
+        List<MovementActivity> movements = dao.getMovementForRange(new Date(startOfDayMillis), new Date(endOfDayMillis));
 
         List<MiniPieChartView.Slice> slices = new ArrayList<>();
-        
-        if (totalStillMillis > 0) {
-            slices.add(new MiniPieChartView.Slice(totalStillMillis / 60000f, ContextCompat.getColor(context, R.color.activity_still)));
-        }
-        
-        for (Map.Entry<String, Long> entry : movementDurations.entrySet()) {
-            if (entry.getValue() > 0) {
-                slices.add(new MiniPieChartView.Slice(entry.getValue() / 60000f, getColorForActivity(entry.getKey())));
+
+        for (StillLocation still : stills) {
+            long s = Math.max(still.startTimeDate.getTime(), startOfDayMillis);
+            long e = (still.endTimeDate == null) ? Math.min(System.currentTimeMillis(), endOfDayMillis) : Math.min(still.endTimeDate.getTime(), endOfDayMillis);
+            
+            if (e > s) {
+                float startTimeMinutes = (s - startOfDayMillis) / 60000f;
+                float durationMinutes = (e - s) / 60000f;
+                slices.add(new MiniPieChartView.Slice(startTimeMinutes, durationMinutes, ContextCompat.getColor(context, R.color.activity_still)));
             }
         }
 
-        float totalTrackedMillis = totalStillMillis;
-        for (Long d : movementDurations.values()) totalTrackedMillis += d;
-        
-        float remainingMinutes = Math.max(0, 1440f - (totalTrackedMillis / 60000f));
-        if (remainingMinutes > 0) {
-            slices.add(new MiniPieChartView.Slice(remainingMinutes, Color.parseColor("#EEEEEE")));
+        for (MovementActivity movement : movements) {
+            if (movement.startTimeDate == null) continue;
+            long s = Math.max(movement.startTimeDate.getTime(), startOfDayMillis);
+            long e = (movement.endTimeDate == null) ? Math.min(System.currentTimeMillis(), endOfDayMillis) : Math.min(movement.endTimeDate.getTime(), endOfDayMillis);
+            
+            if (e > s) {
+                float startTimeMinutes = (s - startOfDayMillis) / 60000f;
+                float durationMinutes = (e - s) / 60000f;
+                slices.add(new MiniPieChartView.Slice(startTimeMinutes, durationMinutes, getColorForActivity(movement.activityType)));
+            }
         }
 
         return slices;

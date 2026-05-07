@@ -18,8 +18,10 @@ public class StillLocation implements TimelineItem {
     public String wasSupposedToBeActivity;
     public String placeId;
     public String placeName;
+    public String category;
     public String icon;
     public String placeCoords;
+    public Double confidence;
 
     @Override
     public Date getStartTime() {

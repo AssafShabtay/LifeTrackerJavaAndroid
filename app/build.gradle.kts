@@ -3,8 +3,12 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.ksp)
     alias(libs.plugins.compose.compiler)
+    id("com.google.android.libraries.mapsplatform.secrets-gradle-plugin")
 }
-
+secrets {
+    propertiesFileName = "secrets.properties"
+    defaultPropertiesFileName = "local.defaults.properties"
+}
 android {
     namespace = "com.example.myapplication"
     compileSdk = 36
@@ -18,7 +22,6 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        manifestPlaceholders["MAPS_API_KEY"] = project.findProperty("MAPS_API_KEY") as String? ?: ""
     }
 
     buildTypes {
@@ -41,12 +44,14 @@ android {
         kotlinCompilerExtensionVersion = "1.5.3"
     }
     buildFeatures {
+        buildConfig = true
         compose = true
         viewBinding = true
     }
 }
 
 dependencies {
+
     implementation (libs.ui)
     implementation(libs.androidx.compose.material3)
     implementation (libs.androidx.runtime)
@@ -58,7 +63,7 @@ dependencies {
     implementation(libs.material)
     implementation(libs.play.services.location)
     implementation(libs.play.services.maps)
-
+    implementation(libs.places)
     // Added for LiveData observation in Compose
     implementation("androidx.compose.runtime:runtime-livedata:1.7.8")
 

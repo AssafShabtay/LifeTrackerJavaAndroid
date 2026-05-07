@@ -2,6 +2,7 @@ package com.example.myapplication.mainScreen;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
@@ -11,7 +12,10 @@ import androidx.fragment.app.Fragment;
 import androidx.core.content.ContextCompat;
 
 import com.example.myapplication.R;
+import com.example.myapplication.database.ActivityDao;
+import com.example.myapplication.database.ActivityDatabase;
 import com.example.myapplication.database.MovementActivity;
+import com.example.myapplication.database.RoutePoint;
 import com.example.myapplication.database.StillLocation;
 import com.example.myapplication.database.TimelineItem;
 import com.google.android.gms.maps.CameraUpdateFactory;
@@ -21,6 +25,12 @@ import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.maps.model.PolylineOptions;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class MapManager implements OnMapReadyCallback {
     private static final String TAG = "MapManager";
@@ -28,6 +38,7 @@ public class MapManager implements OnMapReadyCallback {
     private final int fragmentId;
     private GoogleMap mMap;
     private View mapFragmentView;
+    private final ExecutorService io = Executors.newSingleThreadExecutor();
 
     public MapManager(Fragment fragment, int fragmentId) {
         this.fragment = fragment;
@@ -115,33 +126,64 @@ public class MapManager implements OnMapReadyCallback {
         } else if (item instanceof MovementActivity) {
             // Handle movement activities, add start and end markers and fit both in view
             MovementActivity movement = (MovementActivity) item;
-            LatLngBounds.Builder builder = new LatLngBounds.Builder();
-            boolean hasPoints = false;
+            
+            io.execute(() -> {
+                ActivityDao dao = ActivityDatabase.getDatabase(fragment.requireContext()).activityDao();
+                List<RoutePoint> points = dao.getRoutePointsForMovement(movement.id);
+                
+                fragment.requireActivity().runOnUiThread(() -> {
+                    drawMovementOnMap(movement, points);
+                });
+            });
+        }
+    }
 
-            // Add marker for start position
-            if (movement.startLat != null && movement.startLng != null) {
-                LatLng start = new LatLng(movement.startLat, movement.startLng);
-                mMap.addMarker(new MarkerOptions().position(start).title("Start"));
-                builder.include(start);
+    private void drawMovementOnMap(MovementActivity movement, List<RoutePoint> routePoints) {
+        if (mMap == null) return;
+        
+        LatLngBounds.Builder builder = new LatLngBounds.Builder();
+        boolean hasPoints = false;
+
+        // Add marker for start position
+        if (movement.startLat != null && movement.startLng != null) {
+            LatLng start = new LatLng(movement.startLat, movement.startLng);
+            mMap.addMarker(new MarkerOptions().position(start).title("Start"));
+            builder.include(start);
+            hasPoints = true;
+        }
+
+        // Draw Polyline for route points
+        if (routePoints != null && !routePoints.isEmpty()) {
+            PolylineOptions polylineOptions = new PolylineOptions()
+                    .color(Color.BLUE)
+                    .width(10)
+                    .geodesic(true);
+            
+            for (RoutePoint p : routePoints) {
+                LatLng latLng = new LatLng(p.lat, p.lng);
+                polylineOptions.add(latLng);
+                builder.include(latLng);
                 hasPoints = true;
             }
-            // Add marker for end position=
-            if (movement.endLat != null && movement.endLng != null) {
-                LatLng end = new LatLng(movement.endLat, movement.endLng);
-                mMap.addMarker(new MarkerOptions().position(end).title("End"));
-                builder.include(end);
-                hasPoints = true;
-            }
+            mMap.addPolyline(polylineOptions);
+        }
 
-            if (hasPoints) {
-                try {
-                    // Fit the camera to include both markers
-                    mMap.animateCamera(CameraUpdateFactory.newLatLngBounds(builder.build(), 100));
-                } catch (IllegalStateException e) {
-                    // Fallback: If bounds can't be built (e.g., view not ready or single point), zoom to start TODO CHANGE TO CURRENT POSTION
-                    if (movement.startLat != null) {
-                        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(movement.startLat, movement.startLng), 15f));
-                    }
+        // Add marker for end position
+        if (movement.endLat != null && movement.endLng != null) {
+            LatLng end = new LatLng(movement.endLat, movement.endLng);
+            mMap.addMarker(new MarkerOptions().position(end).title("End"));
+            builder.include(end);
+            hasPoints = true;
+        }
+
+        if (hasPoints) {
+            try {
+                // Fit the camera to include all points
+                mMap.animateCamera(CameraUpdateFactory.newLatLngBounds(builder.build(), 100));
+            } catch (IllegalStateException e) {
+                // Fallback: If bounds can't be built (e.g., view not ready or single point), zoom to start
+                if (movement.startLat != null) {
+                    mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(movement.startLat, movement.startLng), 15f));
                 }
             }
         }

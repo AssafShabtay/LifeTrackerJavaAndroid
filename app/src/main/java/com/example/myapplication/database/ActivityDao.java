@@ -51,11 +51,17 @@ public interface ActivityDao {
     @Query("UPDATE movement_activities SET endTimeDate = :endTimeDate WHERE id = :id")
     void updateMovementEndTime(long id, Date endTimeDate);
 
+    @Query("UPDATE movement_activities SET endTimeDate = NULL WHERE id = :id")
+    void resumeMovementActivity(long id);
+
     @Query("SELECT * FROM movement_activities WHERE id = :id LIMIT 1")
     MovementActivity getMovementActivityById(long id);
 
     @Query("SELECT * FROM movement_activities WHERE endTimeDate IS NULL")
     List<MovementActivity> getActiveMovementActivities();
+
+    @Query("SELECT * FROM movement_activities WHERE activityType = :type AND endTimeDate IS NOT NULL ORDER BY endTimeDate DESC LIMIT 1")
+    MovementActivity getLastCompletedMovementActivity(String type);
 
     @Query("SELECT * FROM still_locations")
     List<StillLocation> getAllStillLocations();
@@ -65,6 +71,12 @@ public interface ActivityDao {
 
     @Query("SELECT * FROM movement_activities WHERE startTimeDate <= :end AND (endTimeDate IS NULL OR endTimeDate >= :start)")
     List<MovementActivity> getMovementForRange(Date start, Date end);
+
+    @Insert
+    void insertRoutePoint(RoutePoint point);
+
+    @Query("SELECT * FROM route_points WHERE movementActivityId = :movementId ORDER BY timestamp ASC")
+    List<RoutePoint> getRoutePointsForMovement(long movementId);
 
     @Transaction
     default void replaceStillWithMovement(long id, MovementActivity movement) {

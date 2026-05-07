@@ -7,10 +7,12 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.content.pm.ServiceInfo;
 import android.location.Location;
 import android.os.Build;
 import android.os.IBinder;
+import android.os.Looper;
 import android.util.Log;
 
 import androidx.annotation.Nullable;
@@ -23,16 +25,28 @@ import com.example.myapplication.database.ActivityDatabase;
 import com.example.myapplication.database.MovementActivity;
 import com.example.myapplication.database.Place;
 import com.example.myapplication.database.PlaceDao;
+import com.example.myapplication.database.RoutePoint;
 import com.example.myapplication.database.StillLocation;
 import com.example.myapplication.helpers.Logger;
 import com.google.android.gms.location.ActivityTransition;
 import com.google.android.gms.location.DetectedActivity;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.Geofence;
+import com.google.android.gms.location.LocationCallback;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.location.Priority;
 import com.google.android.gms.tasks.Tasks;
+import com.google.android.libraries.places.api.Places;
+import com.google.android.libraries.places.api.model.PlaceLikelihood;
+import com.google.android.libraries.places.api.net.FindCurrentPlaceRequest;
+import com.google.android.libraries.places.api.net.FindCurrentPlaceResponse;
+import com.google.android.libraries.places.api.net.PlacesClient;
+import com.google.android.libraries.places.api.model.Place.Field;
 
+
+import java.util.Arrays;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
@@ -42,18 +56,21 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import com.example.myapplication.BuildConfig;
 
 public class LocationService extends Service {
 
-    private static volatile int currentActivity = DetectedActivity.UNKNOWN;
+    private static volatile int currentActivityType = DetectedActivity.UNKNOWN;
     private static volatile Long currentStillTrackingId = null;
-    private static final Map<Integer, Long> currentMovementTrackingIds = new ConcurrentHashMap<>();
+    private static final Map<Integer, Long> currentMovementTrackingIds = new ConcurrentHashMap<>(); // is list because of the possibly of that android thinks two activities are ongoing
     private static volatile boolean isInitializing = false;
 
     private FusedLocationProviderClient fusedLocationClient;
+    private LocationCallback routeLocationCallback;
     private ActivityDao dao;
     private PlaceDao placeDao;
     private GeofenceManager geofenceManager;
+    private PlacesClient placesClient;
 
     private final ExecutorService io = Executors.newSingleThreadExecutor();
 
@@ -61,7 +78,7 @@ public class LocationService extends Service {
     public static final String CHANNEL_ID = "LocationServiceChannel";
     public static final String TAG = "LocationService";
 
-    public static final Set<Integer> MOVEMENT_ACTIVITIES = new HashSet<Integer>() {{
+    public static final Set<Integer> MOVEMENT_ACTIVITIES = new HashSet<>() {{
         // HashSet with all possible movement activities
         add(DetectedActivity.IN_VEHICLE);
         add(DetectedActivity.RUNNING);
@@ -72,6 +89,7 @@ public class LocationService extends Service {
 
     @Override
     public void onCreate() {
+
         super.onCreate();
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
         ActivityDatabase db = ActivityDatabase.getDatabase(getApplicationContext());
@@ -79,22 +97,35 @@ public class LocationService extends Service {
         placeDao = db.placeDao();
         geofenceManager = new GeofenceManager(this);
 
+        if (!Places.isInitialized()) {
+            Places.initialize(getApplicationContext(), BuildConfig.GOOGLE_API_KEY); //TODO check wheter the api is working
+        }
+        placesClient = Places.createClient(this);
+
         createNotificationChannel();
 
-        io.execute(() -> {
-            StillLocation activeStill = dao.getActiveStillLocation();
+        io.execute(() -> { // Recover previous activity state after restart in background thread
+
+            // Recover still activity
+            StillLocation activeStill = dao.getActiveStillLocation(); // check if there was an active still
             if (activeStill != null) {
+                // Restore the previous active still
                 currentStillTrackingId = activeStill.id;
-                currentActivity = DetectedActivity.STILL;
+                currentActivityType = DetectedActivity.STILL;
                 Log.d(TAG, "Recovered active still tracking ID: " + currentStillTrackingId);
             }
 
-            for (MovementActivity m : dao.getActiveMovementActivities()) {
+            // Recover active movement activities
+            for (MovementActivity m : dao.getActiveMovementActivities()) { //TODO COMEBACK TO ENSURE YOU UNDERSTAND
                 int type = getActivityTypeFromName(m.activityType);
                 if (type != DetectedActivity.UNKNOWN) {
                     currentMovementTrackingIds.put(type, m.id);
-                    currentActivity = type;
+                    currentActivityType = type;
                 }
+            }
+
+            if (!currentMovementTrackingIds.isEmpty()) { // if there are active movement activities, start route updates
+                startRouteUpdates();
             }
 
             syncGeofences();
@@ -103,49 +134,45 @@ public class LocationService extends Service {
     }
 
     private void syncGeofences() {
+        // initializing all geofence points, and in geofence manager android watches out if the boundaries are crossed
         List<Place> places = placeDao.getAllPlacesSync();
         for (Place p : places) {
             geofenceManager.addGeofence("place_" + p.id, p.lat, p.lng, p.radius > 0 ? p.radius : 100f);
         }
     }
 
-    private int getActivityTypeFromName(String name) {
-        if (name == null) return DetectedActivity.UNKNOWN;
-        switch (name) {
-            case "Driving": return DetectedActivity.IN_VEHICLE;
-            case "Cycling": return DetectedActivity.ON_BICYCLE;
-            case "Running": return DetectedActivity.RUNNING;
-            case "Walking": return DetectedActivity.WALKING;
-            case "On Foot": return DetectedActivity.ON_FOOT;
-            case "Still": return DetectedActivity.STILL;
-            default: return DetectedActivity.UNKNOWN;
-        }
-    }
 
     @Override
     public void onDestroy() {
         super.onDestroy();
+        stopRouteUpdates();
         io.shutdownNow();
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        // Handles when intents are sent( activity is recognized or geofence is triggered)
         if (intent != null) {
             String action = intent.getAction();
-            if (ActivityTransitionReceiver.ACTION_ACTIVITY_UPDATE.equals(action)) {
+            if (ActivityTransitionReceiver.ACTION_ACTIVITY_UPDATE.equals(action)) { // checks if the intent came from activity recognition
+                // Extracts the activity data
                 int activityType = intent.getIntExtra(ActivityTransitionReceiver.EXTRA_ACTIVITY_TYPE, DetectedActivity.UNKNOWN);
                 int transitionType = intent.getIntExtra(ActivityTransitionReceiver.EXTRA_TRANSITION_TYPE, -1);
-                long timestampNanos = intent.getLongExtra(ActivityTransitionReceiver.EXTRA_TIMESTAMP_NANOS, System.nanoTime());
+                long timestampNanos = intent.getLongExtra(ActivityTransitionReceiver.EXTRA_TIMESTAMP_NANOS, System.nanoTime()); // in nanoseconds
+
+                // calling handleActivityUpdate in background
                 io.execute(() -> handleActivityUpdate(activityType, transitionType, timestampNanos));
-            } else if (GeofenceBroadcastReceiver.ACTION_GEOFENCE_UPDATE.equals(action)) {
+            } else if (GeofenceBroadcastReceiver.ACTION_GEOFENCE_UPDATE.equals(action)) { // checks if the intent came from geofence
+                // Extracts the geofence data
                 String geofenceId = intent.getStringExtra(GeofenceBroadcastReceiver.EXTRA_GEOFENCE_ID);
                 int transitionType = intent.getIntExtra(GeofenceBroadcastReceiver.EXTRA_TRANSITION_TYPE, -1);
+                // calling handleGeofenceUpdate in background
                 io.execute(() -> handleGeofenceUpdate(geofenceId, transitionType));
             } else {
-                startForegroundSafe();
+                startForeground();
             }
         } else {
-            startForegroundSafe();
+            startForeground();
         }
         return START_STICKY;
     }
@@ -156,6 +183,7 @@ public class LocationService extends Service {
 
         if (transitionType == Geofence.GEOFENCE_TRANSITION_ENTER || transitionType == Geofence.GEOFENCE_TRANSITION_DWELL) {
             if (geofenceId.startsWith("place_")) {
+                // updates the active still with the geofence data
                 long placeId = Long.parseLong(geofenceId.replace("place_", ""));
                 Place place = placeDao.getPlaceById(placeId);
                 if (place != null) {
@@ -163,24 +191,25 @@ public class LocationService extends Service {
                 }
             }
         } else if (transitionType == Geofence.GEOFENCE_TRANSITION_EXIT) {
+            //  if the user left the geofence, end the still tracking
             if (currentStillTrackingId != null) {
                 StillLocation still = dao.getStillLocationById(currentStillTrackingId);
                 if (still != null && geofenceId.equals("place_" + still.placeId)) {
-                    if (currentActivity != DetectedActivity.STILL) {
-                        endStillTracking(now);
-                    }
+                    endStillTracking(now);
+
                 }
             }
         }
     }
 
     private void updateActiveStillWithPlace(Place place) {
+        //updates the still data to the geofence data
         if (currentStillTrackingId != null) {
             StillLocation still = dao.getStillLocationById(currentStillTrackingId);
             if (still != null) {
                 still.placeId = String.valueOf(place.id);
                 still.placeName = place.name;
-                still.icon = place.category;
+                still.icon = place.category; //TODO FIX THE NAMING OF CATEGORY TO ICON
                 still.placeCoords = place.address;
                 still.lat = place.lat;
                 still.lng = place.lng;
@@ -204,17 +233,32 @@ public class LocationService extends Service {
         Date eventTime = new Date(System.currentTimeMillis() - TimeUnit.NANOSECONDS.toMillis(android.os.SystemClock.elapsedRealtimeNanos() - timestampNanos));
 
         if (transitionType == ActivityTransition.ACTIVITY_TRANSITION_ENTER) {
-            currentActivity = activityType;
+            // Ensure only one activity is active by ending any ongoing ones before starting the new one
+            // if the ongoing activity is the same as the new one, do nothing(later in the script they will be merged)
+            if (currentStillTrackingId != null && activityType != DetectedActivity.STILL) {
+                endStillTracking(eventTime);
+            }
+            for (Integer type : new HashSet<>(currentMovementTrackingIds.keySet())) {
+                if (type != activityType) {
+                    endMovementTracking(type, eventTime);
+                }
+            }
+
+            currentActivityType = activityType;
+
             isInitializing = true;
             updateNotificationSafe();
 
+            // call functions to start activities according to activity type
             if (activityType == DetectedActivity.STILL) {
                 startStillTracking(eventTime);
             } else if (MOVEMENT_ACTIVITIES.contains(activityType)) {
                 startMovementTracking(activityType, eventTime);
             }
             isInitializing = false;
+
         } else if (transitionType == ActivityTransition.ACTIVITY_TRANSITION_EXIT) {
+            // call functions to end activities according to activity type
             if (activityType == DetectedActivity.STILL) {
                 endStillTracking(eventTime);
             } else if (MOVEMENT_ACTIVITIES.contains(activityType)) {
@@ -226,77 +270,19 @@ public class LocationService extends Service {
         updateNotificationSafe();
     }
 
-    private void updateCurrentActivityAfterExit(int exitedActivityType) {
-        if (currentActivity != exitedActivityType) return;
+    private void updateCurrentActivityAfterExit(int exitedActivityType) { // TODO TRY TO UNDERSTAND
+        if (currentActivityType != exitedActivityType) return;
 
         if (!currentMovementTrackingIds.isEmpty()) {
-            currentActivity = currentMovementTrackingIds.keySet().iterator().next();
+            currentActivityType = currentMovementTrackingIds.keySet().iterator().next();
         } else if (currentStillTrackingId != null) {
-            currentActivity = DetectedActivity.STILL;
+            currentActivityType = DetectedActivity.STILL;
         } else {
-            currentActivity = DetectedActivity.UNKNOWN;
+            currentActivityType = DetectedActivity.UNKNOWN;
         }
     }
 
-    private Location getLocationOnceBlocking() {
-        try {
-            Location loc = Tasks.await(
-                    fusedLocationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null),
-                    10,
-                    TimeUnit.SECONDS
-            );
-            if (loc == null) {
-                loc = Tasks.await(fusedLocationClient.getLastLocation(), 2, TimeUnit.SECONDS);
-            }
-            return loc;
-        } catch (Throwable t) {
-            return null;
-        }
-    }
 
-    private void startForegroundSafe() {
-        Notification notification = buildNotification();
-        try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                ServiceCompat.startForeground(this, NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION);
-            } else {
-                startForeground(NOTIFICATION_ID, notification);
-            }
-        } catch (Throwable ignored) {}
-    }
-
-    private void createNotificationChannel() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return;
-        NotificationChannel channel = new NotificationChannel(CHANNEL_ID, "Location Tracking", NotificationManager.IMPORTANCE_LOW);
-        NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-        if (manager != null) manager.createNotificationChannel(channel);
-    }
-
-    private Notification buildNotification() {
-        String activityLabel = (currentActivity == DetectedActivity.UNKNOWN) ? "Waiting..." : getActivityName(currentActivity);
-        boolean activelyTracking = currentStillTrackingId != null || !currentMovementTrackingIds.isEmpty();
-        String contentText = isInitializing ? "Initializing..." : (activelyTracking ? "Tracking: " + activityLabel : "Idle • Waiting for activity");
-
-        Intent openAppIntent = new Intent(this, MainActivity.class);
-        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, openAppIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-
-        return new NotificationCompat.Builder(this, CHANNEL_ID)
-                .setContentTitle("Timeline Tracker")
-                .setContentText(contentText)
-                .setSmallIcon(android.R.drawable.ic_menu_mylocation)
-                .setContentIntent(pendingIntent)
-                .setOngoing(true)
-                .setOnlyAlertOnce(true)
-                .setPriority(NotificationCompat.PRIORITY_LOW)
-                .build();
-    }
-
-    private void updateNotificationSafe() {
-        try {
-            NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-            if (manager != null) manager.notify(NOTIFICATION_ID, buildNotification());
-        } catch (Throwable ignored) {}
-    }
 
     private void startStillTracking(Date startTime) {
         if (currentStillTrackingId != null) return;
@@ -307,6 +293,7 @@ public class LocationService extends Service {
         if (lastStill != null && lastStill.lat != null && lastStill.lng != null && currentLocation != null) {
             float distance = distanceInMeters(currentLocation.getLatitude(), currentLocation.getLongitude(), lastStill.lat, lastStill.lng);
             if (distance < 100f) { // 100 meter threshold for merging
+                // merge with last still
                 currentStillTrackingId = lastStill.id;
                 String msg = "DB Update from startStillTracking: Merging with last still " + currentStillTrackingId;
                 Log.d(TAG, msg);
@@ -323,14 +310,19 @@ public class LocationService extends Service {
         still.startTimeDate = startTime;
 
         if (currentLocation != null) {
+            // Try to find geofence
             Place nearby = findNearbyPlace(currentLocation.getLatitude(), currentLocation.getLongitude());
             if (nearby != null) {
+                // Use geofence data
                 still.placeId = String.valueOf(nearby.id);
                 still.placeName = nearby.name;
                 still.icon = nearby.category;
                 still.placeCoords = nearby.address;
                 still.lat = nearby.lat;
                 still.lng = nearby.lng;
+            } else {
+                // Otherwise, use Google places
+                detectGooglePlace(still);
             }
         }
 
@@ -342,6 +334,50 @@ public class LocationService extends Service {
             Log.d(TAG, "STILL started: ID=" + currentStillTrackingId);
         } catch (Exception e) {
             currentStillTrackingId = null;
+        }
+    }
+
+    private void detectGooglePlace(StillLocation still) {
+        if (checkSelfPermission(android.Manifest.permission.ACCESS_FINE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+        try {
+            List<Field> placeFields =
+                    Arrays.asList(
+                            Field.DISPLAY_NAME,
+                            Field.ID,
+                            Field.TYPES,
+                            Field.FORMATTED_ADDRESS);
+
+            // request Google Place search
+            FindCurrentPlaceRequest request = FindCurrentPlaceRequest.newInstance(placeFields);
+            FindCurrentPlaceResponse response = Tasks.await(placesClient.findCurrentPlace(request), 5, TimeUnit.SECONDS);
+
+            if (response != null && !response.getPlaceLikelihoods().isEmpty()) {
+
+                // extract the most likely place
+                PlaceLikelihood topResult = response.getPlaceLikelihoods().get(0);
+                com.google.android.libraries.places.api.model.Place place = topResult.getPlace();
+
+                //extract place data
+                still.placeName = place.getDisplayName();
+                still.placeId = place.getId();
+                still.placeCoords = place.getFormattedAddress();
+                still.confidence = topResult.getLikelihood();
+
+                
+                // Map Google Types to your icon/category if needed
+                if (place.getPlaceTypes() != null && !place.getPlaceTypes().isEmpty()) {
+                    still.icon = place.getPlaceTypes().get(0);
+                }
+
+                String msg = "Google Places detected: " + still.placeName + " (likelihood: " + still.confidence + ")";
+                Log.d(TAG, msg);
+                Logger.saveLog(this, msg);
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to detect Google Place", e);
         }
     }
 
@@ -402,9 +438,29 @@ public class LocationService extends Service {
 
     private void startMovementTracking(int activityType, Date startTime) {
         if (currentMovementTrackingIds.containsKey(activityType)) return;
+
+        String activityName = getActivityName(activityType);
+
+        // --- MERGE LOGIC START ---
+        // Check if a similar activity ended recently (e.g., within 3 minutes)
+        MovementActivity lastMovement = dao.getLastCompletedMovementActivity(activityName);
+        if (lastMovement != null && lastMovement.endTimeDate != null) {
+            long gapMs = startTime.getTime() - lastMovement.endTimeDate.getTime();
+            if (gapMs > 0 && gapMs < 180000) { // 3 minute threshold
+                String msg = "DB Update: Resuming recent " + activityName + " activity " + lastMovement.id + " (gap: " + (gapMs/1000) + "s)";
+                Log.d(TAG, msg);
+                Logger.saveLog(this, msg);
+                dao.resumeMovementActivity(lastMovement.id);
+                currentMovementTrackingIds.put(activityType, lastMovement.id);
+                startRouteUpdates();
+                return;
+            }
+        }
+        // --- MERGE LOGIC END ---
+
         Location currentLocation = getLocationOnceBlocking();
         MovementActivity movement = new MovementActivity();
-        movement.activityType = getActivityName(activityType);
+        movement.activityType = activityName;
         movement.startLat = currentLocation != null ? currentLocation.getLatitude() : null;
         movement.startLng = currentLocation != null ? currentLocation.getLongitude() : null;
         movement.startTimeDate = startTime;
@@ -415,6 +471,7 @@ public class LocationService extends Service {
             Logger.saveLog(this, msg);
             long id = dao.insertMovementActivity(movement);
             currentMovementTrackingIds.put(activityType, id);
+            startRouteUpdates();
         } catch (Exception ignored) {}
     }
 
@@ -469,6 +526,9 @@ public class LocationService extends Service {
                         still.placeName = nearby.name;
                         still.icon = nearby.category;
                         still.placeCoords = nearby.address;
+                    } else {
+                        // Use Google Places SDK
+                        detectGooglePlace(still);
                     }
 
                     String msg = "DB Update from endMovementTracking: Replacing movement " + id + " with new still location";
@@ -495,6 +555,66 @@ public class LocationService extends Service {
             Log.e(TAG, "Error ending movement activity: " + id, e);
         } finally {
             currentMovementTrackingIds.remove(activityType);
+            if (currentMovementTrackingIds.isEmpty()) {
+                stopRouteUpdates();
+            }
+        }
+    }
+
+    private void startRouteUpdates() {
+        if (routeLocationCallback != null) return;
+
+        LocationRequest locationRequest = new LocationRequest.Builder(Priority.PRIORITY_BALANCED_POWER_ACCURACY, 30000)
+                .setMinUpdateIntervalMillis(10000)
+                .setMaxUpdateDelayMillis(60000)
+                .build();
+
+        routeLocationCallback = new LocationCallback() {
+            @Override
+            public void onLocationResult(LocationResult locationResult) {
+                if (locationResult == null) return;
+                io.execute(() -> {
+                    for (Location location : locationResult.getLocations()) {
+                        for (Long movementId : currentMovementTrackingIds.values()) {
+                            RoutePoint point = new RoutePoint();
+                            point.movementActivityId = movementId;
+                            point.lat = location.getLatitude();
+                            point.lng = location.getLongitude();
+                            point.timestamp = location.getTime();
+                            dao.insertRoutePoint(point);
+                        }
+                    }
+                });
+            }
+        };
+
+        try {
+            fusedLocationClient.requestLocationUpdates(locationRequest, routeLocationCallback, Looper.getMainLooper());
+        } catch (SecurityException e) {
+            Log.e(TAG, "Location permission missing", e);
+        }
+    }
+
+    private void stopRouteUpdates() {
+        if (routeLocationCallback != null) {
+            fusedLocationClient.removeLocationUpdates(routeLocationCallback);
+            routeLocationCallback = null;
+        }
+    }
+
+    private Location getLocationOnceBlocking() {
+        try {
+            Location loc = Tasks.await(
+                    fusedLocationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null),
+                    10,
+                    TimeUnit.SECONDS
+            );
+            if (loc == null) {
+                loc = Tasks.await(fusedLocationClient.getLastLocation(), 2, TimeUnit.SECONDS);
+            }
+            return loc;
+        } catch (Throwable t) {
+            return null;
         }
     }
 
@@ -526,4 +646,62 @@ public class LocationService extends Service {
             default: return "Unknown";
         }
     }
+    private int getActivityTypeFromName(String name) {
+        if (name == null) return DetectedActivity.UNKNOWN;
+        switch (name) {
+            case "Driving": return DetectedActivity.IN_VEHICLE;
+            case "Cycling": return DetectedActivity.ON_BICYCLE;
+            case "Running": return DetectedActivity.RUNNING;
+            case "Walking": return DetectedActivity.WALKING;
+            case "On Foot": return DetectedActivity.ON_FOOT;
+            case "Still": return DetectedActivity.STILL;
+            default: return DetectedActivity.UNKNOWN;
+        }
+    }
+
+
+    private void startForeground() {
+        Notification notification = buildNotification();
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                ServiceCompat.startForeground(this, NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION);
+            } else {
+                startForeground(NOTIFICATION_ID, notification);
+            }
+        } catch (Throwable ignored) {}
+    }
+
+    private void createNotificationChannel() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return;
+        NotificationChannel channel = new NotificationChannel(CHANNEL_ID, "Location Tracking", NotificationManager.IMPORTANCE_LOW);
+        NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        if (manager != null) manager.createNotificationChannel(channel);
+    }
+
+    private Notification buildNotification() {
+        String activityLabel = (currentActivityType == DetectedActivity.UNKNOWN) ? "Waiting..." : getActivityName(currentActivityType);
+        boolean activelyTracking = currentStillTrackingId != null || !currentMovementTrackingIds.isEmpty();
+        String contentText = isInitializing ? "Initializing..." : (activelyTracking ? "Tracking: " + activityLabel : "Idle • Waiting for activity");
+
+        Intent openAppIntent = new Intent(this, MainActivity.class);
+        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, openAppIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+        return new NotificationCompat.Builder(this, CHANNEL_ID)
+                .setContentTitle("Timeline Tracker")
+                .setContentText(contentText)
+                .setSmallIcon(android.R.drawable.ic_menu_mylocation)
+                .setContentIntent(pendingIntent)
+                .setOngoing(true)
+                .setOnlyAlertOnce(true)
+                .setPriority(NotificationCompat.PRIORITY_LOW)
+                .build();
+    }
+
+    private void updateNotificationSafe() {
+        try {
+            NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+            if (manager != null) manager.notify(NOTIFICATION_ID, buildNotification());
+        } catch (Throwable ignored) {}
+    }
 }
+

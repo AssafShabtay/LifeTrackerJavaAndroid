@@ -8,6 +8,7 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
+import androidx.core.graphics.drawable.DrawableCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.myapplication.R;
@@ -25,12 +26,9 @@ public class TimelineAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
     private static final int TYPE_MOVEMENT = 1;
 
     private final List<TimelineItem> items = new ArrayList<>();
-    private OnItemClickListener listener; // the action to perform when an item is clicked
-    private OnItemLongClickListener longClickListener; // the action to perform when an item is clicked
-    private OnLabelClickListener labelClickListener; // the action to perform when an item is clicked
-
-
-    // Interface for handling clicks on timeline items
+    private OnItemClickListener listener;
+    private OnItemLongClickListener longClickListener;
+    private OnLabelClickListener labelClickListener;
 
     public interface OnItemClickListener {
         void onItemClick(TimelineItem item);
@@ -44,13 +42,11 @@ public class TimelineAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
         void onLabelClick(StillLocation still);
     }
 
-    // functions to set what happens when an item is clicked
-
     public void setOnItemClickListener(OnItemClickListener listener) {
         this.listener = listener;
     }
 
-    public void setOnItemLongClickListener(OnItemLongClickListener longClickListener) {//TODO REMOVE
+    public void setOnItemLongClickListener(OnItemLongClickListener longClickListener) {
         this.longClickListener = longClickListener;
     }
 
@@ -59,26 +55,19 @@ public class TimelineAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
     }
 
     public void submitList(List<TimelineItem> newItems) {
-        // updates the timeline items to the new ones
         items.clear();
         if (newItems != null) items.addAll(newItems);
-        notifyDataSetChanged(); // function to refresh ui, which apperantly isnt efficient so TODO
+        notifyDataSetChanged();
     }
 
     @Override
     public int getItemViewType(int position) {
-        // Return view type based on the class of the item
-        if (items.get(position) instanceof StillLocation) {
-            return TYPE_STILL;
-        } else {
-            return TYPE_MOVEMENT;
-        }
+        return (items.get(position) instanceof StillLocation) ? TYPE_STILL : TYPE_MOVEMENT;
     }
 
     @NonNull
     @Override
     public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        // Inflate the corresponding layout for the view type
         if (viewType == TYPE_STILL) {
             View view = LayoutInflater.from(parent.getContext())
                     .inflate(R.layout.item_still_location, parent, false);
@@ -92,16 +81,10 @@ public class TimelineAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
 
     @Override
     public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
-        // adds the data to view holder
-
-        // Get the item at the current position
         TimelineItem item = items.get(position);
 
-        // Setup click listeners
         holder.itemView.setOnClickListener(v -> {
-            if (listener != null) {
-                listener.onItemClick(item);
-            }
+            if (listener != null) listener.onItemClick(item);
         });
 
         holder.itemView.setOnLongClickListener(v -> {
@@ -112,40 +95,36 @@ public class TimelineAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
             return false;
         });
 
-
         if (holder instanceof StillViewHolder) {
-            //if item is still, show still template
             StillLocation still = (StillLocation) item;
             StillViewHolder stillHolder = (StillViewHolder) holder;
 
-            String title;
-            if (still.placeName != null) {
-                title = still.placeName;
-            } else {
-                title = "Stationary";
-            }
-
-            // Title
+            String title = (still.placeName != null) ? still.placeName : "Stationary";
             stillHolder.itemTitle.setText(title);
 
-            // Coords
-            if (still.placeCoords != null) {//TODO Remove coords
+            // Coords/Address
+            if (still.placeCoords != null) {
                 stillHolder.itemCoords.setText(still.placeCoords);
-            } else {
+                stillHolder.itemCoords.setVisibility(View.VISIBLE);
+            } else if (still.lat != null && still.lng != null) {
                 stillHolder.itemCoords.setText(UiFormatters.decimal(still.lat) + ", " + UiFormatters.decimal(still.lng));
+                stillHolder.itemCoords.setVisibility(View.VISIBLE);
+            } else {
+                stillHolder.itemCoords.setVisibility(View.GONE);
             }
 
-            // Time Range
             stillHolder.itemTimeRange.setText(UiFormatters.timeOnly(still.startTimeDate) + " — " +
                     UiFormatters.timeOnly(still.endTimeDate));
 
-            // Item Duration
             stillHolder.itemDuration.setText(UiFormatters.duration(still.startTimeDate, still.endTimeDate));
 
-            // Color TODO CORRECT COLORS
-            stillHolder.color.setBackgroundColor(ContextCompat.getColor(stillHolder.itemView.getContext(), R.color.activity_still));
+            // Tint the dot
+            int stillColor = ContextCompat.getColor(stillHolder.itemView.getContext(), R.color.activity_still);
+            if (stillHolder.color.getBackground() != null) {
+                DrawableCompat.setTint(stillHolder.color.getBackground().mutate(), stillColor);
+            }
 
-            // Set icon based on activity
+            // Set icon
             int iconRes = R.drawable.ic_still;
             if (still.icon != null) {
                 String icon = still.icon.toLowerCase();
@@ -158,59 +137,54 @@ public class TimelineAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
             }
             stillHolder.itemIcon.setImageResource(iconRes);
 
-            // Label place button
             stillHolder.btnLabel.setOnClickListener(v -> {
-                if (labelClickListener != null) {
-                    labelClickListener.onLabelClick(still);
-                }
+                if (labelClickListener != null) labelClickListener.onLabelClick(still);
             });
 
-            // change the button if it's already labeled
-            if (still.placeName != null && !still.placeName.equals("Stationary")) {
-                stillHolder.btnLabel.setText("Edit Label");
-            } else {
-                stillHolder.btnLabel.setText("Label Place");
-            }
-
         } else {
-            // If item is movement, show movement template
             MovementActivity movement = (MovementActivity) item;
             MovementViewHolder movementHolder = (MovementViewHolder) holder;
 
-            String type;
-            if (movement.activityType != null) {
-                type = movement.activityType;
-            } else {
-                type = "Movement";
-            }
-
-            // Title
+            String type = (movement.activityType != null) ? movement.activityType : "Movement";
             movementHolder.itemTitle.setText(type);
 
-            // Time Range
             movementHolder.itemTimeRange.setText(UiFormatters.timeOnly(movement.startTimeDate) + " — " +
                     UiFormatters.timeOnly(movement.endTimeDate));
 
-            // Item Duration
             movementHolder.itemDuration.setText(UiFormatters.duration(movement.startTimeDate, movement.endTimeDate));
 
-            movementHolder.itemSpeed.setVisibility(View.GONE);//TODO WHY IS THAT HERE
-
-            // Set icon based on activity TODO CORRECT COLORS
+            // Activity type logic
             int colorRes = R.color.activity_walking;
             int iconRes = R.drawable.ic_walk;
-            if (type.equalsIgnoreCase("Driving") || type.equalsIgnoreCase("IN_VEHICLE")) {
+            
+            String t = type.toLowerCase();
+            if (t.contains("driving") || t.contains("vehicle")) {
                 colorRes = R.color.activity_vehicle;
                 iconRes = R.drawable.ic_car;
-            } else if (type.equalsIgnoreCase("WALKING") || type.equalsIgnoreCase("ON_FOOT") || type.equalsIgnoreCase("RUNNING") || type.equalsIgnoreCase("Walking")) {
+            } else if (t.contains("running")) {
+                colorRes = R.color.activity_running;
+                iconRes = R.drawable.ic_walk; // Use walk icon for running as well
+            } else if (t.contains("cycling") || t.contains("bicycle")) {
+                colorRes = R.color.activity_cycling;
+                iconRes = R.drawable.ic_bike;
+            } else if (t.contains("walking") || t.contains("foot")) {
                 colorRes = R.color.activity_walking;
                 iconRes = R.drawable.ic_walk;
-            } else if (type.equalsIgnoreCase("Cycling") || type.equalsIgnoreCase("ON_BICYCLE")) {
-                colorRes = R.color.activity_walking;
-                iconRes = R.drawable.ic_bike;
             }
-            movementHolder.color.setBackgroundColor(ContextCompat.getColor(movementHolder.itemView.getContext(), colorRes));
+
+            int moveColor = ContextCompat.getColor(movementHolder.itemView.getContext(), colorRes);
+            if (movementHolder.color.getBackground() != null) {
+                DrawableCompat.setTint(movementHolder.color.getBackground().mutate(), moveColor);
+            }
             movementHolder.itemIcon.setImageResource(iconRes);
+            
+            // Speed logic
+            if (movement.activityType != null && (t.contains("driving") || t.contains("cycling") || t.contains("running"))) {
+                movementHolder.itemSpeed.setVisibility(View.VISIBLE);
+                movementHolder.itemSpeed.setText("Movement tracking active");
+            } else {
+                movementHolder.itemSpeed.setVisibility(View.GONE);
+            }
         }
     }
 
