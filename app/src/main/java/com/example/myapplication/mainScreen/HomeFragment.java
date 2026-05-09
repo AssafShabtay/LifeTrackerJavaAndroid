@@ -61,6 +61,7 @@ public class HomeFragment extends Fragment implements MainActivity.OnPermissions
     private View headerLayout;
 
     private Button btnInsertExample;
+    private Button btnShowFullDay;
 
     private ActivityDao dao;
     private PlaceDao placeDao;
@@ -164,6 +165,7 @@ public class HomeFragment extends Fragment implements MainActivity.OnPermissions
         headerLayout = view.findViewById(R.id.header_layout);
 
         btnInsertExample = view.findViewById(R.id.btn_insert_example);
+        btnShowFullDay = view.findViewById(R.id.btn_show_full_day);
         rvTimeline = view.findViewById(R.id.rvTimeline);
 
         ActivityDatabase db = ActivityDatabase.getDatabase(requireContext());
@@ -175,6 +177,14 @@ public class HomeFragment extends Fragment implements MainActivity.OnPermissions
             ExampleData.insertExampleDataAsync(dao);
             loadTimelineData(calendarManager.getSelectedDate());
         });
+
+        if (btnShowFullDay != null) {
+            btnShowFullDay.setOnClickListener(v -> {
+                if (mapManager != null && timelineAdapter != null) {
+                    mapManager.showFullDay(timelineAdapter.getItems());
+                }
+            });
+        }
 
         mapManager = new MapManager(this, R.id.map);
         mapManager.init();

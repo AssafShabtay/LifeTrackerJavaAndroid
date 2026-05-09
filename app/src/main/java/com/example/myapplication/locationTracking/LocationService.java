@@ -128,7 +128,7 @@ public class LocationService extends Service {
                 startRouteUpdates();
             }
 
-            syncGeofences();
+            syncGeofences() ;
             updateNotificationSafe();
         });
     }
@@ -292,7 +292,7 @@ public class LocationService extends Service {
         StillLocation lastStill = dao.getLastCompletedStillLocation();
         if (lastStill != null && lastStill.lat != null && lastStill.lng != null && currentLocation != null) {
             float distance = distanceInMeters(currentLocation.getLatitude(), currentLocation.getLongitude(), lastStill.lat, lastStill.lng);
-            if (distance < 100f) { // 100 meter threshold for merging
+            if (distance < 75f) { // 100 meter threshold for merging
                 // merge with last still
                 currentStillTrackingId = lastStill.id;
                 String msg = "DB Update from startStillTracking: Merging with last still " + currentStillTrackingId;
@@ -446,7 +446,7 @@ public class LocationService extends Service {
         MovementActivity lastMovement = dao.getLastCompletedMovementActivity(activityName);
         if (lastMovement != null && lastMovement.endTimeDate != null) {
             long gapMs = startTime.getTime() - lastMovement.endTimeDate.getTime();
-            if (gapMs > 0 && gapMs < 180000) { // 3 minute threshold
+            if (gapMs >= -20000 && gapMs < 180000) { // 3 minute threshold, allowing for small overlaps/jitter
                 String msg = "DB Update: Resuming recent " + activityName + " activity " + lastMovement.id + " (gap: " + (gapMs/1000) + "s)";
                 Log.d(TAG, msg);
                 Logger.saveLog(this, msg);
@@ -454,6 +454,8 @@ public class LocationService extends Service {
                 currentMovementTrackingIds.put(activityType, lastMovement.id);
                 startRouteUpdates();
                 return;
+            } else {
+                Log.d(TAG, "Not merging " + activityName + ". Gap: " + gapMs + "ms");
             }
         }
         // --- MERGE LOGIC END ---
@@ -704,4 +706,3 @@ public class LocationService extends Service {
         } catch (Throwable ignored) {}
     }
 }
-

@@ -57,14 +57,12 @@ add to the settings fragment those settings options:
  -----------------------------------------------------------------------
 
  add light mode
- -----------------------------------------\
-fix the edit text button on the still items
 
  -------------------------------------------------
 
  add a gray effect when pressing a timeline item
 
- -----------------------------------------
 
- add a button to show all the routes and markers durning all day on the map
-if a movement activity doesnt have route, create a straight route to show the movement
+-------------------------
+
+I want that if a still is registered durning a movement activity, it would be considered a stop, it would clearly be shown in the ui, and inside the map

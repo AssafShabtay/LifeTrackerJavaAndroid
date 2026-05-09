@@ -60,6 +60,10 @@ public class TimelineAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
         notifyDataSetChanged();
     }
 
+    public List<TimelineItem> getItems() {
+        return items;
+    }
+
     @Override
     public int getItemViewType(int position) {
         return (items.get(position) instanceof StillLocation) ? TYPE_STILL : TYPE_MOVEMENT;
@@ -100,6 +104,9 @@ public class TimelineAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
             StillViewHolder stillHolder = (StillViewHolder) holder;
 
             String title = (still.placeName != null) ? still.placeName : "Stationary";
+            if (still.wasSupposedToBeActivity != null) {
+                title = "Stop • " + title;
+            }
             stillHolder.itemTitle.setText(title);
 
             // Coords/Address
