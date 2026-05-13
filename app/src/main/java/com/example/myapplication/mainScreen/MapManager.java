@@ -215,10 +215,6 @@ public class MapManager implements OnMapReadyCallback {
 
     private int getStillIconRes(StillLocation still) {
         int iconRes = R.drawable.ic_still;
-        if (still.wasSupposedToBeActivity != null) {
-            // Assuming we have ic_stop or use still icon
-            // For now, let's stick to what's available
-        }
         if (still.icon != null) {
             String icon = still.icon.toLowerCase();
             if (icon.contains("home")) iconRes = R.drawable.ic_home;
@@ -252,10 +248,13 @@ public class MapManager implements OnMapReadyCallback {
         if (still.lat != null && still.lng != null) {
             LatLng pos = new LatLng(still.lat, still.lng);
             String title = (still.placeName != null) ? still.placeName : "Still Location";
-            int color = still.wasSupposedToBeActivity != null ? Color.RED : Color.parseColor("#00BCD4"); // Cyan/Azure
             
+            int color;
             if (still.wasSupposedToBeActivity != null) {
                 title = "Stop: " + title;
+                color = ContextCompat.getColor(fragment.requireContext(), R.color.activity_stop);
+            } else {
+                color = ContextCompat.getColor(fragment.requireContext(), R.color.activity_still);
             }
             
             BitmapDescriptor icon;
@@ -314,6 +313,13 @@ public class MapManager implements OnMapReadyCallback {
                     if (points != null) {
                         for (RoutePoint p : points) {
                             totalBounds.include(new LatLng(p.lat, p.lng));
+                        }
+                    }
+                    if (movement.stops != null) {
+                        for (StillLocation stop : movement.stops) {
+                            if (stop.lat != null && stop.lng != null) {
+                                totalBounds.include(new LatLng(stop.lat, stop.lng));
+                            }
                         }
                     }
                 }
@@ -375,6 +381,26 @@ public class MapManager implements OnMapReadyCallback {
         
         if (hasPoints) {
             mMap.addPolyline(polylineOptions);
+        }
+
+        // Add markers for nested stops
+        if (movement.stops != null && !movement.stops.isEmpty()) {
+            for (StillLocation stop : movement.stops) {
+                if (stop.lat != null && stop.lng != null) {
+                    LatLng stopPos = new LatLng(stop.lat, stop.lng);
+                    String stopTitle = (stop.placeName != null) ? stop.placeName : "Stop";
+                    int stopColor = ContextCompat.getColor(fragment.requireContext(), R.color.activity_stop);
+                    
+                    BitmapDescriptor stopIcon = getIconMarkerIcon(getStillIconRes(stop), stopColor);
+                    
+                    mMap.addMarker(new MarkerOptions()
+                            .position(stopPos)
+                            .title("Stop: " + stopTitle)
+                            .icon(stopIcon));
+                    builder.include(stopPos);
+                    hasPoints = true;
+                }
+            }
         }
 
         // Add marker for end position

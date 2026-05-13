@@ -3,6 +3,7 @@ package com.example.myapplication.mainScreen;
 import android.app.AlertDialog;
 import android.app.PendingIntent;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -41,8 +42,12 @@ import com.google.android.gms.location.ActivityTransition;
 import com.google.android.gms.location.ActivityTransitionRequest;
 import com.google.android.gms.location.DetectedActivity;
 import com.example.myapplication.R;
+import com.google.android.libraries.places.api.Places;
+import com.google.android.libraries.places.api.net.FindCurrentPlaceRequest;
+import com.google.android.libraries.places.api.net.PlacesClient;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
@@ -107,7 +112,7 @@ public class HomeFragment extends Fragment implements MainActivity.OnPermissions
     private void refreshPermissionUi(boolean hasPerms) {
         //control what you see depending on whether  you accepted permissions
         View timelineLabel = requireView().findViewById(R.id.tv_timeline_label);
-        if(hasPerms){// are permissions granted?
+        if (hasPerms) {// are permissions granted?
             permissionBlocker.setVisibility(View.GONE);
             headerLayout.setVisibility(View.VISIBLE);
             rvTimeline.setVisibility(View.VISIBLE);
@@ -117,8 +122,7 @@ public class HomeFragment extends Fragment implements MainActivity.OnPermissions
             if (timelineLabel != null) {
                 timelineLabel.setVisibility(View.VISIBLE);
             }
-        }
-        else{
+        } else {
             permissionBlocker.setVisibility(View.VISIBLE);
             headerLayout.setVisibility(View.GONE);
             rvTimeline.setVisibility(View.GONE);
@@ -348,18 +352,39 @@ public class HomeFragment extends Fragment implements MainActivity.OnPermissions
             List<StillLocation> stills = dao.getStillForRange(start, end);
             List<MovementActivity> movements = dao.getMovementForRange(start, end);
 
-            List<TimelineItem> combined = new ArrayList<>();
-            combined.addAll(stills);
-            combined.addAll(movements);
+            List<TimelineItem> rawCombined = new ArrayList<>();
+            rawCombined.addAll(stills);
+            rawCombined.addAll(movements);
 
             // Sort by start time, from earliest to latest
-            Collections.sort(combined, (a, b) -> {
-                if (a.getStartTime() == null || b.getStartTime() == null) return 0; // If either item has no start time, treat them as equal
+            Collections.sort(rawCombined, (a, b) -> {
+                if (a.getStartTime() == null || b.getStartTime() == null) return 0;
                 return a.getStartTime().compareTo(b.getStartTime());
             });
 
-            if(isAdded()) {
-                requireActivity().runOnUiThread(() -> timelineAdapter.submitList(combined)); // switch back to the main thread and updates the list
+            // Group stops into preceding movement activities
+            List<TimelineItem> processedCombined = new ArrayList<>();
+            MovementActivity lastMovement = null;
+
+            for (TimelineItem item : rawCombined) {
+                if (item instanceof StillLocation) {
+                    StillLocation still = (StillLocation) item;
+                    if (still.wasSupposedToBeActivity != null && lastMovement != null) {
+                        // This is a stop from a movement, add it to the movement
+                        lastMovement.stops.add(still);
+                    } else {
+                        // Not a stop or no movement preceded it, add as top-level
+                        processedCombined.add(still);
+                        lastMovement = null;
+                    }
+                } else if (item instanceof MovementActivity) {
+                    lastMovement = (MovementActivity) item;
+                    processedCombined.add(lastMovement);
+                }
+            }
+
+            if (isAdded()) {
+                requireActivity().runOnUiThread(() -> timelineAdapter.submitList(processedCombined)); // switch back to the main thread and updates the list
             }
         });
     }

@@ -18,6 +18,7 @@
     
     <!-- Activity Specific - Material Colors -->
     <color name="activity_still">#34A853</color> <!-- Google Green -->
+    <color name="activity_stop">#EA4335</color> <!-- Google Red -->
     <color name="activity_walking">#4285F4</color> <!-- Google Blue -->
     <color name="activity_vehicle">#9334E6</color> <!-- Soft Purple -->
     <color name="activity_running">#EA4335</color> <!-- Google Red -->

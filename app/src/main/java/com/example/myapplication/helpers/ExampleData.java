@@ -31,31 +31,45 @@ public final class ExampleData {
         Date now = new Date();
         long oneHour = 60L * 60L * 1000L;
         long fifteenMin = 15L * 60L * 1000L;
+        long fiveMin = 5L * 60L * 1000L;
         long oneDay = 24L * oneHour;
 
         // TODAY
         StillLocation homeMorning = new StillLocation();
         homeMorning.lat = 52.52;
         homeMorning.lng = 13.405;
-        homeMorning.startTimeDate = new Date(now.getTime() - 8 * oneHour);
-        homeMorning.endTimeDate = new Date(now.getTime() - 6 * oneHour);
+        homeMorning.startTimeDate = new Date(now.getTime() - 10 * oneHour);
+        homeMorning.endTimeDate = new Date(now.getTime() - 8 * oneHour);
         homeMorning.placeName = "Home";
         dao.insertStillLocation(homeMorning);
 
-        MovementActivity walk1 = new MovementActivity();
-        walk1.activityType = "Walking";
-        walk1.startLat = 52.52;
-        walk1.startLng = 13.405;
-        walk1.endLat = 52.523;
-        walk1.endLng = 13.41;
-        walk1.startTimeDate = new Date(now.getTime() - 6 * oneHour);
-        walk1.endTimeDate = new Date(now.getTime() - 6 * oneHour + fifteenMin);
-        dao.insertMovementActivity(walk1);
+        // --- NEW: Driving with a Stop ---
+        MovementActivity morningCommute = new MovementActivity();
+        morningCommute.activityType = "Driving";
+        morningCommute.startLat = 52.52;
+        morningCommute.startLng = 13.405;
+        morningCommute.endLat = 52.53;
+        morningCommute.endLng = 13.42;
+        morningCommute.startTimeDate = new Date(now.getTime() - 8 * oneHour);
+        morningCommute.endTimeDate = new Date(now.getTime() - 7 * oneHour);
+        dao.insertMovementActivity(morningCommute);
+
+        StillLocation coffeeStop = new StillLocation();
+        coffeeStop.lat = 52.525;
+        coffeeStop.lng = 13.412;
+        // Start 10 mins into the drive
+        coffeeStop.startTimeDate = new Date(now.getTime() - 8 * oneHour + 10 * 60 * 1000);
+        coffeeStop.endTimeDate = new Date(now.getTime() - 8 * oneHour + 20 * 60 * 1000);
+        coffeeStop.placeName = "Starbucks Coffee";
+        coffeeStop.wasSupposedToBeActivity = "Driving"; // This marks it as a stop to be nested
+        coffeeStop.icon = "cafe";
+        dao.insertStillLocation(coffeeStop);
+        // --------------------------------
 
         StillLocation office = new StillLocation();
         office.lat = 52.53;
         office.lng = 13.42;
-        office.startTimeDate = new Date(now.getTime() - 5 * oneHour);
+        office.startTimeDate = new Date(now.getTime() - 7 * oneHour);
         office.endTimeDate = new Date(now.getTime() - 2 * oneHour);
         office.placeName = "Office";
         dao.insertStillLocation(office);

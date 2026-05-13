@@ -60,6 +60,9 @@ public interface ActivityDao {
     @Query("SELECT * FROM movement_activities WHERE endTimeDate IS NULL")
     List<MovementActivity> getActiveMovementActivities();
 
+    @Query("SELECT * FROM movement_activities WHERE activityType = :type AND endTimeDate IS NULL ORDER BY startTimeDate DESC LIMIT 1")
+    MovementActivity getActiveMovementActivityByType(String type);
+
     @Query("SELECT * FROM movement_activities WHERE activityType = :type AND endTimeDate IS NOT NULL ORDER BY endTimeDate DESC LIMIT 1")
     MovementActivity getLastCompletedMovementActivity(String type);
 

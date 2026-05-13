@@ -26,7 +26,7 @@
         <FrameLayout
             android:layout_width="48dp"
             android:layout_height="48dp">
-            
+
             <View
                 android:id="@+id/color"
                 android:layout_width="12dp"

@@ -37,8 +37,10 @@ import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.location.Priority;
+import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.tasks.Tasks;
 import com.google.android.libraries.places.api.Places;
+import com.google.android.libraries.places.api.model.CircularBounds;
 import com.google.android.libraries.places.api.model.PlaceLikelihood;
 import com.google.android.libraries.places.api.net.FindCurrentPlaceRequest;
 import com.google.android.libraries.places.api.net.FindCurrentPlaceResponse;
@@ -57,6 +59,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import com.example.myapplication.BuildConfig;
+import com.google.android.libraries.places.api.net.SearchNearbyRequest;
+import com.google.android.libraries.places.api.net.SearchNearbyResponse;
 
 public class LocationService extends Service {
 
@@ -98,7 +102,7 @@ public class LocationService extends Service {
         geofenceManager = new GeofenceManager(this);
 
         if (!Places.isInitialized()) {
-            Places.initialize(getApplicationContext(), BuildConfig.GOOGLE_API_KEY); //TODO check wheter the api is working
+            Places.initializeWithNewPlacesApiEnabled(getApplicationContext(), BuildConfig.GOOGLE_API_KEY); //TODO check wheter the api is working
         }
         placesClient = Places.createClient(this);
 
@@ -233,6 +237,15 @@ public class LocationService extends Service {
         Date eventTime = new Date(System.currentTimeMillis() - TimeUnit.NANOSECONDS.toMillis(android.os.SystemClock.elapsedRealtimeNanos() - timestampNanos));
 
         if (transitionType == ActivityTransition.ACTIVITY_TRANSITION_ENTER) {
+            String previousActivityName = null;
+            if (activityType == DetectedActivity.STILL) {
+                if (!currentMovementTrackingIds.isEmpty()) {
+                    // Transitioning from a movement activity to STILL
+                    int prevType = currentMovementTrackingIds.keySet().iterator().next();
+                    previousActivityName = getActivityName(prevType);
+                }
+            }
+
             // Ensure only one activity is active by ending any ongoing ones before starting the new one
             // if the ongoing activity is the same as the new one, do nothing(later in the script they will be merged)
             if (currentStillTrackingId != null && activityType != DetectedActivity.STILL) {
@@ -251,7 +264,7 @@ public class LocationService extends Service {
 
             // call functions to start activities according to activity type
             if (activityType == DetectedActivity.STILL) {
-                startStillTracking(eventTime);
+                startStillTracking(eventTime, previousActivityName);
             } else if (MOVEMENT_ACTIVITIES.contains(activityType)) {
                 startMovementTracking(activityType, eventTime);
             }
@@ -284,7 +297,7 @@ public class LocationService extends Service {
 
 
 
-    private void startStillTracking(Date startTime) {
+    private void startStillTracking(Date startTime, String wasSupposedToBeActivity) {
         if (currentStillTrackingId != null) return;
         Location currentLocation = getLocationOnceBlocking();
 
@@ -308,6 +321,7 @@ public class LocationService extends Service {
         still.lat = currentLocation != null ? currentLocation.getLatitude() : null;
         still.lng = currentLocation != null ? currentLocation.getLongitude() : null;
         still.startTimeDate = startTime;
+        still.wasSupposedToBeActivity = wasSupposedToBeActivity;
 
         if (currentLocation != null) {
             // Try to find geofence
@@ -322,12 +336,12 @@ public class LocationService extends Service {
                 still.lng = nearby.lng;
             } else {
                 // Otherwise, use Google places
-                detectGooglePlace(still);
+                detectGooglePlace(still, currentLocation);
             }
         }
 
         try {
-            String msg = "DB Update from startStillTracking: Inserting new still location";
+            String msg = "DB Update from startStillTracking: Inserting new still location" + (wasSupposedToBeActivity != null ? " (Stop: " + wasSupposedToBeActivity + ")" : "");
             Log.d(TAG, msg);
             Logger.saveLog(this, msg);
             currentStillTrackingId = dao.insertStillLocation(still);
@@ -337,7 +351,7 @@ public class LocationService extends Service {
         }
     }
 
-    private void detectGooglePlace(StillLocation still) {
+    private void detectGooglePlace(StillLocation still, Location location) {
         if (checkSelfPermission(android.Manifest.permission.ACCESS_FINE_LOCATION)
                 != PackageManager.PERMISSION_GRANTED) {
             return;
@@ -350,29 +364,39 @@ public class LocationService extends Service {
                             Field.TYPES,
                             Field.FORMATTED_ADDRESS);
 
-            // request Google Place search
-            FindCurrentPlaceRequest request = FindCurrentPlaceRequest.newInstance(placeFields);
-            FindCurrentPlaceResponse response = Tasks.await(placesClient.findCurrentPlace(request), 5, TimeUnit.SECONDS);
+            // Define a 50-meter circular search area around the user's current location
+            CircularBounds circle = CircularBounds.newInstance(
+                    new LatLng(location.getLatitude(), location.getLongitude()),
+                    50.0
+            );
 
-            if (response != null && !response.getPlaceLikelihoods().isEmpty()) {
+            // Request Google Place search using Nearby Search (New API)
+            SearchNearbyRequest request = SearchNearbyRequest.builder(circle, placeFields)
+                    .setMaxResultCount(1) // We only need the top result
+                    .setRankPreference(SearchNearbyRequest.RankPreference.DISTANCE)
+                    .build();
 
-                // extract the most likely place
-                PlaceLikelihood topResult = response.getPlaceLikelihoods().get(0);
-                com.google.android.libraries.places.api.model.Place place = topResult.getPlace();
+            SearchNearbyResponse response = Tasks.await(placesClient.searchNearby(request), 5, TimeUnit.SECONDS);
 
-                //extract place data
+            if (response != null && !response.getPlaces().isEmpty()) {
+
+                // Extract the closest place
+                com.google.android.libraries.places.api.model.Place place = response.getPlaces().get(0);
+
+                // Extract place data
                 still.placeName = place.getDisplayName();
                 still.placeId = place.getId();
                 still.placeCoords = place.getFormattedAddress();
-                still.confidence = topResult.getLikelihood();
 
-                
+                // Likelihood is not supported in the new API; default to 1.0 or remove if unused
+                still.confidence = 1.0;
+
                 // Map Google Types to your icon/category if needed
                 if (place.getPlaceTypes() != null && !place.getPlaceTypes().isEmpty()) {
                     still.icon = place.getPlaceTypes().get(0);
                 }
 
-                String msg = "Google Places detected: " + still.placeName + " (likelihood: " + still.confidence + ")";
+                String msg = "Google Places detected: " + still.placeName;
                 Log.d(TAG, msg);
                 Logger.saveLog(this, msg);
             }
@@ -442,6 +466,17 @@ public class LocationService extends Service {
         String activityName = getActivityName(activityType);
 
         // --- MERGE LOGIC START ---
+        // Check for an active (uncompleted) activity of the same type (e.g., from a crash)
+        MovementActivity activeMovement = dao.getActiveMovementActivityByType(activityName);
+        if (activeMovement != null) {
+            String msg = "DB Update: Found active " + activityName + " activity " + activeMovement.id + ". Resuming.";
+            Log.d(TAG, msg);
+            Logger.saveLog(this, msg);
+            currentMovementTrackingIds.put(activityType, activeMovement.id);
+            startRouteUpdates();
+            return;
+        }
+
         // Check if a similar activity ended recently (e.g., within 3 minutes)
         MovementActivity lastMovement = dao.getLastCompletedMovementActivity(activityName);
         if (lastMovement != null && lastMovement.endTimeDate != null) {
@@ -488,6 +523,16 @@ public class LocationService extends Service {
                 String resolved = checkIfStillIsMovement(movement.startLat, movement.startLng, movement.startTimeDate, endTime, currentLocation.getLatitude(), currentLocation.getLongitude());
 
                 if ("Still".equalsIgnoreCase(resolved)) {
+                    // PROTECTION: If it's a "Driving" activity, don't re-classify it as STILL unless it's extremely clear it was a mistake
+                    // This prevents traffic stops from deleting your drive history.
+                    if ("Driving".equals(movement.activityType)) {
+                        String msg = "DB Update: Protected Driving activity " + id + " from being re-classified as STILL (likely traffic).";
+                        Log.d(TAG, msg);
+                        Logger.saveLog(this, msg);
+                        dao.endMovementActivity(id, currentLocation.getLatitude(), currentLocation.getLongitude(), endTime);
+                        return;
+                    }
+
                     // 1. Check if we can merge with a previous still activity
                     StillLocation lastStill = dao.getLastCompletedStillLocation();
                     if (lastStill != null && lastStill.lat != null && lastStill.lng != null) {
@@ -521,23 +566,30 @@ public class LocationService extends Service {
                     still.lng = movement.startLng;
                     still.startTimeDate = movement.startTimeDate;
                     still.endTimeDate = endTime;
+                    still.wasSupposedToBeActivity = movement.activityType; // Mark as a stop from movement
 
-                    Place nearby = findNearbyPlace(still.lat, still.lng);
-                    if (nearby != null) {
-                        still.placeId = String.valueOf(nearby.id);
-                        still.placeName = nearby.name;
-                        still.icon = nearby.category;
-                        still.placeCoords = nearby.address;
-                    } else {
-                        // Use Google Places SDK
-                        detectGooglePlace(still);
+                    if (currentLocation != null) {
+                        // Try to find geofence
+                        Place nearby = findNearbyPlace(currentLocation.getLatitude(), currentLocation.getLongitude());
+                        if (nearby != null) {
+                            // Use geofence data
+                            still.placeId = String.valueOf(nearby.id);
+                            still.placeName = nearby.name;
+                            still.icon = nearby.category;
+                            still.placeCoords = nearby.address;
+                            still.lat = nearby.lat;
+                            still.lng = nearby.lng;
+                        } else {
+                            // Otherwise, use Google places
+                            detectGooglePlace(still, currentLocation);
+                        }
                     }
 
-                    String msg = "DB Update from endMovementTracking: Replacing movement " + id + " with new still location";
+                    String msg = "DB Update from endMovementTracking: Replacing movement " + id + " with new still location (Stop)";
                     Log.d(TAG, msg);
                     Logger.saveLog(this, msg);
                     dao.replaceMovementWithStill(id, still);
-                    Log.d(TAG, "Movement " + id + " re-classified as STILL");
+                    Log.d(TAG, "Movement " + id + " re-classified as STILL (Stop)");
                 } else {
                     String msg = "DB Update from endMovementTracking: Ending movement activity " + id;
                     Log.d(TAG, msg);

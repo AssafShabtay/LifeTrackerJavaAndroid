@@ -115,6 +115,15 @@
                     android:textSize="12sp"
                     tools:text="12:05 PM — 12:20 PM" />
 
+                <!-- Container for Nested Stops -->
+                <LinearLayout
+                    android:id="@+id/stopsContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:layout_marginTop="8dp"
+                    android:visibility="gone" />
+
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
     </LinearLayout>
