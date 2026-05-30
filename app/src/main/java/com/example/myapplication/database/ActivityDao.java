@@ -104,4 +104,10 @@ public interface ActivityDao {
         deleteMovementActivity(movementId);
         updateStillStartTime(stillId, newStartTime);
     }
+
+
+
+    // Assuming StillLocation has startTime, endTime, and a placeName or placeId
+    @Query("SELECT SUM(CASE WHEN endTimeDate IS NULL THEN :now ELSE endTimeDate END - startTimeDate) FROM still_locations WHERE category = 'Home' AND startTimeDate >= :sevenDaysAgo")
+    long getTimeAtHomeSince(long sevenDaysAgo, long now);
 }

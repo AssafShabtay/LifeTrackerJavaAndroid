@@ -1,9 +1,7 @@
 package com.example.myapplication.mainScreen;
 
-import android.app.AlertDialog;
 import android.app.PendingIntent;
 import android.content.Intent;
-import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -14,7 +12,6 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
-import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -25,7 +22,6 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.myapplication.MainActivity;
-import com.example.myapplication.database.Place;
 import com.example.myapplication.database.PlaceDao;
 import com.example.myapplication.helpers.PermissionManagerCN;
 import com.example.myapplication.locationTracking.ActivityTransitionReceiver;
@@ -42,12 +38,8 @@ import com.google.android.gms.location.ActivityTransition;
 import com.google.android.gms.location.ActivityTransitionRequest;
 import com.google.android.gms.location.DetectedActivity;
 import com.example.myapplication.R;
-import com.google.android.libraries.places.api.Places;
-import com.google.android.libraries.places.api.net.FindCurrentPlaceRequest;
-import com.google.android.libraries.places.api.net.PlacesClient;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
@@ -242,93 +234,22 @@ public class HomeFragment extends Fragment implements MainActivity.OnPermissions
                 mapManager.focusOnItem(item);
             }
         });
-        timelineAdapter.setOnLabelClickListener(still -> {
-            PlaceLabelSheet sheet = PlaceLabelSheet.newInstance(still, this::savePlaceAndRegisterGeofence);
-            sheet.show(getChildFragmentManager(), "PlaceLabelSheet");
-        });
+        timelineAdapter.setOnLabelClickListener(this::showEditSheet);
         rvTimeline.setLayoutManager(new LinearLayoutManager(requireContext()));
         rvTimeline.setAdapter(timelineAdapter);
     }
 
-    private void showLabelDialog(StillLocation still) {
-        String[] options = {"Home", "Work", "Gym", "School", "Custom..."};
-        new AlertDialog.Builder(requireContext())
-                .setTitle("Label this Place")
-                .setItems(options, (dialog, which) -> {
-                    String selected = options[which];
-                    if (selected.equals("Custom...")) {
-                        showCustomLabelInput(still);
-                    } else {
-                        savePlaceAndRegisterGeofence(still, selected, selected);
-                    }
-                })
-                .show();
-    }
-
-    private void showCustomLabelInput(StillLocation still) {
-        EditText input = new EditText(requireContext());
-        input.setHint("Enter place name");
-        new AlertDialog.Builder(requireContext())
-                .setTitle("Custom Label")
-                .setView(input)
-                .setPositiveButton("Save", (dialog, which) -> {
-                    String name = input.getText().toString().trim();
-                    if (!name.isEmpty()) {
-                        savePlaceAndRegisterGeofence(still, name, "Other");
-                    }
-                })
-                .setNegativeButton("Cancel", null)
-                .show();
-    }
-
-    private void savePlaceAndRegisterGeofence(StillLocation still, String name, String category) {
-        if (still.lat == null || still.lng == null) {
-            Toast.makeText(requireContext(), "Cannot label a place without coordinates", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        Executors.newSingleThreadExecutor().execute(() -> {
-            // 1. Create and save the Place
-            Place place = new Place();
-            place.name = name;
-            place.category = category;
-            place.lat = still.lat;
-            place.lng = still.lng;
-            place.radius = 100f; // Default 100m radius
-
-            long placeId = placeDao.insertPlace(place);
-
-            // 2. Update ALL StillLocation records within this geofence
-            List<StillLocation> allStills = dao.getAllStillLocations();
-            int updatedCount = 0;
-            float[] results = new float[1];
-
-            for (StillLocation s : allStills) {
-                if (s.lat != null && s.lng != null) {
-                    android.location.Location.distanceBetween(s.lat, s.lng, place.lat, place.lng, results);
-                    if (results[0] <= place.radius) {
-                        s.placeId = String.valueOf(placeId);
-                        s.placeName = name;
-                        s.icon = category;
-                        dao.updateStillLocation(s);
-                        updatedCount++;
-                    }
-                }
-            }
-
-            // 3. Register the geofence
-            geofenceManager.addGeofence("place_" + placeId, place.lat, place.lng, place.radius);
-
-            int finalUpdatedCount = updatedCount;
-            requireActivity().runOnUiThread(() -> {
-                Toast.makeText(requireContext(), "Saved " + name + " and updated " + finalUpdatedCount + " locations", Toast.LENGTH_SHORT).show();
-                loadTimelineData(calendarManager.getSelectedDate());
-
-                // Also notify the service to refresh its geofence list if it's running
-                Intent intent = new Intent(requireContext(), LocationService.class);
-                requireContext().startService(intent);
+    private void showEditSheet(StillLocation still) {
+        EditActivitySheet sheet = EditActivitySheet.newInstance(still, updatedStill -> {
+            Executors.newSingleThreadExecutor().execute(() -> {
+                dao.updateStillLocation(updatedStill);
+                requireActivity().runOnUiThread(() -> {
+                    Toast.makeText(requireContext(), "Visit updated", Toast.LENGTH_SHORT).show();
+                    loadTimelineData(calendarManager.getSelectedDate());
+                });
             });
         });
+        sheet.show(getChildFragmentManager(), "PlaceLabelSheet");
     }
 
     private void loadTimelineData(Date date) {

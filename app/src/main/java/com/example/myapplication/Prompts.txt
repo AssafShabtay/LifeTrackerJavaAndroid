@@ -65,4 +65,19 @@ add to the settings fragment those settings options:
 
 -------------------------
 
-I want that if a still is registered durning a movement activity, it would be considered a stop, it would clearly be shown in the ui, and inside the map
+can make the lcoationService cleaner by splitting it to diffrent files in a way that makes sense and is easy,
+
+you MUST keep all of my comments and TODOS
+
+---------------------------------------
+
+I want that if the movement activity with a nested still stop is ended but the still is still going on, the nested still stop wont be considered a stop anymore and will be a normal still
+
+-------------------------------------------------------------------------------------------
+
+detect which location is Home
+
+
+--------------------------
+
+how to add an autocomplete to the address label when dediting address in the  @EditActivitySheet.java 

@@ -21,7 +21,8 @@ public class StillLocation implements TimelineItem {
     public String category;
     public String icon;
     public String placeCoords;
-    public Double confidence;
+    public Integer color;
+    public boolean isStop;
 
     @Override
     public Date getStartTime() {

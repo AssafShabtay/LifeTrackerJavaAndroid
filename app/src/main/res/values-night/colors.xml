@@ -9,8 +9,8 @@
     <color name="secondary">#9AA0A6</color>
     <color name="on_secondary">#202124</color>
 
-    <color name="background">#1F1F1F</color>
-    <color name="surface">#2B2B2B</color>
+    <color name="background">#000000</color>
+    <color name="surface">#000000</color>
     <color name="on_surface">#E3E3E3</color>
     <color name="on_surface_variant">#C4C7C5</color>
     <color name="outline">#8E918F</color>
@@ -18,6 +18,7 @@
 
     <!-- Activity Colors for Dark Mode (Slightly desaturated) -->
     <color name="activity_still">#81C995</color>
+    <color name="activity_stop">#F28B82</color>
     <color name="activity_walking">#8AB4F8</color>
     <color name="activity_vehicle">#D7AEFB</color>
     <color name="activity_running">#F28B82</color>
