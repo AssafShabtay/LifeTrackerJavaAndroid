@@ -35,7 +35,6 @@ import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.PolylineOptions;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -338,7 +337,7 @@ public class MapManager implements OnMapReadyCallback {
         
         LatLngBounds.Builder builder = new LatLngBounds.Builder();
         boolean hasPoints = false;
-        int color = getMovementColor(movement.activityType);
+        int color = getMovementColor(movement.activityTypeName);
 
         // Add marker for start position
         if (movement.startLat != null && movement.startLng != null) {
@@ -346,14 +345,14 @@ public class MapManager implements OnMapReadyCallback {
             
             BitmapDescriptor icon;
             if (useIcon) {
-                icon = getIconMarkerIcon(getMovementIconRes(movement.activityType), color);
+                icon = getIconMarkerIcon(getMovementIconRes(movement.activityTypeName), color);
             } else {
                 icon = getNumberedMarkerIcon(number, color);
             }
             
             mMap.addMarker(new MarkerOptions()
                     .position(start)
-                    .title((useIcon ? "" : (number + ". ")) + "Start: " + movement.activityType)
+                    .title((useIcon ? "" : (number + ". ")) + "Start: " + movement.activityTypeName)
                     .icon(icon));
             builder.include(start);
             hasPoints = true;
@@ -409,14 +408,14 @@ public class MapManager implements OnMapReadyCallback {
             
             BitmapDescriptor icon;
             if (useIcon) {
-                icon = getIconMarkerIcon(getMovementIconRes(movement.activityType), color);
+                icon = getIconMarkerIcon(getMovementIconRes(movement.activityTypeName), color);
             } else {
                 icon = getNumberedMarkerIcon(number, color);
             }
             
             mMap.addMarker(new MarkerOptions()
                     .position(end)
-                    .title((useIcon ? "" : (number + ". ")) + "End: " + movement.activityType)
+                    .title((useIcon ? "" : (number + ". ")) + "End: " + movement.activityTypeName)
                     .icon(icon));
             builder.include(end);
             hasPoints = true;

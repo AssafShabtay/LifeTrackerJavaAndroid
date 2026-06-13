@@ -45,7 +45,7 @@ public final class ExampleData {
 
         // --- NEW: Driving with a Stop ---
         MovementActivity morningCommute = new MovementActivity();
-        morningCommute.activityType = "Driving";
+        morningCommute.activityTypeName = "Driving";
         morningCommute.startLat = 52.52;
         morningCommute.startLng = 13.405;
         morningCommute.endLat = 52.53;
@@ -75,7 +75,7 @@ public final class ExampleData {
         dao.insertStillLocation(office);
 
         MovementActivity driveHome = new MovementActivity();
-        driveHome.activityType = "Driving";
+        driveHome.activityTypeName = "Driving";
         driveHome.startLat = 52.53;
         driveHome.startLng = 13.42;
         driveHome.endLat = 52.52;
@@ -96,7 +96,7 @@ public final class ExampleData {
         dao.insertStillLocation(homeYesterday);
 
         MovementActivity run = new MovementActivity();
-        run.activityType = "Running";
+        run.activityTypeName = "Running";
         run.startLat = 52.52;
         run.startLng = 13.405;
         run.endLat = 52.54;

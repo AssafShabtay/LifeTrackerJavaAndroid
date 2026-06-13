@@ -42,9 +42,6 @@ public class ActivityTransitionReceiver extends BroadcastReceiver {
             }
         }
 
-
-
-
     }
 
 

@@ -1,7 +1,6 @@
 package com.example.myapplication.mainScreen;
 
 import android.content.Context;
-import android.graphics.Color;
 import android.graphics.Typeface;
 import android.util.TypedValue;
 import android.view.Gravity;
@@ -339,7 +338,7 @@ public class CalendarManager {
             if (e > s) {
                 float startTimeMinutes = (s - startOfDayMillis) / 60000f;
                 float durationMinutes = (e - s) / 60000f;
-                slices.add(new MiniPieChartView.Slice(startTimeMinutes, durationMinutes, getColorForActivity(movement.activityType)));
+                slices.add(new MiniPieChartView.Slice(startTimeMinutes, durationMinutes, getColorForActivity(movement.activityTypeName)));
             }
         }
 

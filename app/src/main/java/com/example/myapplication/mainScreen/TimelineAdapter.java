@@ -107,23 +107,8 @@ public class TimelineAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
             String title = (still.placeName != null) ? still.placeName : "Stationary";
             // Check for stops
             //boolean isStop = still.wasSupposedToBeActivity != null; TODO remove
-            boolean isStop = false;
-            for (TimelineItem timelineItem : items) {
-                if (timelineItem instanceof MovementActivity) {
-                    MovementActivity movement = (MovementActivity) timelineItem;
-                    if (still.startTimeDate != null && still.endTimeDate != null &&
-                            movement.startTimeDate != null && movement.endTimeDate != null &&
-                            still.startTimeDate.after(movement.startTimeDate) &&
-                            still.endTimeDate.before(movement.endTimeDate)) {
 
-                        isStop = true;
-                        break;
-                    }
-                }
-            }
-
-
-            if (isStop && !title.startsWith("Stop • ")) {
+            if (still.isStop && !title.startsWith("Stop • ")) {
                 title = "Stop • " + title;
             }
             stillHolder.itemTitle.setText(title);
@@ -150,7 +135,7 @@ public class TimelineAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
                 stillColor = still.color;
             } else {
                 stillColor = ContextCompat.getColor(stillHolder.itemView.getContext(),
-                        isStop ? R.color.activity_stop : R.color.activity_still);
+                        still.isStop ? R.color.activity_stop : R.color.activity_still);
             }
             
             if (stillHolder.color.getBackground() != null) {
@@ -171,7 +156,7 @@ public class TimelineAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
             stillHolder.itemIcon.setImageResource(iconRes);
 
             // Highlight stops or custom colors
-            if (isStop || still.color != null) {
+            if (still.isStop || still.color != null) {
                 int textColor = (still.color != null) ? still.color : ContextCompat.getColor(stillHolder.itemView.getContext(), R.color.activity_stop);
                 stillHolder.itemTitle.setTextColor(textColor);
                 stillHolder.itemIcon.setColorFilter(textColor);
@@ -188,7 +173,7 @@ public class TimelineAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
             MovementActivity movement = (MovementActivity) item;
             MovementViewHolder movementHolder = (MovementViewHolder) holder;
 
-            String type = (movement.activityType != null) ? movement.activityType : "Movement";
+            String type = (movement.activityTypeName != null) ? movement.activityTypeName : "Movement";
             movementHolder.itemTitle.setText(type);
 
             movementHolder.itemTimeRange.setText(UiFormatters.timeOnly(movement.startTimeDate) + " — " +
@@ -222,7 +207,7 @@ public class TimelineAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
             movementHolder.itemIcon.setImageResource(iconRes);
 
             // Speed logic
-            if (movement.activityType != null && (t.contains("driving") || t.contains("cycling") || t.contains("running"))) {
+            if (movement.activityTypeName != null && (t.contains("driving") || t.contains("cycling") || t.contains("running"))) {
                 movementHolder.itemSpeed.setVisibility(View.VISIBLE);
                 movementHolder.itemSpeed.setText("Movement tracking active");
             } else {

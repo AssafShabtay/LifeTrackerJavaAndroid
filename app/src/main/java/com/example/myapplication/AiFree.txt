@@ -1,1 +1,2 @@
-TimelineAdapterthe Plattכעכדשגכשדגכ
+ActivitayMergeManger
+GeofenceUtilsManager

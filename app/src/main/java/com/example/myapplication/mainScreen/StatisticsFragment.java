@@ -4,7 +4,6 @@ import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -156,7 +155,7 @@ public class StatisticsFragment extends Fragment {
                 placeDurations.put(place, placeDurations.getOrDefault(place, 0L) + durationMins);
             } else if (item instanceof MovementActivity) {
                 MovementActivity move = (MovementActivity) item;
-                type = move.activityType != null ? move.activityType : "Moving";
+                type = move.activityTypeName != null ? move.activityTypeName : "Moving";
                 
                 if ("WALKING".equalsIgnoreCase(type)) color = ContextCompat.getColor(requireContext(), R.color.activity_walking);
                 else if ("CYCLING".equalsIgnoreCase(type)) color = ContextCompat.getColor(requireContext(), R.color.activity_cycling);

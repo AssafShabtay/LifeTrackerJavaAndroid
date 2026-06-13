@@ -13,7 +13,7 @@ public class MovementActivity implements TimelineItem {
     @PrimaryKey(autoGenerate = true)
     public long id;
 
-    public String activityType;
+    public String activityTypeName;
     public Double startLat;
     public Double startLng;
     public Double endLat;

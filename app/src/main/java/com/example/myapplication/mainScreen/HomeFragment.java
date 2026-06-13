@@ -287,14 +287,19 @@ public class HomeFragment extends Fragment implements MainActivity.OnPermissions
             List<TimelineItem> processedCombined = new ArrayList<>();
             MovementActivity lastMovement = null;
 
+
             for (TimelineItem item : rawCombined) {
                 if (item instanceof StillLocation) {
                     StillLocation still = (StillLocation) item;
-                    if (still.wasSupposedToBeActivity != null && lastMovement != null) {
-                        // This is a stop from a movement, add it to the movement
+                    // Check if this is a stop
+                    if (lastMovement != null && ((still.startTimeDate != null && still.endTimeDate != null &&
+                            lastMovement.startTimeDate != null && lastMovement.endTimeDate != null &&
+                            still.startTimeDate.after(lastMovement.startTimeDate) &&
+                            still.endTimeDate.before(lastMovement.endTimeDate)) || still.wasSupposedToBeActivity != null)) {
+                        still.isStop = true;
                         lastMovement.stops.add(still);
                     } else {
-                        // Not a stop or no movement preceded it, add as top-level
+                        // Not a stop, add to combined list
                         processedCombined.add(still);
                         lastMovement = null;
                     }
