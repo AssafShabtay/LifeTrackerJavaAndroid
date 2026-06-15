@@ -77,15 +77,16 @@
         <com.google.android.material.textfield.TextInputLayout
             style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="56dp"
             android:hint="Address / Coordinates"
             android:layout_marginBottom="24dp"
-            app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.MediumComponent">
+            app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.MediumComponent"
+            app:endIconMode="clear_text">
 
             <AutoCompleteTextView
                 android:id="@+id/etAddress"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:layout_height="match_parent"
                 android:inputType="textPostalAddress" />
 
         </com.google.android.material.textfield.TextInputLayout>

@@ -113,15 +113,23 @@ public class TimelineAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
             }
             stillHolder.itemTitle.setText(title);
 
-            // Coords/Address
-            if (still.placeCoords != null) {
-                stillHolder.itemCoords.setText(still.placeCoords);
-                stillHolder.itemCoords.setVisibility(View.VISIBLE);
-            } else if (still.lat != null && still.lng != null) {
-                stillHolder.itemCoords.setText(UiFormatters.decimal(still.lat) + ", " + UiFormatters.decimal(still.lng));
-                stillHolder.itemCoords.setVisibility(View.VISIBLE);
+            // Address (priority)
+            if (still.address != null && !still.address.isEmpty()) {
+                stillHolder.itemAddress.setText(still.address);
+                stillHolder.itemAddress.setVisibility(View.VISIBLE);
+                stillHolder.itemCoords.setVisibility(View.GONE); // Hide coords if address exists
             } else {
-                stillHolder.itemCoords.setVisibility(View.GONE);
+                stillHolder.itemAddress.setVisibility(View.GONE); // Hide address if no address
+                // Coords
+                if (still.placeCoords != null) {
+                    stillHolder.itemCoords.setText(still.placeCoords);
+                    stillHolder.itemCoords.setVisibility(View.VISIBLE);
+                } else if (still.lat != null && still.lng != null) {
+                    stillHolder.itemCoords.setText(UiFormatters.decimal(still.lat) + ", " + UiFormatters.decimal(still.lng));
+                    stillHolder.itemCoords.setVisibility(View.VISIBLE);
+                } else {
+                    stillHolder.itemCoords.setVisibility(View.GONE);
+                }
             }
 
             stillHolder.itemTimeRange.setText(UiFormatters.timeOnly(still.startTimeDate) + " — " +
@@ -227,6 +235,7 @@ public class TimelineAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
                     TextView stopTimeRange = stopView.findViewById(R.id.stopTimeRange);
                     android.widget.ImageView stopIcon = stopView.findViewById(R.id.stopIcon);
                     View btnLabelStop = stopView.findViewById(R.id.btnLabelStop);
+                    TextView stopAddress = stopView.findViewById(R.id.stopAddress);
 
                     String sTitle = (stop.placeName != null) ? stop.placeName : "Stationary";
                     if (!sTitle.startsWith("Stop • ")) {
@@ -235,6 +244,14 @@ public class TimelineAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
                     stopTitle.setText(sTitle);
                     stopDuration.setText(UiFormatters.duration(stop.startTimeDate, stop.endTimeDate));
                     stopTimeRange.setText(UiFormatters.timeOnly(stop.startTimeDate) + " — " + UiFormatters.timeOnly(stop.endTimeDate));
+
+                    // Set stop address
+                    if (stop.address != null && !stop.address.isEmpty()) {
+                        stopAddress.setText(stop.address);
+                        stopAddress.setVisibility(View.VISIBLE);
+                    } else {
+                        stopAddress.setVisibility(View.GONE);
+                    }
 
                     // Set stop icon based on category
                     int sIconRes = R.drawable.ic_still;
@@ -277,7 +294,7 @@ public class TimelineAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
     }
 
     static class StillViewHolder extends RecyclerView.ViewHolder {
-        TextView itemTitle, itemCoords, itemTimeRange, itemDuration;
+        TextView itemTitle, itemCoords, itemTimeRange, itemDuration, itemAddress;
         View color;
         android.widget.ImageView itemIcon;
         Button btnLabel;
@@ -291,6 +308,7 @@ public class TimelineAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
             color = itemView.findViewById(R.id.color);
             itemIcon = itemView.findViewById(R.id.itemIcon);
             btnLabel = itemView.findViewById(R.id.btnLabel);
+            itemAddress = itemView.findViewById(R.id.itemAddress);
         }
     }
 

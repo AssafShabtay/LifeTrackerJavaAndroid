@@ -19,6 +19,7 @@ public final class ExampleData {
     public static void insertExampleDataAsync(ActivityDao dao) {
         IO.execute(() -> {
             try {
+
                 insertExampleData(dao);
             } catch (Exception e) {
                 Log.e(TAG, "Failed inserting example data", e);

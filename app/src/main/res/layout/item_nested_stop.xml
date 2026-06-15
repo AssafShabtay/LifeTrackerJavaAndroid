@@ -32,7 +32,7 @@
                 android:id="@+id/stopTitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_toEndOf="@id/stopIcon"
+                android:layout_toEndOf="@+id/stopIcon"
                 android:layout_toStartOf="@id/stopDuration"
                 android:layout_marginStart="8dp"
                 android:layout_marginEnd="8dp"
@@ -50,6 +50,16 @@
                 android:textSize="12sp"
                 tools:text="5m" />
         </RelativeLayout>
+
+        <TextView
+            android:id="@+id/stopAddress"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="24dp"
+            android:layout_marginTop="4dp"
+            android:textColor="?attr/colorOnSurfaceVariant"
+            android:textSize="12sp"
+            tools:text="123 Main St, Anytown, USA" />
 
         <RelativeLayout
             android:layout_width="match_parent"

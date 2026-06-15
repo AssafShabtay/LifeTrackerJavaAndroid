@@ -81,3 +81,6 @@ detect which location is Home
 --------------------------
 
 how to add an autocomplete to the address label when dediting address in the  @EditActivitySheet.java 
+
+
+--------------------------------------------------------------

@@ -23,6 +23,7 @@ public class StillLocation implements TimelineItem {
     public String placeCoords;
     public Integer color;
     public boolean isStop;
+    public String address;
 
     @Override
     public Date getStartTime() {

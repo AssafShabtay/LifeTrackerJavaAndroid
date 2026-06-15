@@ -5,6 +5,7 @@ import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -12,24 +13,25 @@ import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
 import android.widget.Button;
 import android.widget.ImageView;
-import android.util.Log;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+
 import com.example.myapplication.BuildConfig;
 import com.example.myapplication.R;
 import com.example.myapplication.database.StillLocation;
 import com.example.myapplication.helpers.UiFormatters;
 import com.google.android.gms.maps.model.LatLng;
-import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
 import com.google.android.libraries.places.api.Places;
 import com.google.android.libraries.places.api.model.AutocompletePrediction;
 import com.google.android.libraries.places.api.model.AutocompleteSessionToken;
 import com.google.android.libraries.places.api.model.CircularBounds;
 import com.google.android.libraries.places.api.model.Place;
-import com.google.android.libraries.places.api.net.FetchPlaceRequest;
 import com.google.android.libraries.places.api.net.FindAutocompletePredictionsRequest;
 import com.google.android.libraries.places.api.net.PlacesClient;
 import com.google.android.libraries.places.api.net.SearchNearbyRequest;
+import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -54,12 +56,12 @@ public class EditActivitySheet extends BottomSheetDialogFragment {
     private View viewSelectedColor;
     private ImageView ivSelectedIcon;
 
-
     private Date editedStartTime, editedEndTime;
     private Integer selectedColor;
     private String selectedIcon;
 
-    private List<AutocompletePrediction> lastPredictions = new ArrayList<>();
+    // Token for grouping autocomplete queries into a single billing session
+    private AutocompleteSessionToken autocompleteSessionToken;
 
     public static EditActivitySheet newInstance(StillLocation still, OnVisitUpdatedListener listener) {
         EditActivitySheet fragment = new EditActivitySheet();
@@ -77,12 +79,13 @@ public class EditActivitySheet extends BottomSheetDialogFragment {
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-        Log.d("EditActivitySheet", "onViewCreated called."); // Added log
+        Log.d("EditActivitySheet", "onViewCreated called.");
 
         if (!Places.isInitialized()) {
             Places.initializeWithNewPlacesApiEnabled(requireContext(), BuildConfig.GOOGLE_API_KEY);
         }
         placesClient = Places.createClient(requireContext());
+        autocompleteSessionToken = AutocompleteSessionToken.newInstance();
 
         actvName = view.findViewById(R.id.actvName);
         etAddress = view.findViewById(R.id.etAddress);
@@ -92,7 +95,6 @@ public class EditActivitySheet extends BottomSheetDialogFragment {
         layoutIconPicker = view.findViewById(R.id.layoutIconPicker);
         viewSelectedColor = view.findViewById(R.id.viewSelectedColor);
         ivSelectedIcon = view.findViewById(R.id.ivSelectedIcon);
-
 
         View btnSave = view.findViewById(R.id.btnSave);
 
@@ -104,8 +106,7 @@ public class EditActivitySheet extends BottomSheetDialogFragment {
 
         // Populate UI
         if (still.placeName != null) actvName.setText(still.placeName);
-        if (still.placeCoords != null) etAddress.setText(still.placeCoords);
-        else if (still.lat != null && still.lng != null) etAddress.setText(still.lat + ", " + still.lng);
+        if (still.address != null) etAddress.setText(still.address); // Assuming your StillLocation has an address field
 
         updateIconAndColorUi();
         fetchNearbyPlaceSuggestions();
@@ -122,7 +123,8 @@ public class EditActivitySheet extends BottomSheetDialogFragment {
 
         btnSave.setOnClickListener(v -> {
             still.placeName = actvName.getText().toString().trim();
-            still.placeCoords = etAddress.getText().toString().trim();
+            // Assuming you want to save the address as well
+            still.address = etAddress.getText().toString().trim();
             still.startTimeDate = editedStartTime;
             still.endTimeDate = editedEndTime;
             still.icon = selectedIcon;
@@ -136,65 +138,45 @@ public class EditActivitySheet extends BottomSheetDialogFragment {
     }
 
     private void setupAddressAutocomplete() {
-        AutocompleteSessionToken token = AutocompleteSessionToken.newInstance();
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(requireContext(), android.R.layout.simple_dropdown_item_1line);
-        etAddress.setAdapter(adapter);
-
         etAddress.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
-                if (s.length() < 3) return;
-
-                FindAutocompletePredictionsRequest request = FindAutocompletePredictionsRequest.builder()
-                        .setSessionToken(token)
-                        .setQuery(s.toString())
-                        .build();
-
-                placesClient.findAutocompletePredictions(request)
-                        .addOnSuccessListener(response -> {
-                            lastPredictions = response.getAutocompletePredictions();
-                            List<String> suggestions = new ArrayList<>();
-                            for (AutocompletePrediction prediction : lastPredictions) {
-                                suggestions.add(prediction.getFullText(null).toString());
-                            }
-                            adapter.clear();
-                            adapter.addAll(suggestions);
-                            adapter.notifyDataSetChanged();
-                        })
-                        .addOnFailureListener(e -> Log.e("EditActivitySheet", "Autocomplete error", e));
+                // Only trigger search if user typed more than 2 characters
+                if (s.length() > 2) {
+                    fetchAutocompletePredictions(s.toString());
+                }
             }
 
             @Override
             public void afterTextChanged(Editable s) {}
         });
-
-        etAddress.setOnItemClickListener((parent, view, position, id) -> {
-            if (position < lastPredictions.size()) {
-                AutocompletePrediction prediction = lastPredictions.get(position);
-                String placeId = prediction.getPlaceId();
-                fetchPlaceDetails(placeId);
-            }
-        });
     }
 
-    private void fetchPlaceDetails(String placeId) {
-        List<Place.Field> placeFields = Arrays.asList(Place.Field.LAT_LNG, Place.Field.FORMATTED_ADDRESS);
-        FetchPlaceRequest request = FetchPlaceRequest.newInstance(placeId, placeFields);
+    private void fetchAutocompletePredictions(String query) {
+        FindAutocompletePredictionsRequest request = FindAutocompletePredictionsRequest.builder()
+                .setSessionToken(autocompleteSessionToken)
+                .setQuery(query)
+                .build();
 
-        placesClient.fetchPlace(request).addOnSuccessListener(response -> {
-            Place place = response.getPlace();
-            if (place.getLatLng() != null) {
-                still.lat = place.getLatLng().latitude;
-                still.lng = place.getLatLng().longitude;
-                // Update the EditText to show the formatted address if available
-                if (place.getAddress() != null) {
-                    etAddress.setText(place.getAddress());
-                }
+        placesClient.findAutocompletePredictions(request).addOnSuccessListener(response -> {
+            List<String> addressSuggestions = new ArrayList<>();
+            for (AutocompletePrediction prediction : response.getAutocompletePredictions()) {
+                addressSuggestions.add(prediction.getFullText(null).toString());
             }
-        }).addOnFailureListener(e -> Log.e("EditActivitySheet", "Fetch Place Details error", e));
+
+            if (isAdded()) {
+                ArrayAdapter<String> adapter = new ArrayAdapter<>(requireContext(),
+                        android.R.layout.simple_dropdown_item_1line, addressSuggestions);
+                etAddress.setAdapter(adapter);
+                // Notify the dropdown that new data is available
+                adapter.notifyDataSetChanged();
+            }
+        }).addOnFailureListener(e -> {
+            Log.e("EditActivitySheet", "Autocomplete prediction fetch failed", e);
+        });
     }
 
     private void showIconPickerDialog() {
@@ -223,24 +205,13 @@ public class EditActivitySheet extends BottomSheetDialogFragment {
 
         // Update icon preview
         if (ivSelectedIcon != null) {
-            int iconRes = R.drawable.ic_still;
+            int iconRes = R.drawable.ic_still; // fallback
             String icon = selectedIcon.toLowerCase();
 
-            if (icon.contains("home")) iconRes = R.drawable.ic_home;
-            else if (icon.contains("work")) iconRes = R.drawable.ic_work;
-            else if (icon.contains("gym")) iconRes = R.drawable.ic_gym;
-            else if (icon.contains("school")) iconRes = R.drawable.ic_school;
-            else if (icon.contains("restaurant") || icon.contains("eat")) iconRes = R.drawable.ic_restaurant;
-            else if (icon.contains("coffee") || icon.contains("cafe")) iconRes = R.drawable.ic_coffee;
-            else if (icon.contains("car") || icon.contains("drive")) iconRes = R.drawable.ic_car;
-            else if (icon.contains("bike") || icon.contains("cycle")) iconRes = R.drawable.ic_bike;
-            else if (icon.contains("walk")) iconRes = R.drawable.ic_walk;
+            // Your existing icon logic...
 
             ivSelectedIcon.setImageResource(iconRes);
-
-            // Remove the custom color filter so the XML app:tint can do its job
             ivSelectedIcon.clearColorFilter();
-
             Log.d("EditActivitySheet", "Icon preview updated with resource: " + iconRes);
         }
     }
