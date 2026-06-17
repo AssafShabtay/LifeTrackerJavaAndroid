@@ -25,7 +25,7 @@ public class GeofenceManager {
         this.geofencingClient = LocationServices.getGeofencingClient(context);
     }
 
-    @SuppressLint("MissingPermission")
+
     public void addGeofence(String requestId, double lat, double lng, float radius) {
         Geofence geofence = new Geofence.Builder()
                 .setRequestId(requestId)

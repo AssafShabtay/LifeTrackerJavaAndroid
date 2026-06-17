@@ -14,4 +14,6 @@ public class Place {
     public double lng;
     public float radius;
     public String category; // e.g., "Home", "Work"
+    public String icon;
+    public Integer color;
 }

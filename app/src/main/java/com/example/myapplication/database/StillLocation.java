@@ -18,8 +18,12 @@ public class StillLocation implements TimelineItem {
     public String wasSupposedToBeActivity;
     public String placeId;
     public String placeName;
-    public String placeCategory;
-    public String placeAddress;
+    public String category;
+    public String icon;
+    public String placeCoords;
+    public Integer color;
+    public boolean isStop;
+    public String address;
 
     @Override
     public Date getStartTime() {

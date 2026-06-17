@@ -8,8 +8,8 @@ import androidx.room.RoomDatabase;
 import androidx.room.TypeConverters;
 
 @Database(
-        entities = {StillLocation.class, MovementActivity.class, Place.class},
-        version = 4,
+        entities = {StillLocation.class, MovementActivity.class, Place.class, RoutePoint.class},
+        version = 3 ,
         exportSchema = false
 )
 @TypeConverters({Converters.class})

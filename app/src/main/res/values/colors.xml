@@ -1,28 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Primary - Indigo -->
-    <color name="primary">#3F51B5</color>
-    <color name="primary_light">#757de8</color>
-    <color name="primary_dark">#002984</color>
+    <!-- Modern Neutral & Soft Palette -->
+    <color name="primary">#1A73E8</color> <!-- Google Blue -->
     <color name="on_primary">#FFFFFF</color>
+    <color name="primary_container">#D2E3FC</color>
+    <color name="on_primary_container">#174EA6</color>
 
-    <!-- Secondary - Amber/Gold for movement -->
-    <color name="secondary">#FFC107</color>
-    <color name="secondary_light">#fff350</color>
-    <color name="secondary_dark">#c79100</color>
-    <color name="on_secondary">#000000</color>
-
-    <!-- Surface/Background -->
+    <color name="secondary">#5F6368</color>
+    <color name="on_secondary">#FFFFFF</color>
+    
     <color name="background">#F8F9FA</color>
     <color name="surface">#FFFFFF</color>
-    <color name="on_surface">#1A1C1E</color>
-    <color name="on_surface_variant">#44474E</color>
-    <color name="outline">#E0E0E0</color>
+    <color name="on_surface">#202124</color>
+    <color name="on_surface_variant">#5F6368</color>
+    <color name="outline">#DADCE0</color>
+    <color name="outline_variant">#F1F3F4</color>
     
-    <!-- Accent colors for activity types -->
-    <color name="activity_still">#4CAF50</color> <!-- Green -->
-    <color name="activity_walking">#2196F3</color> <!-- Blue -->
-    <color name="activity_vehicle">#9C27B0</color> <!-- Purple -->
+    <!-- Activity Specific - Material Colors -->
+    <color name="activity_still">#34A853</color> <!-- Google Green -->
+    <color name="activity_stop">#EA4335</color> <!-- Google Red -->
+    <color name="activity_walking">#4285F4</color> <!-- Google Blue -->
+    <color name="activity_vehicle">#9334E6</color> <!-- Soft Purple -->
+    <color name="activity_running">#EA4335</color> <!-- Google Red -->
+    <color name="activity_cycling">#FBBC04</color> <!-- Google Yellow -->
+
+    <color name="timeline_line">#E8EAED</color>
 
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>

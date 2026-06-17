@@ -1,5 +1,6 @@
 package com.example.myapplication.locationTracking;
 
+import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -7,8 +8,12 @@ import android.os.Build;
 import android.util.Log;
 
 import com.example.myapplication.helpers.Logger;
+import com.google.android.gms.location.ActivityRecognition;
+import com.google.android.gms.location.ActivityRecognitionResult;
+import com.google.android.gms.location.ActivityTransition;
 import com.google.android.gms.location.ActivityTransitionEvent;
 import com.google.android.gms.location.ActivityTransitionResult;
+import com.google.android.gms.location.DetectedActivity;
 
 public class ActivityTransitionReceiver extends BroadcastReceiver {
 
@@ -20,21 +25,43 @@ public class ActivityTransitionReceiver extends BroadcastReceiver {
 
     @Override
     public void onReceive(Context context, Intent intent) {
-        String msg = "onReceive: Activity transition broadcast received";
+        String msg = "onReceive: Activity transitions broadcast received";
         Log.d(TAG, msg);
         Logger.saveLog(context, msg);
-        
+
         if (ActivityTransitionResult.hasResult(intent)) {
             ActivityTransitionResult result = ActivityTransitionResult.extractResult(intent);
             if (result != null) {
                 long receiptTimestampNanos = android.os.SystemClock.elapsedRealtimeNanos();
                 for (ActivityTransitionEvent event : result.getTransitionEvents()) {
-                    String eventMsg = "onReceive: Processing transition for " + event.getActivityType() + " (Type: " + event.getTransitionType() + ")";
+                    String eventMsg = "onReceive: Processing transition for " + getActivityName(event.getActivityType()) + " (" + getTransitionName(event.getTransitionType()) + ")";
                     Log.d(TAG, eventMsg);
                     Logger.saveLog(context, eventMsg);
                     notifyService(context, event.getActivityType(), event.getTransitionType(), receiptTimestampNanos);
                 }
             }
+        }
+
+    }
+
+
+    private String getActivityName(int activityType) {
+        switch (activityType) {
+            case DetectedActivity.IN_VEHICLE: return "Driving";
+            case DetectedActivity.ON_BICYCLE: return "Cycling";
+            case DetectedActivity.ON_FOOT: return "On Foot";
+            case DetectedActivity.RUNNING: return "Running";
+            case DetectedActivity.WALKING: return "Walking";
+            case DetectedActivity.STILL: return "Still";
+            default: return "Unknown (" + activityType + ")";
+        }
+    }
+
+    private String getTransitionName(int transitionType) {
+        switch (transitionType) {
+            case ActivityTransition.ACTIVITY_TRANSITION_ENTER: return "ENTER";
+            case ActivityTransition.ACTIVITY_TRANSITION_EXIT: return "EXIT";
+            default: return "UNKNOWN (" + transitionType + ")";
         }
     }
 
@@ -42,7 +69,7 @@ public class ActivityTransitionReceiver extends BroadcastReceiver {
         String msg = "notifyService: Sending activity update to LocationService for DB processing";
         Log.d(TAG, msg);
         Logger.saveLog(context, msg);
-        
+
         Intent serviceIntent = new Intent(context, LocationService.class);
         serviceIntent.setAction(ACTION_ACTIVITY_UPDATE);
         serviceIntent.putExtra(EXTRA_ACTIVITY_TYPE, activityType);

@@ -7,36 +7,64 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:gravity="center"
-    android:padding="32dp"
+    android:padding="40dp"
     android:visibility="gone"
     android:background="?attr/android:windowBackground"
     android:clickable="true"
     android:focusable="true">
 
+    <com.google.android.material.card.MaterialCardView
+        android:layout_width="80dp"
+        android:layout_height="80dp"
+        app:cardCornerRadius="40dp"
+        app:cardElevation="0dp"
+        app:cardBackgroundColor="@color/primary_container"
+        android:layout_marginBottom="32dp">
+        
+        <ImageView
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_gravity="center"
+            android:src="@android:drawable/ic_menu_mylocation"
+            app:tint="@color/primary" />
+    </com.google.android.material.card.MaterialCardView>
+
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Permissions needed"
+        android:text="Location Access"
         android:textSize="24sp"
-        android:textStyle="bold"
+        android:fontFamily="sans-serif-medium"
         android:textColor="?attr/colorOnSurface"
-        android:paddingBottom="8dp"/>
+        android:layout_marginBottom="12dp"/>
 
     <TextView
         android:id="@+id/permission_subtitle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Please grant permissions to track your daily timeline."
-        android:textSize="16sp"
+        android:text="Timeline needs location permissions to automatically track your daily movements and places."
+        android:textSize="15sp"
         android:gravity="center"
-        android.textColor="?attr/colorOnSurfaceVariant"
-        android:paddingBottom="32dp"/>
+        android:textColor="?attr/colorOnSurfaceVariant"
+        android:lineSpacingExtra="4dp"
+        android:layout_marginBottom="40dp"/>
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/permission_action"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:text="Grant Access"
+        app:cornerRadius="28dp"
+        android:fontFamily="sans-serif-medium"
+        android:textSize="16sp"/>
+
+    <com.google.android.material.button.MaterialButton
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Grant Permissions"
-        app:cornerRadius="12dp"
-        android:paddingHorizontal="32dp"/>
+        android:layout_marginTop="16dp"
+        style="@style/Widget.Material3.Button.TextButton"
+        android:text="Learn more about privacy"
+        android:textSize="13sp"
+        android:textColor="?attr/colorOnSurfaceVariant" />
+
 </LinearLayout>

@@ -1,6 +1,5 @@
 package com.example.myapplication.mainScreen;
 
-import android.app.AlertDialog;
 import android.app.PendingIntent;
 import android.content.Intent;
 import android.os.Build;
@@ -13,7 +12,6 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
-import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -24,7 +22,6 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.myapplication.MainActivity;
-import com.example.myapplication.database.Place;
 import com.example.myapplication.database.PlaceDao;
 import com.example.myapplication.helpers.PermissionManagerCN;
 import com.example.myapplication.locationTracking.ActivityTransitionReceiver;
@@ -61,6 +58,7 @@ public class HomeFragment extends Fragment implements MainActivity.OnPermissions
     private View headerLayout;
 
     private Button btnInsertExample;
+    private Button btnShowFullDay;
 
     private ActivityDao dao;
     private PlaceDao placeDao;
@@ -88,7 +86,7 @@ public class HomeFragment extends Fragment implements MainActivity.OnPermissions
             refreshHandler.postDelayed(this, UPDATE_INTERVAL_MS);
         }
     };
-    
+
     @Override
     public void onPermissionsGranted() {
         refreshPermissionUi(true);
@@ -106,7 +104,7 @@ public class HomeFragment extends Fragment implements MainActivity.OnPermissions
     private void refreshPermissionUi(boolean hasPerms) {
         //control what you see depending on whether  you accepted permissions
         View timelineLabel = requireView().findViewById(R.id.tv_timeline_label);
-        if(hasPerms){// are permissions granted?
+        if (hasPerms) {// are permissions granted?
             permissionBlocker.setVisibility(View.GONE);
             headerLayout.setVisibility(View.VISIBLE);
             rvTimeline.setVisibility(View.VISIBLE);
@@ -116,8 +114,7 @@ public class HomeFragment extends Fragment implements MainActivity.OnPermissions
             if (timelineLabel != null) {
                 timelineLabel.setVisibility(View.VISIBLE);
             }
-        }
-        else{
+        } else {
             permissionBlocker.setVisibility(View.VISIBLE);
             headerLayout.setVisibility(View.GONE);
             rvTimeline.setVisibility(View.GONE);
@@ -164,6 +161,7 @@ public class HomeFragment extends Fragment implements MainActivity.OnPermissions
         headerLayout = view.findViewById(R.id.header_layout);
 
         btnInsertExample = view.findViewById(R.id.btn_insert_example);
+        btnShowFullDay = view.findViewById(R.id.btn_show_full_day);
         rvTimeline = view.findViewById(R.id.rvTimeline);
 
         ActivityDatabase db = ActivityDatabase.getDatabase(requireContext());
@@ -175,6 +173,14 @@ public class HomeFragment extends Fragment implements MainActivity.OnPermissions
             ExampleData.insertExampleDataAsync(dao);
             loadTimelineData(calendarManager.getSelectedDate());
         });
+
+        if (btnShowFullDay != null) {
+            btnShowFullDay.setOnClickListener(v -> {
+                if (mapManager != null && timelineAdapter != null) {
+                    mapManager.showFullDay(timelineAdapter.getItems());
+                }
+            });
+        }
 
         mapManager = new MapManager(this, R.id.map);
         mapManager.init();
@@ -228,80 +234,22 @@ public class HomeFragment extends Fragment implements MainActivity.OnPermissions
                 mapManager.focusOnItem(item);
             }
         });
-        timelineAdapter.setOnLabelClickListener(still -> {
-            PlaceLabelSheet sheet = PlaceLabelSheet.newInstance(still, this::savePlaceAndRegisterGeofence);
-            sheet.show(getChildFragmentManager(), "PlaceLabelSheet");
-        });
+        timelineAdapter.setOnLabelClickListener(this::showEditSheet);
         rvTimeline.setLayoutManager(new LinearLayoutManager(requireContext()));
         rvTimeline.setAdapter(timelineAdapter);
     }
 
-    private void showLabelDialog(StillLocation still) {
-        String[] options = {"Home", "Work", "Gym", "School", "Custom..."};
-        new AlertDialog.Builder(requireContext())
-                .setTitle("Label this Place")
-                .setItems(options, (dialog, which) -> {
-                    String selected = options[which];
-                    if (selected.equals("Custom...")) {
-                        showCustomLabelInput(still);
-                    } else {
-                        savePlaceAndRegisterGeofence(still, selected, selected);
-                    }
-                })
-                .show();
-    }
-
-    private void showCustomLabelInput(StillLocation still) {
-        EditText input = new EditText(requireContext());
-        input.setHint("Enter place name");
-        new AlertDialog.Builder(requireContext())
-                .setTitle("Custom Label")
-                .setView(input)
-                .setPositiveButton("Save", (dialog, which) -> {
-                    String name = input.getText().toString().trim();
-                    if (!name.isEmpty()) {
-                        savePlaceAndRegisterGeofence(still, name, "Other");
-                    }
-                })
-                .setNegativeButton("Cancel", null)
-                .show();
-    }
-
-    private void savePlaceAndRegisterGeofence(StillLocation still, String name, String category) {
-        if (still.lat == null || still.lng == null) {
-            Toast.makeText(requireContext(), "Cannot label a place without coordinates", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        Executors.newSingleThreadExecutor().execute(() -> {
-            // 1. Create and save the Place
-            Place place = new Place();
-            place.name = name;
-            place.category = category;
-            place.lat = still.lat;
-            place.lng = still.lng;
-            place.radius = 100f; // Default 100m radius
-            
-            long placeId = placeDao.insertPlace(place);
-            
-            // 2. Update the StillLocation record
-            still.placeId = String.valueOf(placeId);
-            still.placeName = name;
-            still.placeCategory = category;
-            dao.updateStillLocation(still);
-            
-            // 3. Register the geofence
-            geofenceManager.addGeofence("place_" + placeId, place.lat, place.lng, place.radius);
-            
-            requireActivity().runOnUiThread(() -> {
-                Toast.makeText(requireContext(), "Saved " + name + " and added geofence", Toast.LENGTH_SHORT).show();
-                loadTimelineData(calendarManager.getSelectedDate());
-                
-                // Also notify the service to refresh its geofence list if it's running
-                Intent intent = new Intent(requireContext(), LocationService.class);
-                requireContext().startService(intent); 
+    private void showEditSheet(StillLocation still) {
+        EditActivitySheet sheet = EditActivitySheet.newInstance(still, updatedStill -> {
+            Executors.newSingleThreadExecutor().execute(() -> {
+                dao.updateStillLocation(updatedStill);
+                requireActivity().runOnUiThread(() -> {
+                    Toast.makeText(requireContext(), "Visit updated", Toast.LENGTH_SHORT).show();
+                    loadTimelineData(calendarManager.getSelectedDate());
+                });
             });
         });
+        sheet.show(getChildFragmentManager(), "PlaceLabelSheet");
     }
 
     private void loadTimelineData(Date date) {
@@ -325,18 +273,44 @@ public class HomeFragment extends Fragment implements MainActivity.OnPermissions
             List<StillLocation> stills = dao.getStillForRange(start, end);
             List<MovementActivity> movements = dao.getMovementForRange(start, end);
 
-            List<TimelineItem> combined = new ArrayList<>();
-            combined.addAll(stills);
-            combined.addAll(movements);
+            List<TimelineItem> rawCombined = new ArrayList<>();
+            rawCombined.addAll(stills);
+            rawCombined.addAll(movements);
 
             // Sort by start time, from earliest to latest
-            Collections.sort(combined, (a, b) -> {
-                if (a.getStartTime() == null || b.getStartTime() == null) return 0; // If either item has no start time, treat them as equal
+            Collections.sort(rawCombined, (a, b) -> {
+                if (a.getStartTime() == null || b.getStartTime() == null) return 0;
                 return a.getStartTime().compareTo(b.getStartTime());
             });
 
-            if(isAdded()) {
-                requireActivity().runOnUiThread(() -> timelineAdapter.submitList(combined)); // switch back to the main thread and updates the list
+            // Group stops into preceding movement activities
+            List<TimelineItem> processedCombined = new ArrayList<>();
+            MovementActivity lastMovement = null;
+
+
+            for (TimelineItem item : rawCombined) {
+                if (item instanceof StillLocation) {
+                    StillLocation still = (StillLocation) item;
+                    // Check if this is a stop
+                    if (lastMovement != null && ((still.startTimeDate != null && still.endTimeDate != null &&
+                            lastMovement.startTimeDate != null && lastMovement.endTimeDate != null &&
+                            still.startTimeDate.after(lastMovement.startTimeDate) &&
+                            still.endTimeDate.before(lastMovement.endTimeDate)) || still.wasSupposedToBeActivity != null)) {
+                        still.isStop = true;
+                        lastMovement.stops.add(still);
+                    } else {
+                        // Not a stop, add to combined list
+                        processedCombined.add(still);
+                        lastMovement = null;
+                    }
+                } else if (item instanceof MovementActivity) {
+                    lastMovement = (MovementActivity) item;
+                    processedCombined.add(lastMovement);
+                }
+            }
+
+            if (isAdded()) {
+                requireActivity().runOnUiThread(() -> timelineAdapter.submitList(processedCombined)); // switch back to the main thread and updates the list
             }
         });
     }
@@ -409,16 +383,24 @@ public class HomeFragment extends Fragment implements MainActivity.OnPermissions
 
         ActivityTransitionRequest request = new ActivityTransitionRequest(transitions);
         Intent intent = new Intent(requireContext(), ActivityTransitionReceiver.class);
-        
+
 
         int flags = PendingIntent.FLAG_UPDATE_CURRENT;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             flags |= PendingIntent.FLAG_MUTABLE;
         }
-        
+
         PendingIntent pendingIntent = PendingIntent.getBroadcast(
                 requireContext(),
                 0,
+                intent,
+                flags
+        );
+
+        // Also request regular activity updates for a quick initial detection
+        PendingIntent activityUpdatePendingIntent = PendingIntent.getBroadcast(//TODO THIS CHUNK MIGHT BE USELESS
+                requireContext(),
+                1, // Different request code
                 intent,
                 flags
         );
@@ -434,6 +416,13 @@ public class HomeFragment extends Fragment implements MainActivity.OnPermissions
                         transitionsRegistered = false;
                         Log.e(TAG, "Registration failed", e);
                     });
+
+            // Initial quick detection to avoid "idle" state
+            ActivityRecognition.getClient(requireContext()) //TODO THIS CHUNK MIGHT BE USELESS
+                    .requestActivityUpdates(5000, activityUpdatePendingIntent)
+                    .addOnSuccessListener(unused -> Log.d(TAG, "Initial activity updates requested"))
+                    .addOnFailureListener(e -> Log.e(TAG, "Failed to request initial activity updates", e));
+
         } catch (SecurityException e) {
             transitionsRegistered = false;
             Log.e(TAG, "missing permission for transitions", e);

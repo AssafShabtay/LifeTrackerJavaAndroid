@@ -1,3 +1,86 @@
 add to the settings fragment those settings options:
-light or dark theme: light or dark or device default
 
+- Light / Dark Theme:
+  Options: Light, Dark, Follow device default. default is device default
+
+
+- Location Tracking
+  Toggle: Enable / Disable location tracking. default is on
+
+- Timeline Accuracy:
+  Options: High accuracy (GPS), Balanced, Low power //dont implement, add the ui but dont implement the function add toto comment to implement
+
+- Auto-delete Location History:
+  Options: Never, 3 months, year, 18 months, 36 months. default is never
+
+- Notifications:// dont implement, add the ui but dont implement the function add toto comment to implement
+  Toggle: Daily timeline summary
+  Toggle: Visit suggestions
+  Toggle: Travel highlights
+
+- Map Style: // dont implement, add the ui but dont implement the function add toto comment to implement
+  Options: Default, Satellite, Terrain
+
+- Units:
+  Options: Kilometers / Meters, Miles / Feet
+
+- Data & Privacy:
+  Button: Export my data
+  Button: Delete all location history
+  Button: Manage activity controls //dont implement Manage activity controls, add the ui but dont implement the function add toto comment to implement
+
+- Account: // dont implement, add the ui but dont implement the function add toto comment to implement
+  Show logged-in user
+  Button: Sign out
+
+- Backup & Sync:   dont implement, add the ui but dont implement the function add toto comment to implement
+  Toggle: Sync with cloud
+  Toggle: Backup on Wi-Fi only
+
+- About:
+  App version
+  Open source licenses
+  Privacy policy
+
+-0-------------------------------------------------------------------------
+
+
+  change the  @PlaceLabelSheet.java  to a popover
+
+ -----------------------------------------------------------------------------
+
+ how to make the movement route follow a street route if activity type is driving
+
+ ---------------------------------------------------------------------------------
+
+ add a category property to stillLocation, and assign to it values
+ -----------------------------------------------------------------------
+
+ add light mode
+
+ -------------------------------------------------
+
+ add a gray effect when pressing a timeline item
+
+
+-------------------------
+
+can make the lcoationService cleaner by splitting it to diffrent files in a way that makes sense and is easy,
+
+you MUST keep all of my comments and TODOS
+
+---------------------------------------
+
+I want that if the movement activity with a nested still stop is ended but the still is still going on, the nested still stop wont be considered a stop anymore and will be a normal still
+
+-------------------------------------------------------------------------------------------
+
+detect which location is Home
+
+
+--------------------------
+
+how to add an autocomplete to the address label when dediting address in the  @EditActivitySheet.java 
+
+
+--------------------------------------------------------------
