@@ -19,15 +19,23 @@ import com.example.myapplication.helpers.UiFormatters;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Adapter for the RecyclerView in the main timeline screen.
+ * It handles two types of items: StillLocation (stationary periods) and MovementActivity (walking, driving, etc.).
+ */
 public class TimelineAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
+
 
     private static final int TYPE_STILL = 0;
     private static final int TYPE_MOVEMENT = 1;
 
     private final List<TimelineItem> items = new ArrayList<>();
-    private OnItemClickListener listener;
-    private OnItemLongClickListener longClickListener;
-    private OnLabelClickListener labelClickListener;
+    private OnItemClickListener listener; // the action to perform when an item is clicked
+    private OnItemLongClickListener longClickListener; // the action to perform when an item is clicked
+    private OnLabelClickListener labelClickListener; // the action to perform when an item is clicked
+
+
+    // Interface for handling clicks on timeline items
 
     public interface OnItemClickListener {
         void onItemClick(TimelineItem item);
@@ -41,6 +49,8 @@ public class TimelineAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
         void onLabelClick(StillLocation still);
     }
 
+    // functions to set what happens when an item is clicked
+
     public void setOnItemClickListener(OnItemClickListener listener) {
         this.listener = listener;
     }
@@ -53,14 +63,17 @@ public class TimelineAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
         this.labelClickListener = labelClickListener;
     }
 
+
     public void submitList(List<TimelineItem> newItems) {
+        // updates the timeline items to the new ones
         items.clear();
         if (newItems != null) items.addAll(newItems);
-        notifyDataSetChanged();
+        notifyDataSetChanged(); // function to refresh ui, which apperantly isnt efficient so TODO
     }
 
-    @Override
+
     public int getItemViewType(int position) {
+        // Return view type based on the class of the item
         if (items.get(position) instanceof StillLocation) {
             return TYPE_STILL;
         } else {
@@ -69,8 +82,8 @@ public class TimelineAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
     }
 
     @NonNull
-    @Override
     public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+        // Inflate the corresponding layout for the view type
         if (viewType == TYPE_STILL) {
             View view = LayoutInflater.from(parent.getContext())
                     .inflate(R.layout.item_still_location, parent, false);
@@ -84,7 +97,12 @@ public class TimelineAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
 
     @Override
     public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
+        // add the data to view holder
+
+        // Get the item at the current position
         TimelineItem item = items.get(position);
+
+        // Setup click listeners
         holder.itemView.setOnClickListener(v -> {
             if (listener != null) {
                 listener.onItemClick(item);
@@ -98,20 +116,23 @@ public class TimelineAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
             }
             return false;
         });
-
+//TODO KEEP ON CHECKING FILE
         if (holder instanceof StillViewHolder) {
+            // Binding logic for stationary periods
+
             StillLocation still = (StillLocation) item;
             StillViewHolder h = (StillViewHolder) holder;
-            
+
             String title = still.placeName != null ? still.placeName : "Stationary";
             h.tvTitle.setText(title);
-            
+
+            // Show address if available, otherwise show coordinates
             if (still.placeAddress != null) {
                 h.tvCoords.setText(still.placeAddress);
             } else {
                 h.tvCoords.setText(UiFormatters.decimal(still.lat) + ", " + UiFormatters.decimal(still.lng));
             }
-            
+
             h.tvTimeRange.setText(UiFormatters.timeOnly(still.startTimeDate) + " — " +
                     UiFormatters.timeOnly(still.endTimeDate));
             h.tvDuration.setText(UiFormatters.duration(still.startTimeDate, still.endTimeDate));
@@ -122,14 +143,15 @@ public class TimelineAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
                     labelClickListener.onLabelClick(still);
                 }
             });
-            
-            // Hide the button if it's already labeled
+
+            // Toggle label button text based on whether a name is assigned
             if (still.placeName != null && !still.placeName.equals("Stationary")) {
                 h.btnLabel.setText("Edit Label");
             } else {
                 h.btnLabel.setText("Label Place");
             }
         } else {
+            // Binding logic for movement activities
             MovementActivity movement = (MovementActivity) item;
             MovementViewHolder h = (MovementViewHolder) holder;
             String type = movement.activityType != null ? movement.activityType : "Movement";
@@ -137,8 +159,9 @@ public class TimelineAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
             h.tvTimeRange.setText(UiFormatters.timeOnly(movement.startTimeDate) + " — " +
                     UiFormatters.timeOnly(movement.endTimeDate));
             h.tvDuration.setText(UiFormatters.duration(movement.startTimeDate, movement.endTimeDate));
-            h.tvSpeed.setVisibility(View.GONE);
-            
+            h.tvSpeed.setVisibility(View.GONE); // Speed is currently hidden
+
+            // Set indicator color based on activity type
             int colorRes = R.color.activity_walking;
             if (type.equalsIgnoreCase("Driving") || type.equalsIgnoreCase("IN_VEHICLE")) {
                 colorRes = R.color.activity_vehicle;
@@ -149,11 +172,13 @@ public class TimelineAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
         }
     }
 
-    @Override
     public int getItemCount() {
         return items.size();
     }
 
+    /**
+     * ViewHolder for StillLocation items.
+     */
     static class StillViewHolder extends RecyclerView.ViewHolder {
         TextView tvTitle, tvCoords, tvTimeRange, tvDuration;
         View indicator;
@@ -170,6 +195,9 @@ public class TimelineAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
         }
     }
 
+    /**
+     * ViewHolder for MovementActivity items.
+     */
     static class MovementViewHolder extends RecyclerView.ViewHolder {
         TextView tvTitle, tvSpeed, tvTimeRange, tvDuration;
         View indicator;
