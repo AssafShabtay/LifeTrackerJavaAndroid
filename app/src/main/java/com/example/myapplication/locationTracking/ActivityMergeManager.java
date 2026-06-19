@@ -101,13 +101,21 @@ public class ActivityMergeManager {
             else if (lastStill.endTimeDate != null) {
                 long gapMs = startTime.getTime() - lastStill.endTimeDate.getTime();
                 // If the gap is less than the max threshold, merge
-                if (gapMs >= -MIN_GAP_THRESHOLD_FOR_STILL_MERGE_MS && gapMs < MAX_GAP_THRESHOLD_FOR_STILL_MERGE_MS) {
+                if (gapMs >= MIN_GAP_THRESHOLD_FOR_STILL_MERGE_MS && gapMs < MAX_GAP_THRESHOLD_FOR_STILL_MERGE_MS) {
                     shouldMerge = true;
                 }
             }
 
 
             if (shouldMerge) {
+                // Check for intervening movement activities
+                if (lastStill.endTimeDate != null && startTime != null && dao.countMovementActivitiesBetween(lastStill.endTimeDate, startTime) > 0) {
+                    String msg = String.format("Not merging with last still %d due to intervening movement activity between %s and %s",
+                            lastStill.id, lastStill.endTimeDate.toString(), startTime.toString());
+                    Log.d(TAG, msg);
+                    Logger.saveLog(locationService, msg);
+                    return false; // Do not merge if there was movement
+                }
 
                 String msg = String.format("DB Update from startStillTracking: Merging with last still %d %s", currentStillTrackingId,
                         (currentLocation == null ? "(Time-based fallback)" : String.format("at [%.6f, %.6f]", currentLocation.getLatitude(), currentLocation.getLongitude())));
@@ -182,5 +190,3 @@ public class ActivityMergeManager {
         return null;
     }
 }
-
-

@@ -63,24 +63,15 @@ add to the settings fragment those settings options:
  add a gray effect when pressing a timeline item
 
 
--------------------------
-
-can make the lcoationService cleaner by splitting it to diffrent files in a way that makes sense and is easy,
-
-you MUST keep all of my comments and TODOS
-
----------------------------------------
-
-I want that if the movement activity with a nested still stop is ended but the still is still going on, the nested still stop wont be considered a stop anymore and will be a normal still
-
 -------------------------------------------------------------------------------------------
 
 detect which location is Home
 
-
---------------------------
-
-how to add an autocomplete to the address label when dediting address in the  @EditActivitySheet.java 
-
-
 --------------------------------------------------------------
+
+
+add a button to add the home address  in the statistics fragment use the autocomplete address
+
+
+
+fix the color setter when picking a color, update also the dot of the icon but make it a ligher color,

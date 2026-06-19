@@ -9,6 +9,8 @@
         <!-- Secondary Colors -->
         <item name="colorSecondary">@color/secondary</item>
         <item name="colorOnSecondary">@color/on_secondary</item>
+        <item name="colorSecondaryContainer">@color/secondary_container</item>
+        <item name="colorOnSecondaryContainer">@color/on_secondary_container</item>
 
         <!-- Background and Surface -->
         <item name="android:windowBackground">@color/background</item>

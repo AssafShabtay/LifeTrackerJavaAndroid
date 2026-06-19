@@ -75,6 +75,9 @@ public interface ActivityDao {
     @Query("SELECT * FROM movement_activities WHERE startTimeDate <= :end AND (endTimeDate IS NULL OR endTimeDate >= :start)")
     List<MovementActivity> getMovementForRange(Date start, Date end);
 
+    @Query("SELECT COUNT(*) FROM movement_activities WHERE (startTimeDate < :endTime AND (endTimeDate IS NULL OR endTimeDate > :startTime))")
+    int countMovementActivitiesBetween(Date startTime, Date endTime);
+
     @Insert
     void insertRoutePoint(RoutePoint point);
 

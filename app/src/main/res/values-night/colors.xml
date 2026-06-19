@@ -8,9 +8,17 @@
 
     <color name="secondary">#9AA0A6</color>
     <color name="on_secondary">#202124</color>
+    <color name="secondary_container">#4A4458</color>
+    <color name="on_secondary_container">#E8DEF8</color>
 
-    <color name="background">#000000</color>
-    <color name="surface">#000000</color>
+
+    <color name="green_dark">#25351C</color>
+    <color name="green_medium">#435338</color>
+    <color name="green_light">#59684E</color>
+    <color name="green_extra_light">#C2C9B9</color>
+
+    <color name="background">#0E0E0E</color> <!-- Dark Gray -->
+    <color name="surface">#181818</color> <!-- Slightly lighter dark gray -->
     <color name="on_surface">#E3E3E3</color>
     <color name="on_surface_variant">#C4C7C5</color>
     <color name="outline">#8E918F</color>
@@ -24,5 +32,5 @@
     <color name="activity_running">#F28B82</color>
     <color name="activity_cycling">#FDE293</color>
 
-    <color name="timeline_line">#3C4043</color>
+    <color name="timeline_line">#435338</color>
 </resources>

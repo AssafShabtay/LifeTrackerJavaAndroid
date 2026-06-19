@@ -29,7 +29,7 @@ public class TimelineAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
     private final List<TimelineItem> items = new ArrayList<>();
     private OnItemClickListener listener;
     private OnItemLongClickListener longClickListener;
-    private OnLabelClickListener labelClickListener;
+    private OnEditButtonClickListener labelClickListener;
 
     public interface OnItemClickListener {
         void onItemClick(TimelineItem item);
@@ -39,7 +39,7 @@ public class TimelineAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
         void onItemLongClick(TimelineItem item);
     }
 
-    public interface OnLabelClickListener {
+    public interface OnEditButtonClickListener {
         void onLabelClick(StillLocation still);
     }
 
@@ -51,7 +51,7 @@ public class TimelineAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
         this.longClickListener = longClickListener;
     }
 
-    public void setOnLabelClickListener(OnLabelClickListener labelClickListener) {
+    public void setOnEditButtonClickListener(OnEditButtonClickListener labelClickListener) {
         this.labelClickListener = labelClickListener;
     }
 
@@ -117,19 +117,8 @@ public class TimelineAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
             if (still.address != null && !still.address.isEmpty()) {
                 stillHolder.itemAddress.setText(still.address);
                 stillHolder.itemAddress.setVisibility(View.VISIBLE);
-                stillHolder.itemCoords.setVisibility(View.GONE); // Hide coords if address exists
             } else {
                 stillHolder.itemAddress.setVisibility(View.GONE); // Hide address if no address
-                // Coords
-                if (still.placeCoords != null) {
-                    stillHolder.itemCoords.setText(still.placeCoords);
-                    stillHolder.itemCoords.setVisibility(View.VISIBLE);
-                } else if (still.lat != null && still.lng != null) {
-                    stillHolder.itemCoords.setText(UiFormatters.decimal(still.lat) + ", " + UiFormatters.decimal(still.lng));
-                    stillHolder.itemCoords.setVisibility(View.VISIBLE);
-                } else {
-                    stillHolder.itemCoords.setVisibility(View.GONE);
-                }
             }
 
             stillHolder.itemTimeRange.setText(UiFormatters.timeOnly(still.startTimeDate) + " — " +
@@ -294,7 +283,7 @@ public class TimelineAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
     }
 
     static class StillViewHolder extends RecyclerView.ViewHolder {
-        TextView itemTitle, itemCoords, itemTimeRange, itemDuration, itemAddress;
+        TextView itemTitle, itemTimeRange, itemDuration, itemAddress;
         View color;
         android.widget.ImageView itemIcon;
         Button btnLabel;
@@ -302,7 +291,6 @@ public class TimelineAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
         StillViewHolder(@NonNull View itemView) {
             super(itemView);
             itemTitle = itemView.findViewById(R.id.itemTitle);
-            itemCoords = itemView.findViewById(R.id.itemCoords);
             itemTimeRange = itemView.findViewById(R.id.itemTimeRange);
             itemDuration = itemView.findViewById(R.id.itemDuration);
             color = itemView.findViewById(R.id.color);

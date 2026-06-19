@@ -21,10 +21,11 @@ import com.example.myapplication.BuildConfig;
 import com.example.myapplication.R;
 import com.example.myapplication.database.StillLocation;
 import com.example.myapplication.helpers.UiFormatters;
+import com.example.myapplication.helpers.PlaceAutocompleteHelper; // Import the new helper
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.libraries.places.api.Places;
 import com.google.android.libraries.places.api.model.AutocompletePrediction;
-import com.google.android.libraries.places.api.model.AutocompleteSessionToken;
+//import com.google.android.libraries.places.api.model.AutocompleteSessionToken; // Can remove if not used elsewhere
 import com.google.android.libraries.places.api.model.CircularBounds;
 import com.google.android.libraries.places.api.model.Place;
 import com.google.android.libraries.places.api.net.FindAutocompletePredictionsRequest;
@@ -46,7 +47,7 @@ public class EditActivitySheet extends BottomSheetDialogFragment {
 
     private StillLocation still;
     private OnVisitUpdatedListener listener;
-    private PlacesClient placesClient;
+    private PlacesClient placesClient; // Keep for fetchNearbyPlaceSuggestions
 
     private AutoCompleteTextView actvName;
     private AutoCompleteTextView etAddress;
@@ -61,7 +62,7 @@ public class EditActivitySheet extends BottomSheetDialogFragment {
     private String selectedIcon;
 
     // Token for grouping autocomplete queries into a single billing session
-    private AutocompleteSessionToken autocompleteSessionToken;
+    // private AutocompleteSessionToken autocompleteSessionToken; // REMOVED - handled by helper
 
     public static EditActivitySheet newInstance(StillLocation still, OnVisitUpdatedListener listener) {
         EditActivitySheet fragment = new EditActivitySheet();
@@ -85,7 +86,7 @@ public class EditActivitySheet extends BottomSheetDialogFragment {
             Places.initializeWithNewPlacesApiEnabled(requireContext(), BuildConfig.GOOGLE_API_KEY);
         }
         placesClient = Places.createClient(requireContext());
-        autocompleteSessionToken = AutocompleteSessionToken.newInstance();
+        // autocompleteSessionToken = AutocompleteSessionToken.newInstance(); // REMOVED - handled by helper
 
         actvName = view.findViewById(R.id.actvName);
         etAddress = view.findViewById(R.id.etAddress);
@@ -110,7 +111,8 @@ public class EditActivitySheet extends BottomSheetDialogFragment {
 
         updateIconAndColorUi();
         fetchNearbyPlaceSuggestions();
-        setupAddressAutocomplete();
+        // setupAddressAutocomplete(); // REMOVED
+        new PlaceAutocompleteHelper(requireContext(), etAddress); // ADDED: Use the new helper
 
         if (layoutIconPicker != null) {
             layoutIconPicker.setOnClickListener(v -> showIconPickerDialog());
@@ -137,47 +139,9 @@ public class EditActivitySheet extends BottomSheetDialogFragment {
         });
     }
 
-    private void setupAddressAutocomplete() {
-        etAddress.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+    // private void setupAddressAutocomplete() { ... } // REMOVED
 
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-                // Only trigger search if user typed more than 2 characters
-                if (s.length() > 2) {
-                    fetchAutocompletePredictions(s.toString());
-                }
-            }
-
-            @Override
-            public void afterTextChanged(Editable s) {}
-        });
-    }
-
-    private void fetchAutocompletePredictions(String query) {
-        FindAutocompletePredictionsRequest request = FindAutocompletePredictionsRequest.builder()
-                .setSessionToken(autocompleteSessionToken)
-                .setQuery(query)
-                .build();
-
-        placesClient.findAutocompletePredictions(request).addOnSuccessListener(response -> {
-            List<String> addressSuggestions = new ArrayList<>();
-            for (AutocompletePrediction prediction : response.getAutocompletePredictions()) {
-                addressSuggestions.add(prediction.getFullText(null).toString());
-            }
-
-            if (isAdded()) {
-                ArrayAdapter<String> adapter = new ArrayAdapter<>(requireContext(),
-                        android.R.layout.simple_dropdown_item_1line, addressSuggestions);
-                etAddress.setAdapter(adapter);
-                // Notify the dropdown that new data is available
-                adapter.notifyDataSetChanged();
-            }
-        }).addOnFailureListener(e -> {
-            Log.e("EditActivitySheet", "Autocomplete prediction fetch failed", e);
-        });
-    }
+    // private void fetchAutocompletePredictions(String query) { ... } // REMOVED
 
     private void showIconPickerDialog() {
         Log.d("EditActivitySheet", "showIconPickerDialog called.");

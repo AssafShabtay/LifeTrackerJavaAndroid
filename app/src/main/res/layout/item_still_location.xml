@@ -4,12 +4,13 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:paddingHorizontal="16dp"
+    android:paddingHorizontal="8dp"
+    android:clipChildren="false"
+    android:clipToPadding="false"
     android:clickable="true"
     android:focusable="true"
     android:stateListAnimator="@animator/scale_item">
 
-    <!-- Timeline Line -->
     <View
         android:layout_width="2dp"
         android:layout_height="match_parent"
@@ -20,9 +21,10 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:paddingVertical="12dp">
+        android:paddingVertical="12dp"
+        android:clipChildren="false"
+        android:clipToPadding="false">
 
-        <!-- Timeline Node (Dot) -->
         <FrameLayout
             android:layout_width="48dp"
             android:layout_height="48dp">
@@ -35,12 +37,16 @@
                 android:background="@drawable/bg_timeline_dot" />
         </FrameLayout>
 
-        <com.google.android.material.card.MaterialCardView
+        <androidx.cardview.widget.CardView
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:layout_marginTop="8dp"
+            android:layout_marginEnd="8dp"
+            android:layout_marginBottom="12dp"
             app:cardCornerRadius="20dp"
-            app:cardElevation="0dp"
+            app:cardElevation="6dp"
             app:cardBackgroundColor="?attr/colorSurface"
             app:strokeWidth="1dp"
             app:strokeColor="@color/outline_variant"
@@ -60,54 +66,67 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content">
 
-                    <ImageView
-                        android:id="@+id/itemIcon"
-                        android:layout_width="20dp"
-                        android:layout_height="20dp"
+                    <androidx.cardview.widget.CardView
+                        android:id="@+id/iconContainer"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:layout_alignParentStart="true"
                         android:layout_centerVertical="true"
-                        android:tint="?attr/colorOnSurfaceVariant"
-                        tools:src="@drawable/ic_still" />
+                        app:cardCornerRadius="20dp"
+                        app:cardElevation="0dp"
+                        app:cardBackgroundColor="?attr/colorSecondaryContainer">
 
-                    <TextView
-                        android:id="@+id/itemTitle"
+                        <ImageView
+                            android:id="@+id/itemIcon"
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:layout_gravity="center"
+                            app:tint="?attr/colorOnSecondaryContainer"
+                            tools:src="@drawable/ic_still" />
+                    </androidx.cardview.widget.CardView>
+
+                    <LinearLayout
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_toEndOf="@+id/itemIcon"
+                        android:orientation="vertical"
+                        android:layout_toEndOf="@id/iconContainer"
+                        android:layout_toStartOf="@+id/itemDuration"
+                        android:layout_centerVertical="true"
                         android:layout_marginStart="12dp"
-                        android:textStyle="bold"
-                        android:textSize="16sp"
-                        android:textColor="?attr/colorOnSurface"
-                        tools:text="Stationary" />
+                        android:layout_marginEnd="8dp">
+
+                        <TextView
+                            android:id="@+id/itemTitle"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textStyle="bold"
+                            android:textSize="16sp"
+                            android:textColor="?attr/colorOnSurface"
+                            tools:text="Home" />
+
+
+                        <TextView
+                            android:id="@+id/itemAddress"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="0dp"
+                            android:textColor="?attr/colorOnSurfaceVariant"
+                            android:textSize="14sp"
+                            tools:text="1600 Amphitheatre Parkway, Mountain View, CA" />
+                    </LinearLayout>
 
                     <TextView
                         android:id="@+id/itemDuration"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_alignParentEnd="true"
-                        android:layout_centerVertical="true"
-                        android:textColor="?attr/colorPrimary"
+                        android:layout_alignTop="@+id/iconContainer"
+                        android:layout_marginTop="2dp"
+                        android:textColor="?attr/colorOnSurfaceVariant"
                         android:textSize="13sp"
                         android:textStyle="bold"
                         tools:text="2h 0m" />
                 </RelativeLayout>
-
-                <TextView
-                    android:id="@+id/itemCoords"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:textColor="?attr/colorOnSurfaceVariant"
-                    android:textSize="14sp"
-                    tools:text="37.4219, -122.0840" />
-
-                <TextView
-                    android:id="@+id/itemAddress"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
-                    android:textColor="?attr/colorOnSurfaceVariant"
-                    android:textSize="14sp"
-                    tools:text="1600 Amphitheatre Parkway, Mountain View, CA" />
 
                 <View
                     android:layout_width="match_parent"
@@ -126,7 +145,7 @@
                         android:layout_centerVertical="true"
                         android:textColor="?attr/colorOnSurfaceVariant"
                         android:textSize="12sp"
-                        tools:text="10:00 AM — 12:00 PM" />
+                        tools:text="2:53 AM — 4:53 AM" />
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnLabel"
@@ -151,6 +170,6 @@
                         app:iconPadding="4dp" />
                 </RelativeLayout>
             </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
+        </androidx.cardview.widget.CardView>
     </LinearLayout>
 </FrameLayout>
