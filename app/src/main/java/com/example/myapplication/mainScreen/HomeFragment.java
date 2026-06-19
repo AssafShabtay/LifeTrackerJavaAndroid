@@ -234,7 +234,7 @@ public class HomeFragment extends Fragment implements MainActivity.OnPermissions
                 mapManager.focusOnItem(item);
             }
         });
-        timelineAdapter.setOnLabelClickListener(this::showEditSheet);
+        timelineAdapter.setOnEditButtonClickListener(this::showEditSheet);
         rvTimeline.setLayoutManager(new LinearLayoutManager(requireContext()));
         rvTimeline.setAdapter(timelineAdapter);
     }

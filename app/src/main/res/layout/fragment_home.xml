@@ -28,17 +28,17 @@
                 app:layout_collapseParallaxMultiplier="0.7">
 
                 <!-- Date Selector Card -->
-                <com.google.android.material.card.MaterialCardView
+                <androidx.cardview.widget.CardView
                     android:id="@+id/date_card"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginHorizontal="16dp"
-                    android:layout_marginTop="4dp"
+                    android:layout_marginTop="3dp"
                     app:cardCornerRadius="24dp"
-                    app:cardElevation="0dp"
-                    app:strokeWidth="1dp"
-                    app:strokeColor="@color/outline_variant"
-                    app:cardBackgroundColor="?attr/colorSurface">
+                    app:cardElevation="4dp"
+                    app:cardBackgroundColor="?attr/colorSurface"
+                    app:cardUseCompatPadding="true"
+                    app:cardPreventCornerOverlap="false">
 
                     <LinearLayout
                         android:id="@+id/header_layout"
@@ -150,8 +150,7 @@
                                 android:rowCount="6" />
                         </LinearLayout>
                     </LinearLayout>
-                </com.google.android.material.card.MaterialCardView>
-
+                </androidx.cardview.widget.CardView>
                 <!-- Map Card -->
                 <com.google.android.material.card.MaterialCardView
                     android:id="@+id/map_card"
@@ -212,15 +211,15 @@
     </com.google.android.material.appbar.AppBarLayout>
 
     <!-- Scrollable Timeline -->
+
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rvTimeline"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:clipToPadding="false"
-        android:paddingBottom="100dp"
+        android:clipChildren="false"  android:paddingBottom="100dp"
         app:layout_behavior="@string/appbar_scrolling_view_behavior"
         tools:listitem="@layout/item_still_location" />
-
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btn_insert_example"
         style="@style/Widget.Material3.Button.TextButton"

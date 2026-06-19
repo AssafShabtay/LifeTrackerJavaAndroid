@@ -1,6 +1,8 @@
 package com.example.myapplication;
 
 import android.Manifest;
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
@@ -9,6 +11,7 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.app.AppCompatDelegate; // Import AppCompatDelegate
 import androidx.fragment.app.Fragment;
 
 import com.example.myapplication.helpers.PermissionManagerCN;
@@ -33,6 +36,9 @@ public class MainActivity extends AppCompatActivity {
     private final StatisticsFragment statisticsFragment = new StatisticsFragment();
     private final SettingsFragment settingsFragment = new SettingsFragment();
     private Fragment activeFragment = homeFragment;
+
+    private static final String PREFS_NAME = "MyPrefs";
+    private static final String THEME_KEY = "theme_preference";
 
     public interface OnPermissionsGrantedListener {
         void onPermissionsGranted();
@@ -151,6 +157,15 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
+        // Apply theme before super.onCreate() to ensure it's set before views are created
+        SharedPreferences preferences = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        boolean isDarkModePreferred = preferences.getBoolean(THEME_KEY, false); // Default to light mode
+        if (isDarkModePreferred) {
+            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES);
+        } else {
+            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
+        }
+
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
@@ -183,10 +198,19 @@ public class MainActivity extends AppCompatActivity {
                 } else if (itemId == R.id.nav_statistics) {
                     getSupportFragmentManager().beginTransaction().hide(activeFragment).show(statisticsFragment).commit();
                     activeFragment = statisticsFragment;
-                } else if (itemId == R.id.nav_settings) {
+                }
+                // In SettingsFragment, when the theme is toggled, we need to recreate the activity
+                // to apply the theme change immediately. So, instead of just showing the fragment,
+                // we'll explicitly recreate the activity if the settings fragment is being navigated to.
+                else if (itemId == R.id.nav_settings) {
                     getSupportFragmentManager().beginTransaction().hide(activeFragment).show(settingsFragment).commit();
                     activeFragment = settingsFragment;
                 }
                 return true;
             };
+
+    // This method can be called from SettingsFragment to recreate the activity and apply theme changes.
+    public void recreateActivity() {
+        recreate();
+    }
 }

@@ -18,6 +18,8 @@
         <item name="colorOutline">@color/outline</item>
         <item name="colorOutlineVariant">@color/outline_variant</item>
 
+        <item name="colorSecondaryContainer">@color/green_dark</item>
+        <item name="colorOnSecondaryContainer">@color/green_extra_light</item>
         <!-- Status Bar & Navigation -->
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">?attr/colorSurface</item>

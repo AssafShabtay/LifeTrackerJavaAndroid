@@ -4,12 +4,15 @@ import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -20,6 +23,7 @@ import com.example.myapplication.R;
 import com.example.myapplication.database.ActivityDatabase;
 import com.example.myapplication.database.MovementActivity;
 import com.example.myapplication.database.Place;
+import com.example.myapplication.database.PlaceDao;
 import com.example.myapplication.database.StillLocation;
 import com.example.myapplication.database.TimelineItem;
 
@@ -33,7 +37,7 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class StatisticsFragment extends Fragment {
+public class StatisticsFragment extends Fragment implements HomeAddressPickerBottomSheet.OnHomeAddressSelectedListener {
 
     private MiniPieChartView pieChart;
     private TextView tvTotalTime;
@@ -43,6 +47,7 @@ public class StatisticsFragment extends Fragment {
 
     private View cabinFeverContent;
     private View cabinFeverPlaceholder;
+    private Button btnOpenHomeAddressPicker;
 
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
@@ -63,8 +68,15 @@ public class StatisticsFragment extends Fragment {
         tvNoData = view.findViewById(R.id.tvNoData);
         cabinFeverContent = view.findViewById(R.id.cabin_fever_content);
         cabinFeverPlaceholder = view.findViewById(R.id.cabin_fever_placeholder);
+        btnOpenHomeAddressPicker = view.findViewById(R.id.btnOpenHomeAddressPicker);
+
+        btnOpenHomeAddressPicker.setOnClickListener(v -> {
+            HomeAddressPickerBottomSheet bottomSheet = HomeAddressPickerBottomSheet.newInstance(this);
+            bottomSheet.show(getChildFragmentManager(), bottomSheet.getTag());
+        });
 
         loadStatistics();
+        // loadHomeAddress() is now implicitly handled by loadCabinFeverIndex which shows/hides placeholder
     }
 
     @Override
@@ -98,7 +110,7 @@ public class StatisticsFragment extends Fragment {
             allItems.addAll(movements);
 
             processStats(allItems);
-            loadCabinFeverIndex();
+            loadCabinFeverIndex(); // This now also handles showing/hiding the address picker button
         });
     }
 
@@ -239,6 +251,56 @@ public class StatisticsFragment extends Fragment {
         topPlacesContainer.addView(view);
     }
 
+    // Removed direct loadHomeAddress() as its functionality is now within loadCabinFeverIndex
+
+    @Override
+    public void onAddressSelected(String address) {
+        saveHomeAddress(address);
+    }
+
+    private void saveHomeAddress(String address) {
+        if (address.isEmpty()) {
+            Toast.makeText(requireContext(), "Please enter a home address.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        executor.execute(() -> {
+            if (!isAdded()) return;
+            ActivityDatabase db = ActivityDatabase.getDatabase(requireContext());
+            PlaceDao placeDao = db.placeDao();
+
+            Place homePlace = placeDao.getHomePlace();
+            if (homePlace == null) {
+                // Create a new home place
+                homePlace = new Place();
+                homePlace.name = "Home";
+                homePlace.address = address;
+                homePlace.category = "Home";
+                homePlace.lat = 0.0; // Placeholder, as we don't have lat/lng from autocomplete string
+                homePlace.lng = 0.0; // Placeholder
+                homePlace.radius = 50.0f; // Default radius
+                homePlace.icon = "Home"; // Default icon
+                homePlace.color = 0xFF9E9E9E; // Default color: light grey, consistent with StillLocation fallback
+
+                long newId = placeDao.insertPlace(homePlace);
+                Log.d("StatisticsFragment", "New home address inserted with ID: " + newId);
+            } else {
+                // Update existing home place
+                homePlace.address = address;
+                // Keep existing lat/lng, radius, icon, color if they were set previously
+                placeDao.updatePlace(homePlace);
+                Log.d("StatisticsFragment", "Home address updated for ID: " + homePlace.id);
+            }
+
+            mainHandler.post(() -> {
+                if (!isAdded()) return;
+                Toast.makeText(requireContext(), "Home address saved!", Toast.LENGTH_SHORT).show();
+                // Reload cabin fever index to reflect the new home address immediately
+                loadCabinFeverIndex();
+            });
+        });
+    }
+
     private void loadCabinFeverIndex() {
         long now = System.currentTimeMillis();
         long sevenDaysMs = 7L * 24 * 60 * 60 * 1000; // 7 days in milliseconds
@@ -249,23 +311,21 @@ public class StatisticsFragment extends Fragment {
             ActivityDatabase db = ActivityDatabase.getDatabase(requireContext());
             Place homePlace = db.placeDao().getHomePlace();
 
-            if (homePlace == null) {
-                mainHandler.post(() -> {
+            mainHandler.post(() -> {
+                if (!isAdded()) return;
+                if (homePlace == null) {
                     if (cabinFeverContent != null) cabinFeverContent.setVisibility(View.GONE);
                     if (cabinFeverPlaceholder != null) cabinFeverPlaceholder.setVisibility(View.VISIBLE);
-                });
-                return;
-            }
+                } else {
+                    if (cabinFeverContent != null) cabinFeverContent.setVisibility(View.VISIBLE);
+                    if (cabinFeverPlaceholder != null) cabinFeverPlaceholder.setVisibility(View.GONE);
 
-            long timeAtHomeMs = db.activityDao().getTimeAtHomeSince(sevenDaysAgo, now);
-            int percentage = (int) (((float) timeAtHomeMs / sevenDaysMs) * 100);
-            if (percentage > 100) percentage = 100;
-
-            int finalPercentage = percentage;
-            mainHandler.post(() -> {
-                if (cabinFeverContent != null) cabinFeverContent.setVisibility(View.VISIBLE);
-                if (cabinFeverPlaceholder != null) cabinFeverPlaceholder.setVisibility(View.GONE);
-                updateCabinFeverUi(finalPercentage);
+                    // Update the cabin fever UI if a home address exists
+                    long timeAtHomeMs = db.activityDao().getTimeAtHomeSince(sevenDaysAgo, now);
+                    int percentage = (int) (((float) timeAtHomeMs / sevenDaysMs) * 100);
+                    if (percentage > 100) percentage = 100;
+                    updateCabinFeverUi(percentage);
+                }
             });
         });
     }

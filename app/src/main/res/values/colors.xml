@@ -8,9 +8,16 @@
 
     <color name="secondary">#5F6368</color>
     <color name="on_secondary">#FFFFFF</color>
-    
-    <color name="background">#F8F9FA</color>
-    <color name="surface">#FFFFFF</color>
+    <color name="secondary_container">#d9e4d5</color>
+    <color name="on_secondary_container">#173218</color>
+
+    <color name="green_dark">#25351C</color>
+    <color name="green_medium">#435338</color>
+    <color name="green_light">#59684E</color>
+    <color name="green_extra_light">#C2C9B9</color>
+
+    <color name="background">#f6f4eb</color>
+    <color name="surface">#fefdfa</color>
     <color name="on_surface">#202124</color>
     <color name="on_surface_variant">#5F6368</color>
     <color name="outline">#DADCE0</color>
