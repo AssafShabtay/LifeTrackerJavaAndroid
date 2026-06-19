@@ -75,3 +75,7 @@ add a button to add the home address  in the statistics fragment use the autocom
 
 
 fix the color setter when picking a color, update also the dot of the icon but make it a ligher color,
+
+
+=--------------
+make the iconPickerDialog look light weight and pretty

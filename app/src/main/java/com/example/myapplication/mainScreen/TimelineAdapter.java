@@ -1,5 +1,7 @@
 package com.example.myapplication.mainScreen;
 
+import static com.example.myapplication.helpers.ColorAndIcons.getStillIconRes;
+
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -28,7 +30,6 @@ public class TimelineAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
 
     private final List<TimelineItem> items = new ArrayList<>();
     private OnItemClickListener listener;
-    private OnItemLongClickListener longClickListener;
     private OnEditButtonClickListener labelClickListener;
 
     public interface OnItemClickListener {
@@ -45,10 +46,6 @@ public class TimelineAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
 
     public void setOnItemClickListener(OnItemClickListener listener) {
         this.listener = listener;
-    }
-
-    public void setOnItemLongClickListener(OnItemLongClickListener longClickListener) {
-        this.longClickListener = longClickListener;
     }
 
     public void setOnEditButtonClickListener(OnEditButtonClickListener labelClickListener) {
@@ -92,13 +89,7 @@ public class TimelineAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
             if (listener != null) listener.onItemClick(item);
         });
 
-        holder.itemView.setOnLongClickListener(v -> {
-            if (longClickListener != null) {
-                longClickListener.onItemLongClick(item);
-                return true;
-            }
-            return false;
-        });
+
 
         if (holder instanceof StillViewHolder) {
             StillLocation still = (StillLocation) item;
@@ -140,17 +131,11 @@ public class TimelineAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
             }
 
             // Set icon
-            int iconRes = R.drawable.ic_still;
+            int iconXml = R.drawable.ic_still;
             if (still.icon != null) {
-                String icon = still.icon.toLowerCase();
-                if (icon.contains("home")) iconRes = R.drawable.ic_home;
-                else if (icon.contains("work")) iconRes = R.drawable.ic_work;
-                else if (icon.contains("gym")) iconRes = R.drawable.ic_gym;
-                else if (icon.contains("school")) iconRes = R.drawable.ic_school;
-                else if (icon.contains("restaurant") || icon.contains("eat")) iconRes = R.drawable.ic_restaurant;
-                else if (icon.contains("cafe") || icon.contains("coffee")) iconRes = R.drawable.ic_coffee;
+                iconXml = getStillIconRes(still);
             }
-            stillHolder.itemIcon.setImageResource(iconRes);
+            stillHolder.itemIcon.setImageResource(iconXml);
 
             // Highlight stops or custom colors
             if (still.isStop || still.color != null) {
@@ -243,17 +228,12 @@ public class TimelineAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
                     }
 
                     // Set stop icon based on category
-                    int sIconRes = R.drawable.ic_still;
-                    if (stop.icon != null) {
-                        String icon = stop.icon.toLowerCase();
-                        if (icon.contains("home")) sIconRes = R.drawable.ic_home;
-                        else if (icon.contains("work")) sIconRes = R.drawable.ic_work;
-                        else if (icon.contains("gym")) sIconRes = R.drawable.ic_gym;
-                        else if (icon.contains("school")) sIconRes = R.drawable.ic_school;
-                        else if (icon.contains("restaurant") || icon.contains("eat")) sIconRes = R.drawable.ic_restaurant;
-                        else if (icon.contains("cafe") || icon.contains("coffee")) sIconRes = R.drawable.ic_coffee;
+                    int stopIconXml = R.drawable.ic_still;
+                    if (stop.icon != null) {;
+                        stopIconXml = getStillIconRes(stop);
+
                     }
-                    stopIcon.setImageResource(sIconRes);
+                    stopIcon.setImageResource(stopIconXml);
 
                     // Apply custom color to stop if exists
                     if (stop.color != null) {

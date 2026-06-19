@@ -1,5 +1,7 @@
 package com.example.myapplication.mainScreen;
 
+import static com.example.myapplication.helpers.ColorAndIcons.getIconList;
+
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
@@ -114,25 +116,12 @@ public class IconPickerDialog extends DialogFragment {
         );
     }
 
-    private List<IconItem> getIconList() {
-        return Arrays.asList(
-                new IconItem("Home", R.drawable.ic_home),
-                new IconItem("Work", R.drawable.ic_work),
-                new IconItem("Gym", R.drawable.ic_gym),
-                new IconItem("School", R.drawable.ic_school),
-                new IconItem("Restaurant", R.drawable.ic_restaurant),
-                new IconItem("Coffee", R.drawable.ic_coffee),
-                new IconItem("Car", R.drawable.ic_car),
-                new IconItem("Bike", R.drawable.ic_bike),
-                new IconItem("Walk", R.drawable.ic_walk),
-                new IconItem("Still", R.drawable.ic_still)
-        );
-    }
 
-    static class IconItem {
+
+    public static class IconItem {
         String name;
         int resId;
-        IconItem(String name, int resId) {
+         public IconItem(String name, int resId) {
             this.name = name;
             this.resId = resId;
         }

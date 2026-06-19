@@ -1,5 +1,7 @@
 package com.example.myapplication.mainScreen;
 
+import static com.example.myapplication.helpers.ColorAndIcons.getStillIconRes;
+
 import android.Manifest;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
@@ -212,19 +214,7 @@ public class MapManager implements OnMapReadyCallback {
         return BitmapDescriptorFactory.fromBitmap(bitmap);
     }
 
-    private int getStillIconRes(StillLocation still) {
-        int iconRes = R.drawable.ic_still;
-        if (still.icon != null) {
-            String icon = still.icon.toLowerCase();
-            if (icon.contains("home")) iconRes = R.drawable.ic_home;
-            else if (icon.contains("work")) iconRes = R.drawable.ic_work;
-            else if (icon.contains("gym")) iconRes = R.drawable.ic_gym;
-            else if (icon.contains("school")) iconRes = R.drawable.ic_school;
-            else if (icon.contains("restaurant")) iconRes = R.drawable.ic_restaurant;
-            else if (icon.contains("cafe") || icon.contains("coffee")) iconRes = R.drawable.ic_coffee;
-        }
-        return iconRes;
-    }
+
 
     private int getMovementIconRes(String type) {
         int iconRes = R.drawable.ic_walk;
