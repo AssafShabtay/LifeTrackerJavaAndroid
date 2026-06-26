@@ -20,15 +20,14 @@ import java.util.ArrayList;
 
 
 //TODO FIX PERMISISONS DECLINED
-public class PermissionManagerCN {
+public class PermissionManager {
     private final Activity activity;
     private final SharedPreferences prefs;
-    private final String[] requiredPermissions;
+    private static final String[] requiredPermissions = buildRequiredPermissions();
     private static final String KEY_PERMISSION_REQUESTED_PREFIX = "requested_";
 
-    public PermissionManagerCN(Activity activity) {
+    public PermissionManager(Activity activity) {
         this.activity = activity;
-        this.requiredPermissions = buildRequiredPermissions();
         this.prefs = activity.getSharedPreferences("permission_prefs", Context.MODE_PRIVATE);
     }
 

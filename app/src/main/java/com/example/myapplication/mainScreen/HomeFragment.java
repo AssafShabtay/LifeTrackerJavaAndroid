@@ -1,8 +1,5 @@
 package com.example.myapplication.mainScreen;
 
-import android.app.PendingIntent;
-import android.content.Intent;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -12,7 +9,6 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
-import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -22,20 +18,13 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.myapplication.MainActivity;
 import com.example.myapplication.database.PlaceDao;
-import com.example.myapplication.helpers.PermissionManagerCN;
-import com.example.myapplication.locationTracking.reciever.ActivityTransitionReceiver;
-import com.example.myapplication.locationTracking.GeofenceManager;
-import com.example.myapplication.locationTracking.LocationService;
+// Removed import com.example.myapplication.locationTracking.GeofenceManager;
 import com.example.myapplication.database.ActivityDao;
 import com.example.myapplication.database.ActivityDatabase;
 import com.example.myapplication.database.MovementActivity;
 import com.example.myapplication.database.StillLocation;
 import com.example.myapplication.database.TimelineItem;
 import com.example.myapplication.helpers.ExampleData;
-import com.google.android.gms.location.ActivityRecognition;
-import com.google.android.gms.location.ActivityTransition;
-import com.google.android.gms.location.ActivityTransitionRequest;
-import com.google.android.gms.location.DetectedActivity;
 import com.example.myapplication.R;
 
 import java.util.ArrayList;
@@ -45,7 +34,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.concurrent.Executors;
 
-public class HomeFragment extends Fragment implements MainActivity.OnPermissionsGrantedListener, MainActivity.OnHomeAddressChangedListener {
+public class HomeFragment extends Fragment implements MainActivity.OnHomeAddressChangedListener {
 
     private static final String TAG = "HomeFragment";
 
@@ -58,19 +47,17 @@ public class HomeFragment extends Fragment implements MainActivity.OnPermissions
 
     private ActivityDao dao;
     private PlaceDao placeDao;
-    private GeofenceManager geofenceManager;
+    // Removed private GeofenceManager geofenceManager;
 
-    private boolean transitionsRegistered = false;
-    private boolean trackingServiceStarted = false;
-    private boolean areServicesInitialized = false;
+    // Removed private boolean transitionsRegistered = false;
+    // Removed private boolean trackingServiceStarted = false;
+    // Removed private boolean areServicesInitialized = false;
 
     private RecyclerView rvTimeline;
     private TimelineAdapter timelineAdapter;
 
     private MapManager mapManager;
     private CalendarManager calendarManager;
-
-    private PermissionManagerCN permissionManagerCN;
 
 
     //refresh ui every 5 minutes
@@ -83,13 +70,7 @@ public class HomeFragment extends Fragment implements MainActivity.OnPermissions
         }
     };
 
-    @Override
-    public void onPermissionsGranted() {
-        if (!areServicesInitialized) {
-            onAllPermissionsGranted();
-            areServicesInitialized = true;
-        }
-    }
+    // Removed onPermissionsGranted method
 
     @Override
     public void onHomeAddressChanged() {
@@ -97,11 +78,7 @@ public class HomeFragment extends Fragment implements MainActivity.OnPermissions
         loadTimelineData(calendarManager.getSelectedDate());
     }
 
-    private void onAllPermissionsGranted() {
-        // No longer calling refreshPermissionUi here, as it's handled by MainActivity
-        requestTransitions();
-        startTrackingService();
-    }
+    // Removed onAllPermissionsGranted method
 
     // refreshPermissionUi method moved to MainActivity
 
@@ -116,8 +93,8 @@ public class HomeFragment extends Fragment implements MainActivity.OnPermissions
         super.onViewCreated(view, savedInstanceState);
 
         MainActivity mainActivity = (MainActivity) requireActivity();
-        permissionManagerCN = mainActivity.getPermissionManager(); // Get PermissionManager from MainActivity
-        mainActivity.setOnPermissionsGrantedListener(this);
+
+        // Removed mainActivity.setOnPermissionsGrantedListener(this);
         mainActivity.setOnHomeAddressChangedListener(this); // Register HomeFragment as listener
 
         // Removed initialization of permissionBlocker, permissionAction, permissionSubtitle, headerLayout
@@ -129,7 +106,7 @@ public class HomeFragment extends Fragment implements MainActivity.OnPermissions
         ActivityDatabase db = ActivityDatabase.getDatabase(requireContext());
         dao = db.activityDao();
         placeDao = db.placeDao();
-        geofenceManager = new GeofenceManager(requireContext());
+        // Removed geofenceManager = new GeofenceManager(requireContext());
 
         btnInsertExample.setOnClickListener(v -> {
             ExampleData.insertExampleDataAsync(dao);
@@ -171,7 +148,8 @@ public class HomeFragment extends Fragment implements MainActivity.OnPermissions
                         float dy = Math.abs(event.getY() - downY[0]);
                         if (dx < CLICK_THRESHOLD && dy < CLICK_THRESHOLD) {
                             v.performClick();
-                        }              break;
+                        }
+                        break;
 
                     case MotionEvent.ACTION_CANCEL:
                         v.getParent().requestDisallowInterceptTouchEvent(false);
@@ -277,19 +255,14 @@ public class HomeFragment extends Fragment implements MainActivity.OnPermissions
 
     @Override
     public void onResume() {
-        // checks for permissions and then loads the timeline data and resumes everything else
         super.onResume();
-        if (permissionManagerCN.hasAllPermissions()) { // Check permissions directly
-            if (!areServicesInitialized) {
-                onAllPermissionsGranted();
-                areServicesInitialized = true;
-            }
-            loadTimelineData(calendarManager.getSelectedDate());
-            if (mapManager != null) {
-                mapManager.onResume();
-            }
-            startPeriodicRefresh();
+        // Assuming MainActivity handles starting services based on permissions.
+        // HomeFragment only needs to load data and manage its UI lifecycle.
+        loadTimelineData(calendarManager.getSelectedDate());
+        if (mapManager != null) {
+            mapManager.onResume();
         }
+        startPeriodicRefresh();
     }
 
     @Override
@@ -307,103 +280,8 @@ public class HomeFragment extends Fragment implements MainActivity.OnPermissions
         refreshHandler.removeCallbacks(refreshRunnable);
     }
 
+    // Removed requestTransitions method
 
-    private void requestTransitions() {
-        if (!permissionManagerCN.hasAllPermissions()) { //check if permissions are granted
-            Log.w(TAG, "Aborting requestTransitions: permissions not fully granted.");
-            return;
-        }
-
-        if (transitionsRegistered) {
-            return;
-        }
-
-        ArrayList<ActivityTransition> transitions = new ArrayList<>();
-        int[] types = new int[]{
-                DetectedActivity.STILL,
-                DetectedActivity.WALKING,
-                DetectedActivity.RUNNING,
-                DetectedActivity.IN_VEHICLE,
-                DetectedActivity.ON_BICYCLE,
-                DetectedActivity.ON_FOOT
-        };
-
-        for (int type : types) {
-            transitions.add(new ActivityTransition.Builder()
-                    .setActivityType(type)
-                    .setActivityTransition(ActivityTransition.ACTIVITY_TRANSITION_ENTER)
-                    .build());
-            transitions.add(new ActivityTransition.Builder()
-                    .setActivityType(type)
-                    .setActivityTransition(ActivityTransition.ACTIVITY_TRANSITION_EXIT)
-                    .build());
-        }
-
-        ActivityTransitionRequest request = new ActivityTransitionRequest(transitions);
-        Intent intent = new Intent(requireContext(), ActivityTransitionReceiver.class);
-
-
-        int flags = PendingIntent.FLAG_UPDATE_CURRENT;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            flags |= PendingIntent.FLAG_MUTABLE;
-        }
-
-        PendingIntent pendingIntent = PendingIntent.getBroadcast(
-                requireContext(),
-                0,
-                intent,
-                flags
-        );
-
-        // Also request regular activity updates for a quick initial detection
-        PendingIntent activityUpdatePendingIntent = PendingIntent.getBroadcast(//TODO THIS CHUNK MIGHT BE USELESS
-                requireContext(),
-                1, // Different request code
-                intent,
-                flags
-        );
-
-        try {
-            ActivityRecognition.getClient(requireContext())
-                    .requestActivityTransitionUpdates(request, pendingIntent)
-                    .addOnSuccessListener(unused -> {
-                        transitionsRegistered = true;
-                        Log.d(TAG, "Activity transitions registered successfully");
-                    })
-                    .addOnFailureListener(e -> {
-                        transitionsRegistered = false;
-                        Log.e(TAG, "Registration failed", e);
-                    });
-
-            // Initial quick detection to avoid "idle" state
-            ActivityRecognition.getClient(requireContext()) //TODO THIS CHUNK MIGHT BE USELESS
-                    .requestActivityUpdates(5000, activityUpdatePendingIntent)
-                    .addOnSuccessListener(unused -> Log.d(TAG, "Initial activity updates requested"))
-                    .addOnFailureListener(e -> Log.e(TAG, "Failed to request initial activity updates", e));
-
-        } catch (SecurityException e) {
-            transitionsRegistered = false;
-            Log.e(TAG, "missing permission for transitions", e);
-        }
-    }
-
-    private void startTrackingService() {
-        if (trackingServiceStarted) {
-            return;
-        }
-
-        Intent intent = new Intent(requireContext(), LocationService.class);
-        try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                requireContext().startForegroundService(intent);
-            } else {
-                requireContext().startService(intent);
-            }
-            trackingServiceStarted = true;
-        } catch (Throwable t) {
-            trackingServiceStarted = false;
-            Log.e(TAG, "Failed to start tracking service", t);
-        }
-    }
+    // Removed startTrackingService method
 
 }

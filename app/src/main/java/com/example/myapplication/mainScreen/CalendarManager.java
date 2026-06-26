@@ -1,5 +1,7 @@
 package com.example.myapplication.mainScreen;
 
+import android.animation.Animator;
+import android.animation.ValueAnimator;
 import android.content.Context;
 import android.graphics.Typeface;
 import android.util.TypedValue;
@@ -56,6 +58,7 @@ public class CalendarManager {
     private Date selectedDate = new Date();
     private int currentMonth;
     private int currentYear;
+    private int measuredHeight = 0; // Field to store the measured height
 
     private final ActivityDao dao;
     private final Map<String, List<MiniPieChartView.Slice>> sliceCache = new HashMap<>();
@@ -121,7 +124,11 @@ public class CalendarManager {
             renderCalendar();
         });
 
-        collapseCalendar();
+        // Measure the calendar container's height after it's laid out
+        calendarContainer.post(() -> {
+            measuredHeight = calendarContainer.getMeasuredHeight();
+            collapseCalendar(); // Collapse after measuring
+        });
     }
 
     public Date getSelectedDate() {
@@ -129,22 +136,100 @@ public class CalendarManager {
     }
 
     public void toggleCalendar() {
+        if (measuredHeight == 0) {
+            // If for some reason height wasn't measured, force a layout and re-measure
+            calendarContainer.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
+            measuredHeight = calendarContainer.getMeasuredHeight();
+        }
+
         calendarExpanded = !calendarExpanded;
-        calendarContainer.setVisibility(calendarExpanded ? View.VISIBLE : View.GONE);
-        ivExpand.setRotation(calendarExpanded ? 180f : 0f);
+        int startHeight = calendarExpanded ? 0 : measuredHeight;
+        int endHeight = calendarExpanded ? measuredHeight : 0;
+        float startRotation = calendarExpanded ? 0f : 180f;
+        float endRotation = calendarExpanded ? 180f : 0f;
+
         if (calendarExpanded) {
+            calendarContainer.setVisibility(View.VISIBLE);
             Calendar selected = Calendar.getInstance();
             selected.setTime(selectedDate);
             currentMonth = selected.get(Calendar.MONTH);
             currentYear = selected.get(Calendar.YEAR);
             renderCalendar();
         }
+
+        ValueAnimator heightAnimator = ValueAnimator.ofInt(startHeight, endHeight);
+        heightAnimator.addUpdateListener(animation -> {
+            int value = (int) animation.getAnimatedValue();
+            LinearLayout.LayoutParams layoutParams = (LinearLayout.LayoutParams) calendarContainer.getLayoutParams();
+            layoutParams.height = value;
+            calendarContainer.setLayoutParams(layoutParams);
+        });
+        heightAnimator.addListener(new Animator.AnimatorListener() {
+            @Override
+            public void onAnimationStart(Animator animation) {}
+
+            @Override
+            public void onAnimationEnd(Animator animation) {
+                if (!calendarExpanded) {
+                    calendarContainer.setVisibility(View.GONE);
+                }
+            }
+
+            @Override
+            public void onAnimationCancel(Animator animation) {}
+
+            @Override
+            public void onAnimationRepeat(Animator animation) {}
+        });
+        heightAnimator.setDuration(300); // 300ms duration
+        heightAnimator.start();
+
+        ivExpand.animate().rotation(endRotation).setDuration(300).start();
     }
 
     public void collapseCalendar() {
-        calendarExpanded = false;
-        calendarContainer.setVisibility(View.GONE);
-        ivExpand.setRotation(0f);
+        if (measuredHeight == 0) {
+            // If for some reason height wasn't measured, force a layout and re-measure
+            calendarContainer.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
+            measuredHeight = calendarContainer.getMeasuredHeight();
+        }
+
+        if (calendarExpanded) { // Only collapse if it's currently expanded
+            calendarExpanded = false;
+            ValueAnimator heightAnimator = ValueAnimator.ofInt(measuredHeight, 0);
+            heightAnimator.addUpdateListener(animation -> {
+                int value = (int) animation.getAnimatedValue();
+                LinearLayout.LayoutParams layoutParams = (LinearLayout.LayoutParams) calendarContainer.getLayoutParams();
+                layoutParams.height = value;
+                calendarContainer.setLayoutParams(layoutParams);
+            });
+            heightAnimator.addListener(new Animator.AnimatorListener() {
+                @Override
+                public void onAnimationStart(Animator animation) {}
+
+                @Override
+                public void onAnimationEnd(Animator animation) {
+                    calendarContainer.setVisibility(View.GONE);
+                }
+
+                @Override
+                public void onAnimationCancel(Animator animation) {}
+
+                @Override
+                public void onAnimationRepeat(Animator animation) {}
+            });
+            heightAnimator.setDuration(300);
+            heightAnimator.start();
+
+            ivExpand.animate().rotation(0f).setDuration(300).start();
+        } else {
+            // If not expanded, just ensure it's hidden and rotation is reset
+            calendarContainer.setVisibility(View.GONE);
+            LinearLayout.LayoutParams layoutParams = (LinearLayout.LayoutParams) calendarContainer.getLayoutParams();
+            layoutParams.height = 0;
+            calendarContainer.setLayoutParams(layoutParams);
+            ivExpand.setRotation(0f);
+        }
     }
 
     private void updateHeader(Date date) {
@@ -322,7 +407,7 @@ public class CalendarManager {
         for (StillLocation still : stills) {
             long s = Math.max(still.startTimeDate.getTime(), startOfDayMillis);
             long e = (still.endTimeDate == null) ? Math.min(System.currentTimeMillis(), endOfDayMillis) : Math.min(still.endTimeDate.getTime(), endOfDayMillis);
-            
+
             if (e > s) {
                 float startTimeMinutes = (s - startOfDayMillis) / 60000f;
                 float durationMinutes = (e - s) / 60000f;
@@ -334,7 +419,7 @@ public class CalendarManager {
             if (movement.startTimeDate == null) continue;
             long s = Math.max(movement.startTimeDate.getTime(), startOfDayMillis);
             long e = (movement.endTimeDate == null) ? Math.min(System.currentTimeMillis(), endOfDayMillis) : Math.min(movement.endTimeDate.getTime(), endOfDayMillis);
-            
+
             if (e > s) {
                 float startTimeMinutes = (s - startOfDayMillis) / 60000f;
                 float durationMinutes = (e - s) / 60000f;
@@ -348,14 +433,14 @@ public class CalendarManager {
     private int getColorForActivity(String type) {
         if (type == null) return ContextCompat.getColor(context, R.color.on_surface_variant);
         switch (type.toLowerCase()) {
-            case "walking": 
+            case "walking":
             case "on foot":
             case "running":
                 return ContextCompat.getColor(context, R.color.activity_walking);
-            case "in_vehicle": 
+            case "in_vehicle":
             case "driving":
                 return ContextCompat.getColor(context, R.color.activity_vehicle);
-            default: 
+            default:
                 return ContextCompat.getColor(context, R.color.secondary);
         }
     }

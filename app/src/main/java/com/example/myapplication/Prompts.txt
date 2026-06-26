@@ -51,12 +51,6 @@ add to the settings fragment those settings options:
 
  how to make the movement route follow a street route if activity type is driving
 
- ---------------------------------------------------------------------------------
-
- add a category property to stillLocation, and assign to it values
- -----------------------------------------------------------------------
-
- add light mode
 
  -------------------------------------------------
 
@@ -67,24 +61,8 @@ add to the settings fragment those settings options:
 
 detect which location is Home
 
---------------------------------------------------------------
-
-
-add a button to add the home address  in the statistics fragment use the autocomplete address
-
-
-
-fix the color setter when picking a color, update also the dot of the icon but make it a ligher color,
-
-
-=--------------
-make the iconPickerDialog look light weight and pretty
 -----------------------------------------------
 
 if you click on the iconcontainer, it will open iconPickerDialog
 
 
-
--------------------------------
-
-add an animation to the calendar
