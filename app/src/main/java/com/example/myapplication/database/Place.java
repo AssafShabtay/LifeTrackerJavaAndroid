@@ -12,8 +12,7 @@ public class Place {
     public String address;
     public double lat;
     public double lng;
-    public float radius;
-    public String category; // e.g., "Home", "Work"
+    public String category;
     public String icon;
     public Integer color;
 }

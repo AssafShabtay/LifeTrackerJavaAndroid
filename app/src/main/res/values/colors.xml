@@ -1,9 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+
+    <color name="green">#24b265</color>
+    <color name="blue">#56A8CE</color>
+    <color name="orange">#DE9031</color>
+    <color name="yellow">#E7E04E</color>
+    <color name="red">#ee4444</color>
+    <color name="mint">#4ADDAA</color>
+    <color name="pink">#ed698f</color>
+    <color name="purple">#5955eb</color>
+
+
+
+    <color name="gym">#B22222</color>
     <!-- Modern Neutral & Soft Palette -->
-    <color name="primary">#1A73E8</color> <!-- Google Blue -->
+    <color name="primary">#59684E</color>
     <color name="on_primary">#FFFFFF</color>
-    <color name="primary_container">#D2E3FC</color>
+    <color name="primary_container">#D0E4CB</color>
     <color name="on_primary_container">#174EA6</color>
 
     <color name="secondary">#5F6368</color>
@@ -25,7 +38,7 @@
     
     <!-- Activity Specific - Material Colors -->
     <color name="activity_still">#34A853</color> <!-- Google Green -->
-    <color name="activity_stop">#EA4335</color> <!-- Google Red -->
+    <color name="activity_stop">#EB6457</color> <!-- Google Red -->
     <color name="activity_walking">#4285F4</color> <!-- Google Blue -->
     <color name="activity_vehicle">#9334E6</color> <!-- Soft Purple -->
     <color name="activity_running">#EA4335</color> <!-- Google Red -->

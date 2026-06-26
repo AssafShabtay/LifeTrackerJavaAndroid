@@ -4,7 +4,9 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:paddingHorizontal="16dp"
+    android:paddingHorizontal="8dp"
+    android:clipChildren="false"
+    android:clipToPadding="false"
     android:clickable="true"
     android:focusable="true"
     android:stateListAnimator="@animator/scale_item">
@@ -20,6 +22,8 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
+        android:clipChildren="false"
+        android:clipToPadding="false"
         android:paddingVertical="12dp">
 
         <!-- Timeline Node (Diamond/Icon for movement) -->
@@ -36,12 +40,16 @@
                 android:rotation="45" />
         </FrameLayout>
 
-        <com.google.android.material.card.MaterialCardView
+        <androidx.cardview.widget.CardView
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:layout_marginStart="8dp"
+
+            android:layout_marginEnd="8dp"
+
             app:cardCornerRadius="20dp"
-            app:cardElevation="0dp"
+            app:cardElevation="3dp"
             app:cardBackgroundColor="?attr/colorSurface"
             app:strokeWidth="1dp"
             app:strokeColor="@color/outline_variant"
@@ -61,19 +69,31 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content">
 
-                    <ImageView
-                        android:id="@+id/itemIcon"
-                        android:layout_width="20dp"
-                        android:layout_height="20dp"
+                    <androidx.cardview.widget.CardView
+                        android:id="@+id/iconContainer"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:layout_alignParentStart="true"
                         android:layout_centerVertical="true"
-                        android:tint="?attr/colorOnSurfaceVariant"
-                        tools:src="@drawable/ic_walk" />
+                        app:cardCornerRadius="20dp"
+                        app:cardElevation="0dp"
+                        app:cardBackgroundColor="?attr/colorSecondaryContainer">
+
+                        <ImageView
+                            android:id="@+id/itemIcon"
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:layout_gravity="center"
+                            app:tint="?attr/colorOnSecondaryContainer"
+                            tools:src="@drawable/ic_walk" />
+                    </androidx.cardview.widget.CardView>
 
                     <TextView
                         android:id="@+id/itemTitle"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_toEndOf="@id/itemIcon"
+                        android:layout_toEndOf="@id/iconContainer"
+                        android:layout_centerVertical="true"
                         android:layout_marginStart="12dp"
                         android:textStyle="bold"
                         android:textSize="16sp"
@@ -86,20 +106,12 @@
                         android:layout_height="wrap_content"
                         android:layout_alignParentEnd="true"
                         android:layout_centerVertical="true"
-                        android:textColor="?attr/colorSecondary"
+                        android:textColor="#8FA389"
                         android:textSize="13sp"
                         android:textStyle="bold"
                         tools:text="15m" />
                 </RelativeLayout>
 
-                <TextView
-                    android:id="@+id/itemSpeed"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:textColor="?attr/colorOnSurfaceVariant"
-                    android:textSize="14sp"
-                    tools:text="4.5 km/h avg" />
 
                 <View
                     android:layout_width="match_parent"
@@ -125,6 +137,6 @@
                     android:visibility="gone" />
 
             </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
+        </androidx.cardview.widget.CardView>
     </LinearLayout>
 </FrameLayout>

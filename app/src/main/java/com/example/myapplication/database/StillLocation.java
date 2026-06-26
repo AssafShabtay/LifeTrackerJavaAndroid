@@ -20,10 +20,9 @@ public class StillLocation implements TimelineItem {
     public String placeName;
     public String category;
     public String icon;
-    public String placeCoords;
     public Integer color;
     public boolean isStop;
-    public String address;
+    public String placeAddress;
 
     @Override
     public Date getStartTime() {

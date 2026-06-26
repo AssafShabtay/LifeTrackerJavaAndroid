@@ -1,11 +1,15 @@
 package com.example.myapplication;
 
 import android.Manifest;
+import android.app.AlertDialog;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
+import android.widget.Button;
+import android.widget.TextView;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
@@ -30,7 +34,12 @@ public class MainActivity extends AppCompatActivity {
     private PermissionManagerCN permissionManagerCN;
     private String[] foregroundPermissions;
     private OnPermissionsGrantedListener onPermissionsGrantedListener;
-    private boolean isShowingRationaleDialog = false; // Re-introduce flag to prevent re-entrance
+    private OnHomeAddressChangedListener onHomeAddressChangedListener;
+    private boolean isShowingRationaleDialog = false;
+
+    private View permissionBlocker;
+    private Button permissionAction;
+    private TextView permissionSubtitle;
 
     private final HomeFragment homeFragment = new HomeFragment();
     private final StatisticsFragment statisticsFragment = new StatisticsFragment();
@@ -48,30 +57,42 @@ public class MainActivity extends AppCompatActivity {
         this.onPermissionsGrantedListener = onPermissionsGrantedListener;
     }
 
+    public interface OnHomeAddressChangedListener { // New interface
+        void onHomeAddressChanged();
+    }
+
+    public void setOnHomeAddressChangedListener(OnHomeAddressChangedListener listener) { // Setter for new listener
+        this.onHomeAddressChangedListener = listener;
+    }
+
+    public OnHomeAddressChangedListener getOnHomeAddressChangedListener() { // Getter for new listener
+        return onHomeAddressChangedListener;
+    }
+
     private final ActivityResultLauncher<String[]> foregroundPermissionLauncher =
             registerForActivityResult(new ActivityResultContracts.RequestMultiplePermissions(), result -> {
-                boolean allForegroundGranted = true;
+                boolean isAllPermissionsGranted = true;
                 for (Map.Entry<String, Boolean> entry : result.entrySet()) {
                     permissionManagerCN.markPermissionRequested(entry.getKey());
                     if (!entry.getValue()) {
-                        allForegroundGranted = false;
+                        isAllPermissionsGranted = false;
                     }
                 }
 
-                if (allForegroundGranted) {
+                if (isAllPermissionsGranted) {
                     checkAndRequestBackgroundLocation();
                 } else {
-                    // Only call handlePermissionDenied if we are not currently showing a rationale dialog
-                    // to avoid re-entering the loop prematurely.
+                    // avoid re opening the dialog
                     if (!isShowingRationaleDialog) {
                         handlePermissionDenied();
                     }
                 }
+                refreshPermissionUi(permissionManagerCN.hasAllPermissions());
             });
 
     private final ActivityResultLauncher<String> backgroundPermissionLauncher =
             registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
-                permissionManagerCN.markPermissionRequested(Manifest.permission.ACCESS_BACKGROUND_LOCATION);
+                permissionManagerCN.markPermissionRequested(Manifest.permission.ACCESS_BACKGROUND_LOCATION); // TODO FIX API LEVEL
                 if (isGranted) {
                     if (onPermissionsGrantedListener != null) {
                         onPermissionsGrantedListener.onPermissionsGranted();
@@ -81,6 +102,7 @@ public class MainActivity extends AppCompatActivity {
                     // We don't call handlePermissionDenied() here to avoid potential rationale loops
                     // for background location. The fragment UI will show permissions are missing.
                 }
+                refreshPermissionUi(permissionManagerCN.hasAllPermissions());
             });
 
     private void handlePermissionDenied() {
@@ -125,7 +147,7 @@ public class MainActivity extends AppCompatActivity {
                 }
             } else {
                 // Show a custom dialog explaining why background location is needed before showing the system/settings prompt
-                new android.app.AlertDialog.Builder(this)
+                new AlertDialog.Builder(this)
                         .setTitle("Background Location Access")
                         .setMessage("This app collects location data to enable timeline visits and geofencing even when the app is closed or not in use. Please select 'Allow all the time' in the next screen.")
                         .setPositiveButton("Grant", (dialog, which) -> {
@@ -140,6 +162,7 @@ public class MainActivity extends AppCompatActivity {
                             }
                             // Otherwise, if not permanently denied, just continue without background access.
                             // The UI in HomeFragment should reflect the missing permission.
+                            refreshPermissionUi(false);
                         })
                         .setCancelable(false)
                         .show();
@@ -169,12 +192,15 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        String[] allRequired = PermissionManagerCN.buildRequiredPermissions();
-        permissionManagerCN = new PermissionManagerCN(this, allRequired);
+        permissionBlocker = findViewById(R.id.permission_blocker);
+        permissionAction = findViewById(R.id.permission_action);
+        permissionSubtitle = findViewById(R.id.permission_subtitle);
+
+        permissionManagerCN = new PermissionManagerCN(this);
 
         // Filter out background location for the initial request flow
         List<String> fgList = new ArrayList<>();
-        for (String p : allRequired) {
+        for (String p : permissionManagerCN.getRequiredPermissions()) {
             if (!p.equals(Manifest.permission.ACCESS_BACKGROUND_LOCATION)) {
                 fgList.add(p);
             }
@@ -187,6 +213,16 @@ public class MainActivity extends AppCompatActivity {
         getSupportFragmentManager().beginTransaction().add(R.id.fragment_container, settingsFragment, "3").hide(settingsFragment).commit();
         getSupportFragmentManager().beginTransaction().add(R.id.fragment_container, statisticsFragment, "2").hide(statisticsFragment).commit();
         getSupportFragmentManager().beginTransaction().add(R.id.fragment_container, homeFragment, "1").commit();
+
+        // Initial check and UI refresh
+        refreshPermissionUi(permissionManagerCN.hasAllPermissions());
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // Refresh UI state when activity resumes, in case permissions were changed in settings
+        refreshPermissionUi(permissionManagerCN.hasAllPermissions());
     }
 
     private final BottomNavigationView.OnNavigationItemSelectedListener navListener =
@@ -212,5 +248,42 @@ public class MainActivity extends AppCompatActivity {
     // This method can be called from SettingsFragment to recreate the activity and apply theme changes.
     public void recreateActivity() {
         recreate();
+    }
+
+    private void refreshPermissionUi(boolean hasPerms) {
+        if (hasPerms) {
+            permissionBlocker.setVisibility(View.GONE);
+            // headerLayout.setVisibility(View.VISIBLE); // These are HomeFragment specific
+            // rvTimeline.setVisibility(View.VISIBLE); // These are HomeFragment specific
+            // if (mapManager != null) { // These are HomeFragment specific
+            // mapManager.setVisibility(View.VISIBLE); // These are HomeFragment specific
+            // }
+            // if (timelineLabel != null) { // These are HomeFragment specific
+            // timelineLabel.setVisibility(View.VISIBLE); // These are HomeFragment specific
+            // }
+        } else {
+            permissionBlocker.setVisibility(View.VISIBLE);
+            // headerLayout.setVisibility(View.GONE); // These are HomeFragment specific
+            // rvTimeline.setVisibility(View.GONE); // These are HomeFragment specific
+            // if (mapManager != null) { // These are HomeFragment specific
+            // mapManager.setVisibility(View.GONE); // These are HomeFragment specific
+            // }
+            // if (timelineLabel != null) { // These are HomeFragment specific
+            // timelineLabel.setVisibility(View.GONE); // These are HomeFragment specific
+            // }
+
+            boolean permanent = permissionManagerCN.isAnyPermissionPermanentlyDenied();
+            permissionSubtitle.setText(permanent
+                    ? "Permissions were denied. Please enable them in Settings to continue"
+                    : "Please grant permissions to continue.");
+            permissionAction.setText(permanent ? "Open Settings" : "Grant");
+            permissionAction.setOnClickListener(v -> {
+                if (permanent) {
+                    permissionManagerCN.openAppSettings();
+                } else {
+                    requestPermissions();
+                }
+            });
+        }
     }
 }

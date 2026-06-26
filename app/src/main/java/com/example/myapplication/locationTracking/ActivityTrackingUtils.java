@@ -1,6 +1,8 @@
 package com.example.myapplication.locationTracking;
 
 import android.content.Context;
+import android.location.Address;
+import android.location.Geocoder;
 import android.location.Location;
 import android.util.Log;
 
@@ -8,9 +10,10 @@ import com.example.myapplication.database.RoutePoint;
 import com.example.myapplication.helpers.Logger;
 import com.google.android.gms.location.DetectedActivity;
 
-import java.util.ArrayList;
+import java.io.IOException;
 import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 
 public class ActivityTrackingUtils {
 
@@ -104,7 +107,31 @@ public class ActivityTrackingUtils {
         Location.distanceBetween(startLat, startLng, endLat, endLng, results);
         return results[0];
     }
+    public static double[] getCoordinatesFromAddress(String address, Context context) {
+        Geocoder geocoder = new Geocoder(context, Locale.getDefault());
+        try {
+            List<Address> addresses = geocoder.getFromLocationName(address, 1);
+            if (addresses != null && !addresses.isEmpty()) {
+                Address location = addresses.get(0);
+                return new double[]{location.getLatitude(), location.getLongitude()};
+            }
+        } catch (IOException e) {
+            Log.e("StatisticsFragment", "Geocoding failed", e);
+        }
+        return null;
+    }
+    public static double[] calculateRadiusBox(double lat, double lng, double radiusInMeters) {
+        // some shity math I wont try to understand to calculate the radius
+        double latDelta = radiusInMeters / 111320.0;
+        double lngDelta = radiusInMeters / (111320.0 * Math.cos(Math.toRadians(lat)));
 
+        double minLat = lat - latDelta;
+        double maxLat = lat + latDelta;
+        double minLng = lng - lngDelta;
+        double maxLng = lng + lngDelta;
+
+        return new double[]{minLat, maxLat, minLng, maxLng};
+    }
     public static String getActivityName(int activityType) {
         switch (activityType) {
             case DetectedActivity.IN_VEHICLE: return "Driving";

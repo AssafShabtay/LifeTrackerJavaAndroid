@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Modern Dark Palette -->
-    <color name="primary">#AECBFA</color> <!-- Lighter Blue for Dark Mode -->
+    <color name="primary">#4A4457</color> <!-- Lighter Blue for Dark Mode -->
     <color name="on_primary">#042B5E</color>
     <color name="primary_container">#174EA6</color>
     <color name="on_primary_container">#D2E3FC</color>

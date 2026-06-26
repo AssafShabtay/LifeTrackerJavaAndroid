@@ -1,11 +1,15 @@
 package com.example.myapplication.locationTracking;
 
-import android.annotation.SuppressLint;
+import android.Manifest;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.util.Log;
 
+import androidx.core.content.ContextCompat;
+
+import com.example.myapplication.locationTracking.reciever.GeofenceBroadcastReceiver;
 import com.google.android.gms.location.Geofence;
 import com.google.android.gms.location.GeofencingClient;
 import com.google.android.gms.location.GeofencingRequest;
@@ -27,13 +31,18 @@ public class GeofenceManager {
 
 
     public void addGeofence(String requestId, double lat, double lng, float radius) {
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            Log.e(TAG, "Fine location permission not granted, cannot add geofence.");
+            return;
+        }
+
         Geofence geofence = new Geofence.Builder()
                 .setRequestId(requestId)
                 .setCircularRegion(lat, lng, radius)
                 .setExpirationDuration(Geofence.NEVER_EXPIRE)
-                .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER | 
-                                    Geofence.GEOFENCE_TRANSITION_EXIT | 
-                                    Geofence.GEOFENCE_TRANSITION_DWELL)
+                .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER |
+                        Geofence.GEOFENCE_TRANSITION_EXIT |
+                        Geofence.GEOFENCE_TRANSITION_DWELL)
                 .setLoiteringDelay(120000) // 2 minutes to confirm stay
                 .build();
 
@@ -48,6 +57,11 @@ public class GeofenceManager {
     }
 
     public void removeGeofence(String requestId) {
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            Log.e(TAG, "Fine location permission not granted, cannot remove geofence.");
+            return;
+        }
+
         List<String> ids = new ArrayList<>();
         ids.add(requestId);
         geofencingClient.removeGeofences(ids)
@@ -60,7 +74,7 @@ public class GeofenceManager {
             return geofencePendingIntent;
         }
         Intent intent = new Intent(context, GeofenceBroadcastReceiver.class);
-        geofencePendingIntent = PendingIntent.getBroadcast(context, 0, intent, 
+        geofencePendingIntent = PendingIntent.getBroadcast(context, 0, intent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_MUTABLE);
         return geofencePendingIntent;
     }

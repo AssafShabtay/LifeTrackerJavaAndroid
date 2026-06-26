@@ -1,5 +1,7 @@
 package com.example.myapplication.mainScreen;
 
+import static com.example.myapplication.helpers.ColorAndIcons.DEFAULT_COLORS;
+import static com.example.myapplication.helpers.ColorAndIcons.getStillColor;
 import static com.example.myapplication.helpers.ColorAndIcons.getStillIconRes;
 
 import android.Manifest;
@@ -96,7 +98,7 @@ public class MapManager implements OnMapReadyCallback {
         mMap.getUiSettings().setZoomGesturesEnabled(true);
         mMap.getUiSettings().setTiltGesturesEnabled(true);
         mMap.getUiSettings().setRotateGesturesEnabled(true);
-        
+
         updateMyLocationEnabled();
     }
 
@@ -132,11 +134,11 @@ public class MapManager implements OnMapReadyCallback {
             }
         } else if (item instanceof MovementActivity) {
             MovementActivity movement = (MovementActivity) item;
-            
+
             io.execute(() -> {
                 ActivityDao dao = ActivityDatabase.getDatabase(fragment.requireContext()).activityDao();
                 List<RoutePoint> points = dao.getRoutePointsForMovement(movement.id);
-                
+
                 fragment.requireActivity().runOnUiThread(() -> {
                     LatLngBounds bounds = drawMovementOnMap(movement, points, 1, true);
                     if (bounds != null) {
@@ -158,30 +160,30 @@ public class MapManager implements OnMapReadyCallback {
         Bitmap bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(bitmap);
         Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        
+
         // Circle background
         paint.setColor(color);
         canvas.drawCircle(size / 2f, size / 2f, size / 2f, paint);
-        
+
         // White border
         paint.setStyle(Paint.Style.STROKE);
         paint.setColor(Color.WHITE);
         paint.setStrokeWidth(4);
         canvas.drawCircle(size / 2f, size / 2f, (size / 2f) - 2, paint);
-        
+
         // Text
         paint.setStyle(Paint.Style.FILL);
         paint.setColor(Color.WHITE);
         paint.setTextSize(36);
         paint.setFakeBoldText(true);
         paint.setTextAlign(Paint.Align.CENTER);
-        
+
         String text = String.valueOf(number);
         Rect bounds = new Rect();
         paint.getTextBounds(text, 0, text.length(), bounds);
         float y = (size / 2f) - bounds.exactCenterY();
         canvas.drawText(text, size / 2f, y, paint);
-        
+
         return BitmapDescriptorFactory.fromBitmap(bitmap);
     }
 
@@ -190,17 +192,17 @@ public class MapManager implements OnMapReadyCallback {
         Bitmap bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(bitmap);
         Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        
+
         // Circle background
         paint.setColor(color);
         canvas.drawCircle(size / 2f, size / 2f, size / 2f, paint);
-        
+
         // White border
         paint.setStyle(Paint.Style.STROKE);
         paint.setColor(Color.WHITE);
         paint.setStrokeWidth(4);
         canvas.drawCircle(size / 2f, size / 2f, (size / 2f) - 2, paint);
-        
+
         // Draw icon
         Drawable drawable = ContextCompat.getDrawable(fragment.requireContext(), iconResId);
         if (drawable != null) {
@@ -210,7 +212,7 @@ public class MapManager implements OnMapReadyCallback {
             wrappedDrawable.setBounds(padding, padding, size - padding, size - padding);
             wrappedDrawable.draw(canvas);
         }
-        
+
         return BitmapDescriptorFactory.fromBitmap(bitmap);
     }
 
@@ -219,7 +221,7 @@ public class MapManager implements OnMapReadyCallback {
     private int getMovementIconRes(String type) {
         int iconRes = R.drawable.ic_walk;
         if (type == null) return iconRes;
-        
+
         String t = type.toLowerCase();
         if (t.contains("driving") || t.contains("vehicle")) {
             iconRes = R.drawable.ic_car;
@@ -237,22 +239,21 @@ public class MapManager implements OnMapReadyCallback {
         if (still.lat != null && still.lng != null) {
             LatLng pos = new LatLng(still.lat, still.lng);
             String title = (still.placeName != null) ? still.placeName : "Still Location";
-            
-            int color;
-            if (still.wasSupposedToBeActivity != null) {
+
+            // Determine the color for the still location
+            int color = getStillColor(still, fragment.requireContext());
+
+            if (still.isStop) {
                 title = "Stop: " + title;
-                color = ContextCompat.getColor(fragment.requireContext(), R.color.activity_stop);
-            } else {
-                color = ContextCompat.getColor(fragment.requireContext(), R.color.activity_still);
             }
-            
+
             BitmapDescriptor icon;
             if (useIcon) {
                 icon = getIconMarkerIcon(getStillIconRes(still), color);
             } else {
                 icon = getNumberedMarkerIcon(number, color);
             }
-            
+
             mMap.addMarker(new MarkerOptions()
                     .position(pos)
                     .title((useIcon ? "" : (number + ". ")) + title)
@@ -272,11 +273,11 @@ public class MapManager implements OnMapReadyCallback {
 
         io.execute(() -> {
             ActivityDao dao = ActivityDatabase.getDatabase(fragment.requireContext()).activityDao();
-            
+
             for (int i = 0; i < items.size(); i++) {
                 TimelineItem item = items.get(i);
                 final int number = i + 1;
-                
+
                 if (item instanceof StillLocation) {
                     StillLocation still = (StillLocation) item;
                     fragment.requireActivity().runOnUiThread(() -> {
@@ -288,7 +289,7 @@ public class MapManager implements OnMapReadyCallback {
                 } else if (item instanceof MovementActivity) {
                     MovementActivity movement = (MovementActivity) item;
                     List<RoutePoint> points = dao.getRoutePointsForMovement(movement.id);
-                    
+
                     fragment.requireActivity().runOnUiThread(() -> {
                         drawMovementOnMap(movement, points, number, false);
                     });
@@ -324,7 +325,7 @@ public class MapManager implements OnMapReadyCallback {
 
     private LatLngBounds drawMovementOnMap(MovementActivity movement, List<RoutePoint> routePoints, int number, boolean useIcon) {
         if (mMap == null) return null;
-        
+
         LatLngBounds.Builder builder = new LatLngBounds.Builder();
         boolean hasPoints = false;
         int color = getMovementColor(movement.activityTypeName);
@@ -332,14 +333,14 @@ public class MapManager implements OnMapReadyCallback {
         // Add marker for start position
         if (movement.startLat != null && movement.startLng != null) {
             LatLng start = new LatLng(movement.startLat, movement.startLng);
-            
+
             BitmapDescriptor icon;
             if (useIcon) {
                 icon = getIconMarkerIcon(getMovementIconRes(movement.activityTypeName), color);
             } else {
                 icon = getNumberedMarkerIcon(number, color);
             }
-            
+
             mMap.addMarker(new MarkerOptions()
                     .position(start)
                     .title((useIcon ? "" : (number + ". ")) + "Start: " + movement.activityTypeName)
@@ -367,7 +368,7 @@ public class MapManager implements OnMapReadyCallback {
             polylineOptions.add(new LatLng(movement.endLat, movement.endLng));
             hasPoints = true;
         }
-        
+
         if (hasPoints) {
             mMap.addPolyline(polylineOptions);
         }
@@ -378,10 +379,12 @@ public class MapManager implements OnMapReadyCallback {
                 if (stop.lat != null && stop.lng != null) {
                     LatLng stopPos = new LatLng(stop.lat, stop.lng);
                     String stopTitle = (stop.placeName != null) ? stop.placeName : "Stop";
-                    int stopColor = ContextCompat.getColor(fragment.requireContext(), R.color.activity_stop);
-                    
+
+                    // Determine the color for the stop location
+                    int stopColor = getStillColor(stop, fragment.requireContext());
+
                     BitmapDescriptor stopIcon = getIconMarkerIcon(getStillIconRes(stop), stopColor);
-                    
+
                     mMap.addMarker(new MarkerOptions()
                             .position(stopPos)
                             .title("Stop: " + stopTitle)
@@ -395,14 +398,14 @@ public class MapManager implements OnMapReadyCallback {
         // Add marker for end position
         if (movement.endLat != null && movement.endLng != null) {
             LatLng end = new LatLng(movement.endLat, movement.endLng);
-            
+
             BitmapDescriptor icon;
             if (useIcon) {
                 icon = getIconMarkerIcon(getMovementIconRes(movement.activityTypeName), color);
             } else {
                 icon = getNumberedMarkerIcon(number, color);
             }
-            
+
             mMap.addMarker(new MarkerOptions()
                     .position(end)
                     .title((useIcon ? "" : (number + ". ")) + "End: " + movement.activityTypeName)
@@ -423,6 +426,8 @@ public class MapManager implements OnMapReadyCallback {
         if (t.contains("cycling") || t.contains("bicycle")) return Color.parseColor("#F4B400"); // Google Yellow
         return Color.GRAY;
     }
+
+
 
     private void updateMyLocationEnabled() {
         // code taken from google

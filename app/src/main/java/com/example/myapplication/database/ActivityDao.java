@@ -107,10 +107,12 @@ public interface ActivityDao {
         deleteMovementActivity(movementId);
         updateStillStartTime(stillId, newStartTime);
     }
-
-
-
-    // Assuming StillLocation has startTime, endTime, and a placeName or placeId
+    @Query("UPDATE still_locations SET category = :category, " +
+            "placeName = CASE WHEN :category = 'Home' THEN 'Home' ELSE placeName END, " +
+            "icon = CASE WHEN :category = 'Home' THEN 'Home' ELSE icon END " +
+            "WHERE lat BETWEEN :minLat AND :maxLat " +
+            "AND lng BETWEEN :minLng AND :maxLng")
+    void updateStillsWithinBounds(double minLat, double maxLat, double minLng, double maxLng, String category);
     @Query("SELECT SUM(CASE WHEN endTimeDate IS NULL THEN :now ELSE endTimeDate END - startTimeDate) FROM still_locations WHERE category = 'Home' AND startTimeDate >= :sevenDaysAgo")
     long getTimeAtHomeSince(long sevenDaysAgo, long now);
 }

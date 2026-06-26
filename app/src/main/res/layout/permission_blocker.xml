@@ -32,7 +32,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Location Access"
+        android:text="Locaion Access"
         android:textSize="24sp"
         android:fontFamily="sans-serif-medium"
         android:textColor="?attr/colorOnSurface"

@@ -87,7 +87,8 @@
                 android:id="@+id/etAddress"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:inputType="textPostalAddress" />
+                android:inputType="textPostalAddress"
+                android:paddingStart="16dp" />
 
         </com.google.android.material.textfield.TextInputLayout>
 
@@ -103,6 +104,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
+                android:backgroundTint="?attr/colorSecondaryContainer"
                 android:text="Start: --:--" />
 
             <View
@@ -115,6 +117,7 @@
                 android:layout_width="0dp"
                 android:layout_weight="1"
                 android:layout_height="wrap_content"
+                android:backgroundTint="?attr/colorSecondaryContainer"
                 android:text="End: --:--" />
         </LinearLayout>
 
@@ -126,7 +129,10 @@
             android:text="Save Changes"
             android:fontFamily="sans-serif-medium"
             android:textSize="16sp"
+            android:backgroundTint="?attr/colorPrimary"
+            android:textColor="@color/white"
             app:cornerRadius="28dp" />
+
 
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>

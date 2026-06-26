@@ -1,5 +1,8 @@
 package com.example.myapplication.mainScreen;
 
+import static com.example.myapplication.locationTracking.ActivityTrackingUtils.calculateRadiusBox;
+import static com.example.myapplication.locationTracking.ActivityTrackingUtils.getCoordinatesFromAddress;
+
 import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
@@ -19,6 +22,7 @@ import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
+import com.example.myapplication.MainActivity;
 import com.example.myapplication.R;
 import com.example.myapplication.database.ActivityDatabase;
 import com.example.myapplication.database.MovementActivity;
@@ -39,9 +43,6 @@ import java.util.concurrent.Executors;
 
 public class StatisticsFragment extends Fragment implements HomeAddressPickerBottomSheet.OnHomeAddressSelectedListener {
 
-    private MiniPieChartView pieChart;
-    private TextView tvTotalTime;
-    private LinearLayout legendContainer;
     private LinearLayout topPlacesContainer;
     private TextView tvNoData;
 
@@ -52,6 +53,8 @@ public class StatisticsFragment extends Fragment implements HomeAddressPickerBot
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
+    private Map<String, Long> currentPlaceDurations = new HashMap<>(); // Added field
+
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
@@ -61,9 +64,6 @@ public class StatisticsFragment extends Fragment implements HomeAddressPickerBot
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-        pieChart = view.findViewById(R.id.pieChart);
-        tvTotalTime = view.findViewById(R.id.tvTotalTime);
-        legendContainer = view.findViewById(R.id.legendContainer);
         topPlacesContainer = view.findViewById(R.id.topPlacesContainer);
         tvNoData = view.findViewById(R.id.tvNoData);
         cabinFeverContent = view.findViewById(R.id.cabin_fever_content);
@@ -71,7 +71,8 @@ public class StatisticsFragment extends Fragment implements HomeAddressPickerBot
         btnOpenHomeAddressPicker = view.findViewById(R.id.btnOpenHomeAddressPicker);
 
         btnOpenHomeAddressPicker.setOnClickListener(v -> {
-            HomeAddressPickerBottomSheet bottomSheet = HomeAddressPickerBottomSheet.newInstance(this);
+            // Pass currentPlaceDurations to the bottom sheet
+            HomeAddressPickerBottomSheet bottomSheet = HomeAddressPickerBottomSheet.newInstance(this, currentPlaceDurations);
             bottomSheet.show(getChildFragmentManager(), bottomSheet.getTag());
         });
 
@@ -119,15 +120,12 @@ public class StatisticsFragment extends Fragment implements HomeAddressPickerBot
             mainHandler.post(() -> {
                 if (!isAdded()) return;
                 tvNoData.setVisibility(View.VISIBLE);
-                pieChart.setSlices(Collections.emptyList());
-                tvTotalTime.setText("0h\n0m");
-                legendContainer.removeAllViews();
                 topPlacesContainer.removeAllViews();
+                currentPlaceDurations.clear(); // Clear the map if no data
             });
             return;
         }
 
-        List<MiniPieChartView.Slice> slices = new ArrayList<>();
         Map<String, Long> activityDurations = new HashMap<>();
         Map<String, Long> activityColors = new HashMap<>();
         Map<String, Long> placeDurations = new HashMap<>();
@@ -153,7 +151,6 @@ public class StatisticsFragment extends Fragment implements HomeAddressPickerBot
 
             Calendar cal = Calendar.getInstance();
             cal.setTime(effectiveStart);
-            int startMinsFromDayStart = cal.get(Calendar.HOUR_OF_DAY) * 60 + cal.get(Calendar.MINUTE);
 
             int color = Color.GRAY;
             String type = "Unknown";
@@ -176,36 +173,20 @@ public class StatisticsFragment extends Fragment implements HomeAddressPickerBot
                 else color = ContextCompat.getColor(requireContext(), R.color.activity_stop);
             }
 
-            slices.add(new MiniPieChartView.Slice(startMinsFromDayStart, durationMins, color));
             activityDurations.put(type, activityDurations.getOrDefault(type, 0L) + durationMins);
             activityColors.put(type, (long)color);
         }
 
+        currentPlaceDurations = placeDurations; // Update the class field
+
         final long finalTotal = totalMinutes;
-        mainHandler.post(() -> updateUi(slices, activityDurations, activityColors, placeDurations, finalTotal));
+        mainHandler.post(() -> updateUi(activityDurations, activityColors, placeDurations, finalTotal));
     }
 
-    private void updateUi(List<MiniPieChartView.Slice> slices, Map<String, Long> activityDurations, Map<String, Long> activityColors, Map<String, Long> placeDurations, long totalMins) {
+    private void updateUi(Map<String, Long> activityDurations, Map<String, Long> activityColors, Map<String, Long> placeDurations, long totalMins) {
         if (!isAdded()) return;
 
-        pieChart.setSlices(slices);
-        
-        long hours = totalMins / 60;
-        long mins = totalMins % 60;
-        tvTotalTime.setText(hours + "h\n" + mins + "m");
-
         tvNoData.setVisibility(placeDurations.isEmpty() ? View.VISIBLE : View.GONE);
-
-        // Update Legend
-        legendContainer.removeAllViews();
-        List<String> sortedActivities = new ArrayList<>(activityDurations.keySet());
-        Collections.sort(sortedActivities, (a, b) -> activityDurations.get(b).compareTo(activityDurations.get(a)));
-
-        for (String type : sortedActivities) {
-            long duration = activityDurations.get(type);
-            int color = activityColors.get(type).intValue();
-            addLegendItem(type, duration, color);
-        }
 
         // Update Top Places
         topPlacesContainer.removeAllViews();
@@ -220,21 +201,7 @@ public class StatisticsFragment extends Fragment implements HomeAddressPickerBot
         }
     }
 
-    private void addLegendItem(String label, long mins, int color) {
-        if (!isAdded()) return;
-        View view = LayoutInflater.from(requireContext()).inflate(android.R.layout.simple_list_item_2, legendContainer, false);
-        TextView text1 = view.findViewById(android.R.id.text1);
-        TextView text2 = view.findViewById(android.R.id.text2);
-        
-        text1.setText(label);
-        text1.setTextColor(color);
-        text1.setTextSize(14);
-        
-        text2.setText(mins / 60 + "h " + mins % 60 + "m");
-        text2.setTextSize(12);
-        
-        legendContainer.addView(view);
-    }
+
 
     private void addPlaceItem(String name, long mins) {
         if (!isAdded()) return;
@@ -251,9 +218,9 @@ public class StatisticsFragment extends Fragment implements HomeAddressPickerBot
         topPlacesContainer.addView(view);
     }
 
-    // Removed direct loadHomeAddress() as its functionality is now within loadCabinFeverIndex
 
-    @Override
+    // ------------------------ Cabin fever statistics ----------------------------
+
     public void onAddressSelected(String address) {
         saveHomeAddress(address);
     }
@@ -266,9 +233,10 @@ public class StatisticsFragment extends Fragment implements HomeAddressPickerBot
 
         executor.execute(() -> {
             if (!isAdded()) return;
+            double[] coords = getCoordinatesFromAddress(address, requireContext());
+
             ActivityDatabase db = ActivityDatabase.getDatabase(requireContext());
             PlaceDao placeDao = db.placeDao();
-
             Place homePlace = placeDao.getHomePlace();
             if (homePlace == null) {
                 // Create a new home place
@@ -276,30 +244,43 @@ public class StatisticsFragment extends Fragment implements HomeAddressPickerBot
                 homePlace.name = "Home";
                 homePlace.address = address;
                 homePlace.category = "Home";
-                homePlace.lat = 0.0; // Placeholder, as we don't have lat/lng from autocomplete string
-                homePlace.lng = 0.0; // Placeholder
-                homePlace.radius = 50.0f; // Default radius
-                homePlace.icon = "Home"; // Default icon
-                homePlace.color = 0xFF9E9E9E; // Default color: light grey, consistent with StillLocation fallback
+                homePlace.icon = "Home";
+                homePlace.color = 0xFF9E9E9E; // TODO CHANGE Default color: light grey, consistent with StillLocation fallback
+                if(coords != null){
+                    homePlace.lat = coords[0];
+                    homePlace.lng = coords[1];
+                }
+                placeDao.insertPlace(homePlace);
+                if (coords != null) {
 
-                long newId = placeDao.insertPlace(homePlace);
-                Log.d("StatisticsFragment", "New home address inserted with ID: " + newId);
+                    double[] bounds = calculateRadiusBox(coords[0], coords[1], 50.0);
+                    db.activityDao().updateStillsWithinBounds(bounds[0], bounds[1], bounds[2], bounds[3], "Home");
+                }
             } else {
                 // Update existing home place
                 homePlace.address = address;
-                // Keep existing lat/lng, radius, icon, color if they were set previously
+                homePlace.category = "Home";
+                homePlace.name = "Home";
+                homePlace.icon = "Home";
                 placeDao.updatePlace(homePlace);
-                Log.d("StatisticsFragment", "Home address updated for ID: " + homePlace.id);
             }
 
             mainHandler.post(() -> {
                 if (!isAdded()) return;
-                Toast.makeText(requireContext(), "Home address saved!", Toast.LENGTH_SHORT).show();
-                // Reload cabin fever index to reflect the new home address immediately
+                // Reload cabin fever index
                 loadCabinFeverIndex();
+
+                // Notify HomeFragment about the home address change
+                if (getActivity() instanceof MainActivity) {
+                    MainActivity.OnHomeAddressChangedListener listener = ((MainActivity) getActivity()).getOnHomeAddressChangedListener();
+                    if (listener != null) {
+                        listener.onHomeAddressChanged();
+                    }
+                }
             });
         });
     }
+
 
     private void loadCabinFeverIndex() {
         long now = System.currentTimeMillis();
@@ -311,6 +292,12 @@ public class StatisticsFragment extends Fragment implements HomeAddressPickerBot
             ActivityDatabase db = ActivityDatabase.getDatabase(requireContext());
             Place homePlace = db.placeDao().getHomePlace();
 
+            long timeAtHomeMs = 0;
+            if (homePlace != null) {
+                timeAtHomeMs = db.activityDao().getTimeAtHomeSince(sevenDaysAgo, now);
+            }
+
+            final long finalTimeAtHomeMs = timeAtHomeMs; // make time final
             mainHandler.post(() -> {
                 if (!isAdded()) return;
                 if (homePlace == null) {
@@ -321,8 +308,7 @@ public class StatisticsFragment extends Fragment implements HomeAddressPickerBot
                     if (cabinFeverPlaceholder != null) cabinFeverPlaceholder.setVisibility(View.GONE);
 
                     // Update the cabin fever UI if a home address exists
-                    long timeAtHomeMs = db.activityDao().getTimeAtHomeSince(sevenDaysAgo, now);
-                    int percentage = (int) (((float) timeAtHomeMs / sevenDaysMs) * 100);
+                    int percentage = (int) (((float) finalTimeAtHomeMs / sevenDaysMs) * 100);
                     if (percentage > 100) percentage = 100;
                     updateCabinFeverUi(percentage);
                 }

@@ -42,7 +42,8 @@ public class GeofenceUtilsManager {
             still.placeId = String.valueOf(nearby.id);
             still.placeName = nearby.name;
             still.icon = nearby.category;
-            still.placeCoords = nearby.address;
+            still.placeAddress = nearby.address;
+            still.category = nearby.category;
             still.lat = nearby.lat;
             still.lng = nearby.lng;
         } else {
@@ -86,7 +87,7 @@ public class GeofenceUtilsManager {
                 // Extract place data
                 still.placeName = place.getDisplayName();
                 still.placeId = place.getId();
-                still.placeCoords = place.getFormattedAddress();
+                still.placeAddress = place.getFormattedAddress();
 
                 // Map Google Types to your icon/category if needed
                 if (place.getPlaceTypes() != null && !place.getPlaceTypes().isEmpty()) {
@@ -106,7 +107,7 @@ public class GeofenceUtilsManager {
         List<Place> places = placeDao.getAllPlacesSync();
         for (Place p : places) {
             float dist = distanceInMeters(lat, lng, p.lat, p.lng);
-            if (dist < (p.radius > 0 ? p.radius : 100f)) {
+            if (dist < 75f) {
                 return p;
             }
         }

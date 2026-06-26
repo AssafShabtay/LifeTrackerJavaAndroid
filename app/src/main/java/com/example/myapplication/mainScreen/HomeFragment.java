@@ -13,7 +13,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -24,7 +23,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.myapplication.MainActivity;
 import com.example.myapplication.database.PlaceDao;
 import com.example.myapplication.helpers.PermissionManagerCN;
-import com.example.myapplication.locationTracking.ActivityTransitionReceiver;
+import com.example.myapplication.locationTracking.reciever.ActivityTransitionReceiver;
 import com.example.myapplication.locationTracking.GeofenceManager;
 import com.example.myapplication.locationTracking.LocationService;
 import com.example.myapplication.database.ActivityDao;
@@ -46,16 +45,13 @@ import java.util.Date;
 import java.util.List;
 import java.util.concurrent.Executors;
 
-public class HomeFragment extends Fragment implements MainActivity.OnPermissionsGrantedListener {
+public class HomeFragment extends Fragment implements MainActivity.OnPermissionsGrantedListener, MainActivity.OnHomeAddressChangedListener {
 
     private static final String TAG = "HomeFragment";
 
     private static final long UPDATE_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
-    private View permissionBlocker;
-    private Button permissionAction;
-    private TextView permissionSubtitle;
-    private View headerLayout;
+    // Removed permissionBlocker, permissionAction, permissionSubtitle, headerLayout
 
     private Button btnInsertExample;
     private Button btnShowFullDay;
@@ -89,57 +85,25 @@ public class HomeFragment extends Fragment implements MainActivity.OnPermissions
 
     @Override
     public void onPermissionsGranted() {
-        refreshPermissionUi(true);
         if (!areServicesInitialized) {
             onAllPermissionsGranted();
             areServicesInitialized = true;
         }
     }
 
+    @Override
+    public void onHomeAddressChanged() {
+        Log.d(TAG, "Home address changed, reloading timeline data.");
+        loadTimelineData(calendarManager.getSelectedDate());
+    }
+
     private void onAllPermissionsGranted() {
+        // No longer calling refreshPermissionUi here, as it's handled by MainActivity
         requestTransitions();
         startTrackingService();
     }
 
-    private void refreshPermissionUi(boolean hasPerms) {
-        //control what you see depending on whether  you accepted permissions
-        View timelineLabel = requireView().findViewById(R.id.tv_timeline_label);
-        if (hasPerms) {// are permissions granted?
-            permissionBlocker.setVisibility(View.GONE);
-            headerLayout.setVisibility(View.VISIBLE);
-            rvTimeline.setVisibility(View.VISIBLE);
-            if (mapManager != null) {
-                mapManager.setVisibility(View.VISIBLE);
-            }
-            if (timelineLabel != null) {
-                timelineLabel.setVisibility(View.VISIBLE);
-            }
-        } else {
-            permissionBlocker.setVisibility(View.VISIBLE);
-            headerLayout.setVisibility(View.GONE);
-            rvTimeline.setVisibility(View.GONE);
-            if (mapManager != null) {
-                mapManager.setVisibility(View.GONE);
-            }
-            if (timelineLabel != null) {
-                timelineLabel.setVisibility(View.GONE);
-            }
-
-            //Ask for permissions again
-            boolean permanent = permissionManagerCN.isAnyPermissionPermanentlyDenied();
-            permissionSubtitle.setText(permanent
-                    ? "Permissions were denied. Please enable them in Settings to continue"
-                    : "Please grant permissions to continue.");
-            permissionAction.setText(permanent ? "Open Settings" : "Grant");
-            permissionAction.setOnClickListener(v -> {
-                if (permanent) {
-                    permissionManagerCN.openAppSettings();
-                } else {
-                    ((MainActivity) requireActivity()).requestPermissions();
-                }
-            });
-        }
-    }
+    // refreshPermissionUi method moved to MainActivity
 
     @Nullable
     @Override
@@ -152,13 +116,11 @@ public class HomeFragment extends Fragment implements MainActivity.OnPermissions
         super.onViewCreated(view, savedInstanceState);
 
         MainActivity mainActivity = (MainActivity) requireActivity();
-        permissionManagerCN = mainActivity.getPermissionManager();
+        permissionManagerCN = mainActivity.getPermissionManager(); // Get PermissionManager from MainActivity
         mainActivity.setOnPermissionsGrantedListener(this);
+        mainActivity.setOnHomeAddressChangedListener(this); // Register HomeFragment as listener
 
-        permissionBlocker = view.findViewById(R.id.permission_blocker);
-        permissionAction = view.findViewById(R.id.permission_action);
-        permissionSubtitle = view.findViewById(R.id.permission_subtitle);
-        headerLayout = view.findViewById(R.id.header_layout);
+        // Removed initialization of permissionBlocker, permissionAction, permissionSubtitle, headerLayout
 
         btnInsertExample = view.findViewById(R.id.btn_insert_example);
         btnShowFullDay = view.findViewById(R.id.btn_show_full_day);
@@ -209,8 +171,7 @@ public class HomeFragment extends Fragment implements MainActivity.OnPermissions
                         float dy = Math.abs(event.getY() - downY[0]);
                         if (dx < CLICK_THRESHOLD && dy < CLICK_THRESHOLD) {
                             v.performClick();
-                        }
-                        break;
+                        }              break;
 
                     case MotionEvent.ACTION_CANCEL:
                         v.getParent().requestDisallowInterceptTouchEvent(false);
@@ -244,7 +205,6 @@ public class HomeFragment extends Fragment implements MainActivity.OnPermissions
             Executors.newSingleThreadExecutor().execute(() -> {
                 dao.updateStillLocation(updatedStill);
                 requireActivity().runOnUiThread(() -> {
-                    Toast.makeText(requireContext(), "Visit updated", Toast.LENGTH_SHORT).show();
                     loadTimelineData(calendarManager.getSelectedDate());
                 });
             });
@@ -295,7 +255,7 @@ public class HomeFragment extends Fragment implements MainActivity.OnPermissions
                     if (lastMovement != null && ((still.startTimeDate != null && still.endTimeDate != null &&
                             lastMovement.startTimeDate != null && lastMovement.endTimeDate != null &&
                             still.startTimeDate.after(lastMovement.startTimeDate) &&
-                            still.endTimeDate.before(lastMovement.endTimeDate)) || still.wasSupposedToBeActivity != null)) {
+                            still.endTimeDate.before(lastMovement.endTimeDate)))) {
                         still.isStop = true;
                         lastMovement.stops.add(still);
                     } else {
@@ -319,9 +279,7 @@ public class HomeFragment extends Fragment implements MainActivity.OnPermissions
     public void onResume() {
         // checks for permissions and then loads the timeline data and resumes everything else
         super.onResume();
-        boolean hasPerms = permissionManagerCN.hasAllPermissions();
-        refreshPermissionUi(hasPerms);
-        if (hasPerms) {
+        if (permissionManagerCN.hasAllPermissions()) { // Check permissions directly
             if (!areServicesInitialized) {
                 onAllPermissionsGranted();
                 areServicesInitialized = true;

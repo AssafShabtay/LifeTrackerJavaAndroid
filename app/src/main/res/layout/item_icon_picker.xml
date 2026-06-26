@@ -3,7 +3,8 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="40dp"
     android:layout_height="40dp"
-    android:layout_margin="2dp">
+    android:layout_margin="7dp"
+    android:background="?attr/selectableItemBackgroundBorderless">
 
     <View
         android:id="@+id/iconBackground"

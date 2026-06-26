@@ -1,6 +1,5 @@
-package com.example.myapplication.locationTracking;
+package com.example.myapplication.locationTracking.reciever;
 
-import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -8,8 +7,7 @@ import android.os.Build;
 import android.util.Log;
 
 import com.example.myapplication.helpers.Logger;
-import com.google.android.gms.location.ActivityRecognition;
-import com.google.android.gms.location.ActivityRecognitionResult;
+import com.example.myapplication.locationTracking.LocationService;
 import com.google.android.gms.location.ActivityTransition;
 import com.google.android.gms.location.ActivityTransitionEvent;
 import com.google.android.gms.location.ActivityTransitionResult;

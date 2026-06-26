@@ -26,9 +26,9 @@ public class PermissionManagerCN {
     private final String[] requiredPermissions;
     private static final String KEY_PERMISSION_REQUESTED_PREFIX = "requested_";
 
-    public PermissionManagerCN(Activity activity, String[] requiredPermissions) {
+    public PermissionManagerCN(Activity activity) {
         this.activity = activity;
-        this.requiredPermissions = requiredPermissions;
+        this.requiredPermissions = buildRequiredPermissions();
         this.prefs = activity.getSharedPreferences("permission_prefs", Context.MODE_PRIVATE);
     }
 
@@ -129,5 +129,9 @@ public class PermissionManagerCN {
         Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
                 Uri.fromParts("package", activity.getPackageName(), null));
         activity.startActivity(intent);
+    }
+
+    public String[] getRequiredPermissions() {
+        return requiredPermissions;
     }
 }

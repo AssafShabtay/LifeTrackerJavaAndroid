@@ -32,11 +32,11 @@
         </activity>
 
         <receiver
-            android:name=".locationTracking.ActivityTransitionReceiver"
+            android:name=".locationTracking.reciever.ActivityTransitionReceiver"
             android:exported="false" />
 
         <receiver
-            android:name=".locationTracking.GeofenceBroadcastReceiver"
+            android:name=".locationTracking.reciever.GeofenceBroadcastReceiver"
             android:exported="false" />
 
         <service

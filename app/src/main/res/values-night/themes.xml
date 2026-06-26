@@ -26,7 +26,12 @@
         <item name="android:windowLightStatusBar">false</item>
         <item name="android:windowLightNavigationBar">false</item>
 
-        <!-- Components Style -->
-        <item name="bottomSheetDialogTheme">@style/AppBottomSheetDialogTheme</item>
+        <!-- Default style for MaterialButton to have white text -->
+        <item name="materialButtonStyle">@style/Widget.App.Button.WhiteText</item>
+
+    </style>
+
+    <style name="Widget.App.Button.WhiteText" parent="Widget.Material3.Button">
+        <item name="android:textColor">@android:color/white</item>
     </style>
 </resources>

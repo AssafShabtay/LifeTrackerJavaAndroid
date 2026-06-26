@@ -79,3 +79,12 @@ fix the color setter when picking a color, update also the dot of the icon but m
 
 =--------------
 make the iconPickerDialog look light weight and pretty
+-----------------------------------------------
+
+if you click on the iconcontainer, it will open iconPickerDialog
+
+
+
+-------------------------------
+
+add an animation to the calendar

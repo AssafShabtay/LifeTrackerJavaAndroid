@@ -32,6 +32,8 @@ import com.example.myapplication.database.PlaceDao;
 import com.example.myapplication.database.RoutePoint;
 import com.example.myapplication.database.StillLocation;
 import com.example.myapplication.helpers.Logger;
+import com.example.myapplication.locationTracking.reciever.ActivityTransitionReceiver;
+import com.example.myapplication.locationTracking.reciever.GeofenceBroadcastReceiver;
 import com.google.android.gms.location.ActivityTransition;
 import com.google.android.gms.location.DetectedActivity;
 import com.google.android.gms.location.FusedLocationProviderClient;
@@ -96,7 +98,7 @@ public class LocationService extends Service {
         geofenceManager = new GeofenceManager(this);
 
         if (!Places.isInitialized()) {
-            Places.initializeWithNewPlacesApiEnabled(getApplicationContext(), BuildConfig.GOOGLE_API_KEY); //TODO check wheter the api is working
+            Places.initializeWithNewPlacesApiEnabled(getApplicationContext(), BuildConfig.GOOGLE_API_KEY);
         }
         placesClient = Places.createClient(this);
 
@@ -106,7 +108,8 @@ public class LocationService extends Service {
         activityMergeManager = new ActivityMergeManager(dao, this, locationProvider);
         createNotificationChannel();
 
-        io.execute(() -> { // Recover previous activity state after restart in background thread
+        io.execute(() -> {
+            // Recover previous activity state after restart in background thread
 
             // Recover still activity
             StillLocation activeStill = dao.getActiveStillLocation(); // check if there was an active still
@@ -121,7 +124,6 @@ public class LocationService extends Service {
                     locationProvider.startFrequentStillLocationUpdates();
                 }
             }
-
             // Recover active movement activities
             for (MovementActivity m : dao.getActiveMovementActivities()) { //TODO COMEBACK TO ENSURE YOU UNDERSTAND
                 int type = getActivityTypeFromName(m.activityTypeName);
@@ -135,6 +137,16 @@ public class LocationService extends Service {
                 locationProvider.startRouteUpdates();
             }
 
+            // If no activities were recovered, start a new still activity
+            if (currentStillTrackingId == null && currentMovementTrackingIds.isEmpty()) {
+                Log.d(TAG, "No activity recovered, starting a new STILL activity.");
+                currentActivityType = DetectedActivity.STILL;
+                isInitializing = true;
+                updateNotificationSafe();
+                startStillTracking(new Date(), null);
+                isInitializing = false;
+            }
+
             syncGeofences() ;
             updateNotificationSafe();
         });
@@ -144,7 +156,7 @@ public class LocationService extends Service {
         // initializing all geofence points, and in geofence manager android watches out if the boundaries are crossed
         List<Place> places = placeDao.getAllPlacesSync();
         for (Place p : places) {
-            geofenceManager.addGeofence("place_" + p.id, p.lat, p.lng, p.radius > 0 ? p.radius : 100f);
+            geofenceManager.addGeofence("place_" + p.id, p.lat, p.lng, 75f);
         }
     }
 
@@ -220,7 +232,7 @@ public class LocationService extends Service {
                 still.placeId = String.valueOf(place.id);
                 still.placeName = place.name;
                 still.icon = place.category; //TODO FIX THE NAMING OF CATEGORY TO ICON
-                still.placeCoords = place.address;
+                still.placeAddress = place.address;
                 still.lat = place.lat;
                 still.lng = place.lng;
                 String msg = String.format("DB Update from updateActiveStillWithPlace: Updating still location %d with place %s at [%.6f, %.6f]", still.id, place.name, place.lat, place.lng);

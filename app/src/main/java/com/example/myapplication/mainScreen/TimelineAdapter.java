@@ -1,5 +1,6 @@
 package com.example.myapplication.mainScreen;
 
+import static com.example.myapplication.helpers.ColorAndIcons.getStillColor;
 import static com.example.myapplication.helpers.ColorAndIcons.getStillIconRes;
 
 import android.view.LayoutInflater;
@@ -10,6 +11,7 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.cardview.widget.CardView;
 import androidx.core.content.ContextCompat;
 import androidx.core.graphics.drawable.DrawableCompat;
 import androidx.recyclerview.widget.RecyclerView;
@@ -27,6 +29,8 @@ public class TimelineAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
 
     private static final int TYPE_STILL = 0;
     private static final int TYPE_MOVEMENT = 1;
+
+
 
     private final List<TimelineItem> items = new ArrayList<>();
     private OnItemClickListener listener;
@@ -89,27 +93,32 @@ public class TimelineAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
             if (listener != null) listener.onItemClick(item);
         });
 
-
-
         if (holder instanceof StillViewHolder) {
+            // --------------- Handle still items ---------------
             StillLocation still = (StillLocation) item;
             StillViewHolder stillHolder = (StillViewHolder) holder;
 
             String title = (still.placeName != null) ? still.placeName : "Stationary";
-            // Check for stops
-            //boolean isStop = still.wasSupposedToBeActivity != null; TODO remove
 
             if (still.isStop && !title.startsWith("Stop • ")) {
                 title = "Stop • " + title;
             }
             stillHolder.itemTitle.setText(title);
 
-            // Address (priority)
-            if (still.address != null && !still.address.isEmpty()) {
-                stillHolder.itemAddress.setText(still.address);
+            // Address
+            if (still.placeAddress != null && !still.placeAddress.isEmpty()) {
+                stillHolder.itemAddress.setText(still.placeAddress);
                 stillHolder.itemAddress.setVisibility(View.VISIBLE);
             } else {
                 stillHolder.itemAddress.setVisibility(View.GONE); // Hide address if no address
+            }
+
+            // Category
+            if (still.category != null && !still.category.isEmpty()) {
+                stillHolder.itemCategory.setText(still.category);
+                stillHolder.itemCategory.setVisibility(View.VISIBLE);
+            } else {
+                stillHolder.itemCategory.setVisibility(View.GONE);
             }
 
             stillHolder.itemTimeRange.setText(UiFormatters.timeOnly(still.startTimeDate) + " — " +
@@ -117,15 +126,9 @@ public class TimelineAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
 
             stillHolder.itemDuration.setText(UiFormatters.duration(still.startTimeDate, still.endTimeDate));
 
-            // Tint the dot
-            int stillColor;
-            if (still.color != null) {
-                stillColor = still.color;
-            } else {
-                stillColor = ContextCompat.getColor(stillHolder.itemView.getContext(),
-                        still.isStop ? R.color.activity_stop : R.color.activity_still);
-            }
-            
+
+            int stillColor = getStillColor(still, stillHolder.itemView.getContext());
+
             if (stillHolder.color.getBackground() != null) {
                 DrawableCompat.setTint(stillHolder.color.getBackground().mutate(), stillColor);
             }
@@ -137,21 +140,17 @@ public class TimelineAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
             }
             stillHolder.itemIcon.setImageResource(iconXml);
 
-            // Highlight stops or custom colors
-            if (still.isStop || still.color != null) {
-                int textColor = (still.color != null) ? still.color : ContextCompat.getColor(stillHolder.itemView.getContext(), R.color.activity_stop);
-                stillHolder.itemTitle.setTextColor(textColor);
-                stillHolder.itemIcon.setColorFilter(textColor);
-            } else {
-                stillHolder.itemTitle.setTextColor(ContextCompat.getColor(stillHolder.itemView.getContext(), R.color.on_surface));
-                stillHolder.itemIcon.clearColorFilter();
-            }
+            // Apply colors
+            stillHolder.itemTitle.setTextColor(stillColor);
+            stillHolder.itemIcon.setColorFilter(stillColor);
+            stillHolder.iconContainer.setCardBackgroundColor(stillColor & 0x20FFFFFF);
 
             stillHolder.btnLabel.setOnClickListener(v -> {
                 if (labelClickListener != null) labelClickListener.onLabelClick(still);
             });
 
         } else {
+            // --------------- Handle movement items ---------------
             MovementActivity movement = (MovementActivity) item;
             MovementViewHolder movementHolder = (MovementViewHolder) holder;
 
@@ -159,7 +158,7 @@ public class TimelineAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
             movementHolder.itemTitle.setText(type);
 
             movementHolder.itemTimeRange.setText(UiFormatters.timeOnly(movement.startTimeDate) + " — " +
-                    UiFormatters.timeOnly(movement.endTimeDate));
+                      UiFormatters.timeOnly(movement.endTimeDate));
 
             movementHolder.itemDuration.setText(UiFormatters.duration(movement.startTimeDate, movement.endTimeDate));
 
@@ -187,14 +186,10 @@ public class TimelineAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
                 DrawableCompat.setTint(movementHolder.color.getBackground().mutate(), moveColor);
             }
             movementHolder.itemIcon.setImageResource(iconRes);
+            movementHolder.itemIcon.setColorFilter(moveColor);
+            movementHolder.iconContainer.setCardBackgroundColor(moveColor & 0x20FFFFFF);
 
-            // Speed logic
-            if (movement.activityTypeName != null && (t.contains("driving") || t.contains("cycling") || t.contains("running"))) {
-                movementHolder.itemSpeed.setVisibility(View.VISIBLE);
-                movementHolder.itemSpeed.setText("Movement tracking active");
-            } else {
-                movementHolder.itemSpeed.setVisibility(View.GONE);
-            }
+
 
             // Handle nested stops
             movementHolder.stopsContainer.removeAllViews();
@@ -220,8 +215,8 @@ public class TimelineAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
                     stopTimeRange.setText(UiFormatters.timeOnly(stop.startTimeDate) + " — " + UiFormatters.timeOnly(stop.endTimeDate));
 
                     // Set stop address
-                    if (stop.address != null && !stop.address.isEmpty()) {
-                        stopAddress.setText(stop.address);
+                    if (stop.placeAddress != null && !stop.placeAddress.isEmpty()) {
+                        stopAddress.setText(stop.placeAddress);
                         stopAddress.setVisibility(View.VISIBLE);
                     } else {
                         stopAddress.setVisibility(View.GONE);
@@ -263,10 +258,11 @@ public class TimelineAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
     }
 
     static class StillViewHolder extends RecyclerView.ViewHolder {
-        TextView itemTitle, itemTimeRange, itemDuration, itemAddress;
+        TextView itemTitle, itemTimeRange, itemDuration, itemAddress, itemCategory;
         View color;
         android.widget.ImageView itemIcon;
         Button btnLabel;
+        CardView iconContainer;
 
         StillViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -277,24 +273,30 @@ public class TimelineAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
             itemIcon = itemView.findViewById(R.id.itemIcon);
             btnLabel = itemView.findViewById(R.id.btnLabel);
             itemAddress = itemView.findViewById(R.id.itemAddress);
+            itemCategory = itemView.findViewById(R.id.itemCategory);
+            iconContainer = itemView.findViewById(R.id.iconContainer);
         }
     }
 
     static class MovementViewHolder extends RecyclerView.ViewHolder {
-        TextView itemTitle, itemSpeed, itemTimeRange, itemDuration;
+        TextView itemTitle;
+        TextView itemTimeRange;
+        TextView itemDuration;
         View color;
         android.widget.ImageView itemIcon;
         LinearLayout stopsContainer;
+        CardView iconContainer;
 
         MovementViewHolder(@NonNull View itemView) {
             super(itemView);
             itemTitle = itemView.findViewById(R.id.itemTitle);
-            itemSpeed = itemView.findViewById(R.id.itemSpeed);
+
             itemTimeRange = itemView.findViewById(R.id.itemTimeRange);
             itemDuration = itemView.findViewById(R.id.itemDuration);
             color = itemView.findViewById(R.id.color);
             itemIcon = itemView.findViewById(R.id.itemIcon);
             stopsContainer = itemView.findViewById(R.id.stopsContainer);
+            iconContainer = itemView.findViewById(R.id.iconContainer);
         }
     }
 }

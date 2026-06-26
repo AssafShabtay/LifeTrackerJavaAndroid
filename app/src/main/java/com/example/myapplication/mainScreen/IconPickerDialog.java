@@ -1,15 +1,20 @@
 package com.example.myapplication.mainScreen;
 
 import static com.example.myapplication.helpers.ColorAndIcons.getIconList;
+import static com.example.myapplication.helpers.ColorAndIcons.DEFAULT_COLORS;
 
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowManager;
+import android.widget.EditText;
 import android.widget.ImageView;
-import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -17,11 +22,11 @@ import androidx.fragment.app.DialogFragment;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.core.content.ContextCompat;
 
 import com.example.myapplication.R;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 public class IconPickerDialog extends DialogFragment {
@@ -40,10 +45,14 @@ public class IconPickerDialog extends DialogFragment {
 
     private RecyclerView recyclerColors;
     private RecyclerView recyclerIcons;
+    private EditText searchEditText;
 
     private String selectedIcon;
     private int selectedColor;
     private OnIconSelectedListener listener;
+
+    private List<IconItem> allIcons;
+    private IconAdapter iconAdapter;
 
     public static IconPickerDialog newInstance(String currentIcon, int currentColor) {
         IconPickerDialog fragment = new IconPickerDialog();
@@ -63,9 +72,11 @@ public class IconPickerDialog extends DialogFragment {
 
         recyclerColors = view.findViewById(R.id.recyclerColors);
         recyclerIcons = view.findViewById(R.id.recyclerIcons);
+        searchEditText = view.findViewById(R.id.searchEditText);
 
         setupColorRecycler();
         setupIconRecycler();
+        setupSearchBar();
 
         return view;
     }
@@ -74,23 +85,78 @@ public class IconPickerDialog extends DialogFragment {
     public void onStart() {
         super.onStart();
         if (getDialog() != null && getDialog().getWindow() != null) {
-            getDialog().getWindow().setBackgroundDrawableResource(android.R.color.transparent);
-            // Make the dialog wider
-            getDialog().getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            android.view.Window window = getDialog().getWindow();
+
+            // 1. Make the dialog window background transparent so the card corners and shadow show
+            window.setBackgroundDrawableResource(android.R.color.transparent);
+
+            // 2. Remove the dimming effect on the background
+            window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND);
+
+            // Example: Align to the top with a margin
+            WindowManager.LayoutParams params = window.getAttributes();
+            params.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
+            params.y = 70; // Offset from the top in pixels
+            window.setAttributes(params);
+
+            // 3. Set the layout to wrap content so it floats like a popover
+            // Fix: Changed width to MATCH_PARENT for better dialog container sizing
+            window.setLayout(
+                    ViewGroup.LayoutParams.MATCH_PARENT, // Changed from WRAP_CONTENT
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+            );
         }
     }
 
+    private void setupSearchBar() {
+        searchEditText.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {}
+
+            @Override
+            public void afterTextChanged(Editable s) {
+                filterIcons(s.toString());
+            }
+        });
+    }
+
+    private void filterIcons(String query) {
+        List<IconItem> filteredList = new ArrayList<>();
+        String lowerCaseQuery = query.toLowerCase(); // Convert query to lower case once
+        for (IconItem item : allIcons) {
+            if (item.name.toLowerCase().contains(lowerCaseQuery) ||
+                (item.keywords != null && containsKeyword(item.keywords, lowerCaseQuery))) { // Check keywords
+                filteredList.add(item);
+            }
+        }
+        iconAdapter.updateList(filteredList);
+    }
+
+    private boolean containsKeyword(List<String> keywords, String query) {
+        for (String keyword : keywords) {
+            if (keyword.toLowerCase().contains(query)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private void showIcons() {
-        recyclerIcons.setAdapter(new IconAdapter(getIconList(), icon -> {
+        allIcons = getIconList();
+        iconAdapter = new IconAdapter(allIcons, icon -> {
             selectedIcon = icon.name;
             if (listener != null) listener.onIconSelected(selectedIcon, selectedColor);
             dismiss();
-        }));
+        });
+        recyclerIcons.setAdapter(iconAdapter);
     }
 
     private void setupColorRecycler() {
         recyclerColors.setLayoutManager(new LinearLayoutManager(getContext(), LinearLayoutManager.HORIZONTAL, false));
-        recyclerColors.setAdapter(new ColorAdapter(getColorList(), color -> {
+        recyclerColors.setAdapter(new ColorAdapter(getColorArray(), color -> {
             selectedColor = color;
             if (recyclerColors.getAdapter() != null) {
                 recyclerColors.getAdapter().notifyDataSetChanged();
@@ -106,32 +172,39 @@ public class IconPickerDialog extends DialogFragment {
         showIcons();
     }
 
-    private List<Integer> getColorList() {
-        return Arrays.asList(
-                0xFFF44336, 0xFFE91E63, 0xFF9C27B0, 0xFF673AB7,
-                0xFF3F51B5, 0xFF2196F3, 0xFF03A9F4, 0xFF00BCD4,
-                0xFF009688, 0xFF4CAF50, 0xFF8BC34A, 0xFFCDDC39,
-                0xFFFFEB3B, 0xFFFFC107, 0xFFFF9800, 0xFFFF5722,
-                0xFF795548, 0xFF9E9E9E, 0xFF607D8B
-        );
+    private int[] getColorArray() {
+        if (getContext() == null) {
+            return new int[0];
+        }
+        int[] colors = new int[DEFAULT_COLORS.length];
+        for (int i = 0; i < DEFAULT_COLORS.length; i++) {
+            colors[i] = ContextCompat.getColor(getContext(), DEFAULT_COLORS[i]);
+        }
+        return colors;
     }
-
-
 
     public static class IconItem {
         String name;
         int resId;
-         public IconItem(String name, int resId) {
+        List<String> keywords; // Add this line
+        public IconItem(String name, int resId) {
             this.name = name;
             this.resId = resId;
+            this.keywords = new ArrayList<>(); // Initialize the list
+        }
+
+        public IconItem(String name, int resId, List<String> keywords) { // Add new constructor
+            this.name = name;
+            this.resId = resId;
+            this.keywords = keywords;
         }
     }
 
     class ColorAdapter extends RecyclerView.Adapter<ColorAdapter.ViewHolder> {
-        private final List<Integer> colors;
+        private final int[] colors;
         private final OnColorSelectedListener colorListener;
 
-        ColorAdapter(List<Integer> colors, OnColorSelectedListener colorListener) {
+        ColorAdapter(int[] colors, OnColorSelectedListener colorListener) {
             this.colors = colors;
             this.colorListener = colorListener;
         }
@@ -151,14 +224,15 @@ public class IconPickerDialog extends DialogFragment {
 
         @Override
         public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-            int color = colors.get(position);
+            int color = colors[position];
             GradientDrawable gd = new GradientDrawable();
             gd.setShape(GradientDrawable.OVAL);
-            gd.setColor(color);
+            // Set the color with 50% opacity (0x80 is for 50% alpha)
+            gd.setColor(color & 0x80FFFFFF); // Apply 50% alpha to the color
             holder.view.setBackground(gd);
 
             if (color == selectedColor) {
-                gd.setStroke((int)(2 * holder.view.getContext().getResources().getDisplayMetrics().density), Color.BLACK);
+                gd.setStroke((int)(2 * holder.view.getContext().getResources().getDisplayMetrics().density), Color.GRAY);
             } else {
                 gd.setStroke(0, Color.TRANSPARENT);
             }
@@ -171,7 +245,7 @@ public class IconPickerDialog extends DialogFragment {
 
         @Override
         public int getItemCount() {
-            return colors.size();
+            return colors.length;
         }
 
         class ViewHolder extends RecyclerView.ViewHolder {
@@ -184,12 +258,18 @@ public class IconPickerDialog extends DialogFragment {
     }
 
     class IconAdapter extends RecyclerView.Adapter<IconAdapter.ViewHolder> {
-        private final List<IconItem> icons;
+        private List<IconItem> icons; // Removed 'final' so we can update it
         private final OnIconClickListener iconListener;
 
         IconAdapter(List<IconItem> icons, OnIconClickListener iconListener) {
             this.icons = icons;
             this.iconListener = iconListener;
+        }
+
+        // Added method to update list when searching
+        public void updateList(List<IconItem> newIcons) {
+            this.icons = newIcons;
+            notifyDataSetChanged();
         }
 
         @NonNull
