@@ -1,5 +1,6 @@
 package com.example.myapplication.database;
 
+import androidx.annotation.NonNull;
 import androidx.lifecycle.LiveData;
 import androidx.room.Dao;
 import androidx.room.Delete;
@@ -20,10 +21,11 @@ public interface PlaceDao {
 
     @Delete
     void deletePlace(Place place);
-
+    @NonNull
     @Query("SELECT * FROM places")
     LiveData<List<Place>> getAllPlaces();
 
+    @NonNull
     @Query("SELECT * FROM places")
     List<Place> getAllPlacesSync();
 

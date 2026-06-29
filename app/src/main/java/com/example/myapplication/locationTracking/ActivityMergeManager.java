@@ -11,6 +11,7 @@ import com.example.myapplication.database.StillLocation;
 import com.example.myapplication.helpers.Logger;
 
 import java.util.Date;
+import java.util.Locale;
 
 public class ActivityMergeManager {
     private static final String TAG = "ActivityMergeManager";
@@ -36,7 +37,7 @@ public class ActivityMergeManager {
             if (activeStill != null && activeStill.lat != null && activeStill.lng != null && currentLocation != null) {
                 float distance = distanceInMeters(currentLocation.getLatitude(), currentLocation.getLongitude(), activeStill.lat, activeStill.lng);
                 if (distance < DISTANCE_THRESHOLD_FOR_STILL_MERGE_METERS) {
-                    String msg = String.format("DB Update from startStillTracking: Extending current active still %d (location-based merge at [%.6f, %.6f])", activeStill.id, currentLocation.getLatitude(), currentLocation.getLongitude());
+                    String msg = String.format(Locale.US, "DB Update from startStillTracking: Extending current active still %d (location-based merge at [%.6f, %.6f])", activeStill.id, currentLocation.getLatitude(), currentLocation.getLongitude());
                     Log.d(TAG, msg);
                     Logger.saveLog(locationService, msg);
                     dao.updateStillEndTime(activeStill.id, null);
@@ -66,7 +67,7 @@ public class ActivityMergeManager {
                         locationProvider.stopFrequentStillLocationUpdates();
                     }
                 }
-                String msg = String.format("2DB Update from startStillTracking: Extending current active still %d (location-based merge at [%.6f, %.6f])", activeStill.id, currentLocation.getLatitude(), currentLocation.getLongitude());
+                String msg = String.format(Locale.US, "2DB Update from startStillTracking: Extending current active still %d (location-based merge at [%.6f, %.6f])", activeStill.id, currentLocation.getLatitude(), currentLocation.getLongitude());
                 Log.d(TAG, msg);
                 Logger.saveLog(locationService, msg);
                 Log.d(TAG, "STILL already active (location missing). Merging ID=" + currentStillTrackingId);
@@ -110,15 +111,15 @@ public class ActivityMergeManager {
             if (shouldMerge) {
                 // Check for intervening movement activities
                 if (lastStill.endTimeDate != null && startTime != null && dao.countMovementActivitiesBetween(lastStill.endTimeDate, startTime) > 0) {
-                    String msg = String.format("Not merging with last still %d due to intervening movement activity between %s and %s",
+                    String msg = String.format(Locale.US, "Not merging with last still %d due to intervening movement activity between %s and %s",
                             lastStill.id, lastStill.endTimeDate.toString(), startTime.toString());
                     Log.d(TAG, msg);
                     Logger.saveLog(locationService, msg);
                     return false; // Do not merge if there was movement
                 }
 
-                String msg = String.format("DB Update from startStillTracking: Merging with last still %d %s", currentStillTrackingId,
-                        (currentLocation == null ? "(Time-based fallback)" : String.format("at [%.6f, %.6f]", currentLocation.getLatitude(), currentLocation.getLongitude())));
+                String msg = String.format(Locale.US, "DB Update from startStillTracking: Merging with last still %d %s", currentStillTrackingId,
+                        (currentLocation == null ? "(Time-based fallback)" : String.format(Locale.US, "at [%.6f, %.6f]", currentLocation.getLatitude(), currentLocation.getLongitude())));
                 Log.d(TAG, msg);
                 Logger.saveLog(locationService, msg);
 
@@ -146,7 +147,7 @@ public class ActivityMergeManager {
                 // merge with last still
                 dao.deleteStillLocation(id);
                 long lastStillId = lastStill.id;
-                String msg = String.format("DB Update from endStillTracking: Merging with last still %d at [%.6f, %.6f]", id, currentLocation.getLatitude(), currentLocation.getLongitude());
+                String msg = String.format(Locale.US, "DB Update from endStillTracking: Merging with last still %d at [%.6f, %.6f]", id, currentLocation.getLatitude(), currentLocation.getLongitude());
                 Log.d(TAG, msg);
                 Logger.saveLog(locationService, msg);
                 dao.updateStillEndTime(lastStillId, null);

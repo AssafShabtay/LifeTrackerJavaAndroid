@@ -7,27 +7,59 @@ import java.util.Locale;
 
 public class UiFormatters {
 
-    private static final DecimalFormat DECIMAL_FORMAT = new DecimalFormat("0.0000");
-    private static final DecimalFormat SPEED_FORMAT = new DecimalFormat("0.0");
-    private static final SimpleDateFormat TIME_ONLY_FORMAT =
-            new SimpleDateFormat("h:mm a", Locale.getDefault());
-    private static final SimpleDateFormat DATE_TIME_FORMAT =
-            new SimpleDateFormat("MMM d, h:mm a", Locale.getDefault());
-
     public static String decimal(double value) {
-        return DECIMAL_FORMAT.format(value);
+        // DecimalFormat relies on the default locale internally as well.
+        // Instantiating locally ensures safety and current locale.
+        return new DecimalFormat("0.0000").format(value);
     }
 
     public static String speed(float metersPerSecond) {
-        return SPEED_FORMAT.format(metersPerSecond) + " m/s";
+        return new DecimalFormat("0.0").format(metersPerSecond) + " m/s";
     }
 
     public static String dateTime(Date date) {
-        return date == null ? "—" : DATE_TIME_FORMAT.format(date);
+        if (date == null) return "—";
+
+        // Always fetches the most up-to-date user Locale
+        SimpleDateFormat format = new SimpleDateFormat("MMM d, h:mm a", Locale.getDefault());
+        return format.format(date);
     }
 
     public static String timeOnly(Date date) {
-        return date == null ? "Ongoing" : TIME_ONLY_FORMAT.format(date);
+        if (date == null) return "Ongoing";
+
+        SimpleDateFormat format = new SimpleDateFormat("h:mm a", Locale.getDefault());
+        return format.format(date);
+    }
+
+    public static String time24Hour(Date date) {
+        if (date == null) return "—";
+        SimpleDateFormat format = new SimpleDateFormat("HH:mm:ss", Locale.getDefault());
+        return format.format(date);
+    }
+
+    public static String dayOfWeek(Date date) {
+        if (date == null) return "—";
+        SimpleDateFormat format = new SimpleDateFormat("EEEE", Locale.getDefault());
+        return format.format(date);
+    }
+
+    public static String monthYear(Date date) {
+        if (date == null) return "—";
+        SimpleDateFormat format = new SimpleDateFormat("MMMM yyyy", Locale.getDefault());
+        return format.format(date);
+    }
+
+    public static String fullDate(Date date) {
+        if (date == null) return "—";
+        SimpleDateFormat format = new SimpleDateFormat("MMMM d, yyyy", Locale.getDefault());
+        return format.format(date);
+    }
+
+    public static String isoDate(Date date) {
+        if (date == null) return "—";
+        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
+        return format.format(date);
     }
 
     public static String duration(Date start, Date end) {

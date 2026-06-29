@@ -61,13 +61,20 @@ public class ActivityTrackingUtils {
 
     }
     public static String checkIfStillIsMovement(double startLat, double startLng, Date startTime, Date endTime, double endLat, double endLng, Context context) {
+        // 1. Prevent NullPointerExceptions if dates are missing
+        if (startTime == null || endTime == null) {
+            return "Still";
+        }
+
         float distance = distanceInMeters(startLat, startLng, endLat, endLng);
         long durationMs = endTime.getTime() - startTime.getTime();
         float durationSec = durationMs / 1000f;
 
-        // Prevent division by zero and handle anomalous negative time jumps
+        // 2. Prevent division by zero and handle anomalous negative time jumps
         if (durationSec <= 0) return "Still";
+
         float speed = distance / durationSec;
+
         // --- REAL WORLD CONSTANTS ---
         // GPS wander is typically 10-20 meters. 25 meters safely filters stationary device drift.
         final float GPS_NOISE_RADIUS = 25f;
@@ -78,28 +85,32 @@ public class ActivityTrackingUtils {
         // 50.0 m/s = ~180 km/h (Speeds above this are highly likely to be GPS multi-path errors/jumps)
         final float MAX_REALISTIC_SPEED = 50.0f;
 
-        // Sanity check: Impossible speeds usually indicate a GPS drift/jump, regardless of distance.
+        // 3. Sanity check: Impossible speeds usually indicate a GPS drift/jump
         if (speed > MAX_REALISTIC_SPEED) {
-            String msg = String.format("Sanity check failed: Speed %.2f m/s exceeds realistic limits. Flagged as drift.", speed);
-            Log.d(TAG, msg);
-            Logger.saveLog(context, msg);
+            String msg = String.format(Locale.US, "Sanity check failed: Speed %.2f m/s exceeds realistic limits. Flagged as drift.", speed);
+            // Log.d(TAG, msg); // Assuming TAG is declared elsewhere in your class
+
+            // Prevent a crash if the Context passed is null
+            if (context != null) {
+                Logger.saveLog(context, msg);
+            }
             return "Still";
         }
 
-        // Drift Filter: If the distance is inside standard GPS error margins,
+        // 4. Drift Filter: If the distance is inside standard GPS error margins,
         // OR if the distance is slightly larger but the speed is a crawl (< 0.5 m/s or 1.8 km/h).
-        if (distance < GPS_NOISE_RADIUS || (distance < 50f && speed < 0.5f)) {
+        if (distance < GPS_NOISE_RADIUS || (distance < 75f && speed < 0.5f)) {
             return "Still";
         }
 
+        // 5. Determine State by Speed
         if (speed <= MAX_WALK_SPEED) return "Walking";
         if (speed <= MAX_RUN_SPEED) return "Running";
 
-
-        if (durationMs > 120000) {
-            return "Driving";
-        }
-        return "Still";
+        // 6. Fixed Logic: If speed > MAX_RUN_SPEED and it hasn't been flagged as GPS drift,
+        // it MUST be a vehicle. The previous 2-minute requirement caused valid short drives
+        // to fall through and return "Still".
+        return "Driving";
     }
 
     public static float distanceInMeters(double startLat, double startLng, double endLat, double endLng) {

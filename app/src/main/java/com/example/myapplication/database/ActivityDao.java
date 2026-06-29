@@ -1,5 +1,6 @@
 package com.example.myapplication.database;
 
+import androidx.annotation.NonNull;
 import androidx.room.Dao;
 import androidx.room.Insert;
 import androidx.room.Query;
@@ -57,21 +58,24 @@ public interface ActivityDao {
     @Query("SELECT * FROM movement_activities WHERE id = :id LIMIT 1")
     MovementActivity getMovementActivityById(long id);
 
+    @NonNull
     @Query("SELECT * FROM movement_activities WHERE endTimeDate IS NULL")
     List<MovementActivity> getActiveMovementActivities();
-
     @Query("SELECT * FROM movement_activities WHERE activityTypeName = :type AND endTimeDate IS NULL ORDER BY startTimeDate DESC LIMIT 1")
     MovementActivity getActiveMovementActivityByType(String type);
 
     @Query("SELECT * FROM movement_activities WHERE activityTypeName = :type AND endTimeDate IS NOT NULL ORDER BY endTimeDate DESC LIMIT 1")
     MovementActivity getLastCompletedMovementActivity(String type);
 
+    @NonNull
     @Query("SELECT * FROM still_locations")
     List<StillLocation> getAllStillLocations();
 
+    @NonNull
     @Query("SELECT * FROM still_locations WHERE startTimeDate <= :end AND (endTimeDate IS NULL OR endTimeDate >= :start)")
     List<StillLocation> getStillForRange(Date start, Date end);
 
+    @NonNull
     @Query("SELECT * FROM movement_activities WHERE startTimeDate <= :end AND (endTimeDate IS NULL OR endTimeDate >= :start)")
     List<MovementActivity> getMovementForRange(Date start, Date end);
 
@@ -81,6 +85,7 @@ public interface ActivityDao {
     @Insert
     void insertRoutePoint(RoutePoint point);
 
+    @NonNull 
     @Query("SELECT * FROM route_points WHERE movementActivityId = :movementId ORDER BY timestamp ASC")
     List<RoutePoint> getRoutePointsForMovement(long movementId);
 
@@ -107,12 +112,14 @@ public interface ActivityDao {
         deleteMovementActivity(movementId);
         updateStillStartTime(stillId, newStartTime);
     }
+
     @Query("UPDATE still_locations SET category = :category, " +
             "placeName = CASE WHEN :category = 'Home' THEN 'Home' ELSE placeName END, " +
             "icon = CASE WHEN :category = 'Home' THEN 'Home' ELSE icon END " +
             "WHERE lat BETWEEN :minLat AND :maxLat " +
             "AND lng BETWEEN :minLng AND :maxLng")
     void updateStillsWithinBounds(double minLat, double maxLat, double minLng, double maxLng, String category);
+
     @Query("SELECT SUM(CASE WHEN endTimeDate IS NULL THEN :now ELSE endTimeDate END - startTimeDate) FROM still_locations WHERE category = 'Home' AND startTimeDate >= :sevenDaysAgo")
     long getTimeAtHomeSince(long sevenDaysAgo, long now);
 }

@@ -46,6 +46,7 @@ import com.google.android.libraries.places.api.net.PlacesClient;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -235,7 +236,7 @@ public class LocationService extends Service {
                 still.placeAddress = place.address;
                 still.lat = place.lat;
                 still.lng = place.lng;
-                String msg = String.format("DB Update from updateActiveStillWithPlace: Updating still location %d with place %s at [%.6f, %.6f]", still.id, place.name, place.lat, place.lng);
+                String msg = String.format(Locale.US, "DB Update from updateActiveStillWithPlace: Updating still location %d with place %s at [%.6f, %.6f]", still.id, place.name, place.lat, place.lng);
                 Log.d(TAG, msg);
                 Logger.saveLog(this, msg);
                 dao.updateStillLocation(still);
@@ -346,12 +347,14 @@ public class LocationService extends Service {
         try {
             String msg = String.format("DB Update from startStillTracking: Inserting new still location %s %s",
                     (wasSupposedToBeActivity != null ? "(Stop: " + wasSupposedToBeActivity + ")" : ""),
-                    (currentLocation != null ? String.format("at [%.6f, %.6f]", currentLocation.getLatitude(), currentLocation.getLongitude()) : "(no location)"));
+                    (currentLocation != null ? String.format(Locale.US, "at [%.6f, %.6f]", currentLocation.getLatitude(), currentLocation.getLongitude()) : "(no location)"));
             Log.d(TAG, msg);
             Logger.saveLog(this, msg);
             currentStillTrackingId = dao.insertStillLocation(still);
             Log.d(TAG, "STILL started: ID=" + currentStillTrackingId);
         } catch (Exception e) {
+            Log.d(TAG, "Error:" + e);
+            Logger.saveLog(this, "Error:" + e);
             currentStillTrackingId = null;
         }
     }
@@ -402,8 +405,8 @@ public class LocationService extends Service {
                 geofenceUtilsManager.findPlaceAndUpdateStill(currentLocation, still);
             }
 
-            String msg = String.format("DB Update from endStillTracking: Ending still location %d %s (no initial location info)", id,
-                    (currentLocation != null ? String.format("at [%.6f, %.6f]", currentLocation.getLatitude(), currentLocation.getLongitude()) : ""));
+            String msg = String.format(Locale.US, "DB Update from endStillTracking: Ending still location %d %s (no initial location info)", id,
+                    (currentLocation != null ? String.format(Locale.US, "at [%.6f, %.6f]", currentLocation.getLatitude(), currentLocation.getLongitude()) : ""));
             Log.d(TAG, msg);
             Logger.saveLog(this, msg);
             dao.endStillLocation(id, endTime);
@@ -415,7 +418,7 @@ public class LocationService extends Service {
         else if (startLat != null && startLng != null && currentLocation != null) {
             String resolved = checkIfStillIsMovement(startLat, startLng, startTime, endTime, currentLocation.getLatitude(), currentLocation.getLongitude(), this);
             if ("Still".equalsIgnoreCase(resolved)) {
-                String msg = String.format("DB Update from endStillTracking: Ending still location %d. Start: [%.6f, %.6f], End: [%.6f, %.6f]", id, startLat, startLng, currentLocation.getLatitude(), currentLocation.getLongitude());
+                String msg = String.format(Locale.US, "DB Update from endStillTracking: Ending still location %d. Start: [%.6f, %.6f], End: [%.6f, %.6f]", id, startLat, startLng, currentLocation.getLatitude(), currentLocation.getLongitude());
                 Log.d(TAG, msg);
                 Logger.saveLog(this, msg);
 
@@ -429,13 +432,13 @@ public class LocationService extends Service {
                 movement.endLng = currentLocation.getLongitude();
                 movement.startTimeDate = startTime;
                 movement.endTimeDate = endTime;
-                String msg = String.format("DB Update from endStillTracking: Replacing still %d with movement %s. Start: [%.6f, %.6f], End: [%.6f, %.6f]", id, resolved, startLat, startLng, currentLocation.getLatitude(), currentLocation.getLongitude());
+                String msg = String.format(Locale.US, "DB Update from endStillTracking: Replacing still %d with movement %s. Start: [%.6f, %.6f], End: [%.6f, %.6f]", id, resolved, startLat, startLng, currentLocation.getLatitude(), currentLocation.getLongitude());
                 Log.d(TAG, msg);
                 Logger.saveLog(this, msg);
                 dao.replaceStillWithMovement(id, movement);
             }
         } else {
-            String msg = String.format("DB Update from endStillTracking: Ending still location %d (fallback, no location info)", id);
+            String msg = String.format(Locale.US, "DB Update from endStillTracking: Ending still location %d (fallback, no location info)", id);
             Log.d(TAG, msg);
             Logger.saveLog(this, msg);
             dao.endStillLocation(id, endTime);
@@ -474,7 +477,7 @@ public class LocationService extends Service {
 
         try {
             String msg = String.format("DB Update from startMovementTracking: Inserting movement activity %s %s", movement.activityTypeName,
-                    (currentLocation != null ? String.format("at [%.6f, %.6f]", currentLocation.getLatitude(), currentLocation.getLongitude()) : "(no location)"));
+                    (currentLocation != null ? String.format(Locale.US, "at [%.6f, %.6f]", currentLocation.getLatitude(), currentLocation.getLongitude()) : "(no location)"));
             Log.d(TAG, msg);
             Logger.saveLog(this, msg);
             long id = dao.insertMovementActivity(movement);
@@ -503,7 +506,7 @@ public class LocationService extends Service {
                         float dist = distanceInMeters(movement.startLat, movement.startLng, lastStill.lat, lastStill.lng);
                         if (dist < 100f) {
                             // Extend instead of new record
-                            String msg = String.format("DB Update: Merging false movement %d into previous STILL %d. Start: [%.6f, %.6f], End: [%.6f, %.6f]", id, lastStill.id, movement.startLat, movement.startLng, currentLocation.getLatitude(), currentLocation.getLongitude());
+                            String msg = String.format(Locale.US, "DB Update: Merging false movement %d into previous STILL %d. Start: [%.6f, %.6f], End: [%.6f, %.6f]", id, lastStill.id, movement.startLat, movement.startLng, currentLocation.getLatitude(), currentLocation.getLongitude());
                             Log.d(TAG, msg);
                             Logger.saveLog(this, msg);
                             dao.deleteMovementAndExtendStill(id, lastStill.id, endTime);
@@ -516,7 +519,7 @@ public class LocationService extends Service {
                     if (activeStill != null && activeStill.lat != null && activeStill.lng != null) {
                         float dist = distanceInMeters(movement.startLat, movement.startLng, activeStill.lat, activeStill.lng);
                         if (dist < 100f) {
-                            String msg = String.format("DB Update: Merging false movement %d into active STILL %d. Start: [%.6f, %.6f], End: [%.6f, %.6f]", id, activeStill.id, movement.startLat, movement.startLng, currentLocation.getLatitude(), currentLocation.getLongitude());
+                            String msg = String.format(Locale.US, "DB Update: Merging false movement %d into active STILL %d. Start: [%.6f, %.6f], End: [%.6f, %.6f]", id, activeStill.id, movement.startLat, movement.startLng, currentLocation.getLatitude(), currentLocation.getLongitude());
                             Log.d(TAG, msg);
                             Logger.saveLog(this, msg);
 
@@ -549,7 +552,7 @@ public class LocationService extends Service {
                         geofenceUtilsManager.findPlaceAndUpdateStill(currentLocation, still);
                     }
 
-                    String msg = String.format("DB Update from endMovementTracking: Replacing movement %d with new still location (Stop). Start: [%.6f, %.6f], End: [%.6f, %.6f]", id, movement.startLat, movement.startLng, currentLocation.getLatitude(), currentLocation.getLongitude());
+                    String msg = String.format(Locale.US, "DB Update from endMovementTracking: Replacing movement %d with new still location (Stop). Start: [%.6f, %.6f], End: [%.6f, %.6f]", id, movement.startLat, movement.startLng, currentLocation.getLatitude(), currentLocation.getLongitude());
                     Log.d(TAG, msg);
                     Logger.saveLog(this, msg);
                     dao.replaceMovementWithStill(id, still);
@@ -557,20 +560,20 @@ public class LocationService extends Service {
                 } else {
                     long durationMs = endTime.getTime() - movement.startTimeDate.getTime();
                     if (durationMs < 120000) {
-                        String msg = String.format("DB Update: Deleting short movement activity %d (%s) - duration: %d s", id, movement.activityTypeName, durationMs / 1000);
+                        String msg = String.format(Locale.US, "DB Update: Deleting short movement activity %d (%s) - duration: %d s", id, movement.activityTypeName, durationMs / 1000);
                         Log.d(TAG, msg);
                         Logger.saveLog(this, msg);
                         dao.deleteMovementActivity(id);
                         return;
                     }
 
-                    String msg = String.format("DB Update from endMovementTracking: Ending movement activity %d. Start: [%.6f, %.6f], End: [%.6f, %.6f]", id, movement.startLat, movement.startLng, currentLocation.getLatitude(), currentLocation.getLongitude());
+                    String msg = String.format(Locale.US, "DB Update from endMovementTracking: Ending movement activity %d. Start: [%.6f, %.6f], End: [%.6f, %.6f]", id, movement.startLat, movement.startLng, currentLocation.getLatitude(), currentLocation.getLongitude());
                     Log.d(TAG, msg);
                     Logger.saveLog(this, msg);
                     dao.endMovementActivity(id, currentLocation.getLatitude(), currentLocation.getLongitude(), endTime);
                 }
             } else {
-                String msg = String.format("DB Update from endMovementTracking: Ending movement activity %d (no location info)", id);
+                String msg = String.format(Locale.US, "DB Update from endMovementTracking: Ending movement activity %d (no location info)", id);
                 Log.d(TAG, msg);
                 Logger.saveLog(this, msg);
                 dao.endMovementActivity(id,

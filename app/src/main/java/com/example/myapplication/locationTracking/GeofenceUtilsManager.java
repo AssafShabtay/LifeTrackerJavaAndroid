@@ -20,6 +20,7 @@ import com.google.android.libraries.places.api.net.SearchNearbyResponse;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
 public class GeofenceUtilsManager {
@@ -94,7 +95,7 @@ public class GeofenceUtilsManager {
                     still.icon = place.getPlaceTypes().get(0);
                 }
 
-                String msg = String.format("Google Places detected: %s at [%.6f, %.6f]", still.placeName, location.getLatitude(), location.getLongitude());
+                String msg = String.format(Locale.US, "Google Places detected: %s at [%.6f, %.6f]", still.placeName, location.getLatitude(), location.getLongitude());
                 Log.d(TAG, msg);
                 Logger.saveLog(context, msg);
             }

@@ -2,12 +2,15 @@ package com.example.myapplication.locationTracking;
 
 import static com.example.myapplication.locationTracking.ActivityTrackingUtils.isValidAccuracy;
 
+import android.Manifest;
 import android.content.Context;
+import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.Looper;
 import android.util.Log;
 
 import androidx.annotation.WorkerThread;
+import androidx.core.app.ActivityCompat;
 
 import com.example.myapplication.database.ActivityDao;
 import com.example.myapplication.database.RoutePoint;
@@ -24,6 +27,7 @@ import com.google.android.gms.tasks.Tasks;
 
 import java.util.Date;
 import java.util.HashSet;
+import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -170,7 +174,7 @@ public class LocationProvider {
                                 still.lng = location.getLongitude();
                                 dao.updateStillLocation(still);
 
-                                String msg = String.format("DB Update from frequentStillLocation: Updated still %d with location [%.6f, %.6f]", still.id, still.lat, still.lng);
+                                String msg = String.format(Locale.US, "DB Update from frequentStillLocation: Updated still %d with location [%.6f, %.6f]", still.id, still.lat, still.lng);
                                 Log.d(TAG, msg);
                                 Logger.saveLog(context, msg);
 
@@ -240,6 +244,9 @@ public class LocationProvider {
     private Location tryCurrentLocation(int priority, long timeout, TimeUnit unit) {
         CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
         try {
+            if (ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                return null;
+            }
             return Tasks.await(
                     fusedLocationClient.getCurrentLocation(priority, cancellationTokenSource.getToken()),
                     timeout,
@@ -262,6 +269,9 @@ public class LocationProvider {
     @WorkerThread
     private Location tryLastLocationFallback() {
         try {
+            if (ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                return null;
+            }
             Location lastLoc = Tasks.await(fusedLocationClient.getLastLocation(), 2, TimeUnit.SECONDS);
 
             // Loosen up the restrictions. 150-200m is acceptable when the alternative is failure.

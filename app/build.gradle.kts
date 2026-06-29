@@ -40,12 +40,8 @@ android {
     kotlinOptions {
         jvmTarget = "11"
     }
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.3"
-    }
     buildFeatures {
         buildConfig = true
-        compose = true
         viewBinding = true
     }
 }
@@ -55,18 +51,11 @@ dependencies {
     implementation (libs.ui)
     implementation(libs.androidx.compose.material3)
     implementation (libs.androidx.runtime)
-    implementation (libs.androidx.activity.compose)
-    implementation (platform(libs.androidx.compose.bom))
-    implementation (libs.androidx.compose.ui.graphics)
-    implementation (libs.androidx.compose.ui.tooling.preview)
     implementation(libs.appcompat)
     implementation(libs.material)
     implementation(libs.play.services.location)
     implementation(libs.play.services.maps)
     implementation(libs.places)
-    // Added for LiveData observation in Compose
-    implementation("androidx.compose.runtime:runtime-livedata:1.7.8")
-
     ksp(libs.room.compiler)
     implementation(libs.room.runtime)
     testImplementation(libs.junit)

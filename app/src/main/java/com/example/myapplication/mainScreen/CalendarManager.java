@@ -20,8 +20,8 @@ import com.example.myapplication.database.ActivityDao;
 import com.example.myapplication.database.ActivityDatabase;
 import com.example.myapplication.database.MovementActivity;
 import com.example.myapplication.database.StillLocation;
+import com.example.myapplication.helpers.UiFormatters;
 
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -233,10 +233,8 @@ public class CalendarManager {
     }
 
     private void updateHeader(Date date) {
-        SimpleDateFormat dayFmt = new SimpleDateFormat("EEEE", Locale.getDefault());
-        SimpleDateFormat fullFmt = new SimpleDateFormat("MMMM d, yyyy", Locale.getDefault());
-        tvDayName.setText(dayFmt.format(date));
-        tvDateFull.setText(fullFmt.format(date));
+        tvDayName.setText(UiFormatters.dayOfWeek(date));
+        tvDateFull.setText(UiFormatters.fullDate(date));
     }
 
     private void buildWeekHeader() {
@@ -262,8 +260,7 @@ public class CalendarManager {
         monthCal.set(Calendar.MONTH, currentMonth);
         monthCal.set(Calendar.DAY_OF_MONTH, 1);
 
-        SimpleDateFormat monthFmt = new SimpleDateFormat("MMMM yyyy", Locale.getDefault());
-        tvMonthYear.setText(monthFmt.format(monthCal.getTime()));
+        tvMonthYear.setText(UiFormatters.monthYear(monthCal.getTime()));
 
         calendarGrid.removeAllViews();
 
@@ -380,8 +377,7 @@ public class CalendarManager {
     }
 
     private String getCacheKey(Date date) {
-        SimpleDateFormat fmt = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
-        return fmt.format(date);
+        return UiFormatters.isoDate(date);
     }
 
     private List<MiniPieChartView.Slice> calculateSlicesForDate(Date date) {

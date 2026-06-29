@@ -66,3 +66,7 @@ detect which location is Home
 if you click on the iconcontainer, it will open iconPickerDialog
 
 
+- -------------
+
+add nested movmeent activities
+

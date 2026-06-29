@@ -149,8 +149,7 @@ public class EditActivitySheet extends BottomSheetDialogFragment {
     private void showIconPickerDialog() {
         Log.d("EditActivitySheet", "showIconPickerDialog called.");
         IconPickerDialog dialog = IconPickerDialog.newInstance(selectedIcon, selectedColor);
-        dialog.setOnIconSelectedListener((iconName, color) -> {
-            Log.d("EditActivitySheet", "Icon selected callback. Icon: " + iconName + ", Color: " + String.format("#%06X", (0xFFFFFF & color)));
+        dialog.setOnIconSelectedListener((iconName, color) -> { // implements onIconSelected
             selectedIcon = iconName;
             selectedColor = color;
             updateIconAndColorUi();

@@ -15,9 +15,6 @@ import com.google.android.gms.location.GeofencingClient;
 import com.google.android.gms.location.GeofencingRequest;
 import com.google.android.gms.location.LocationServices;
 
-import java.util.ArrayList;
-import java.util.List;
-
 public class GeofenceManager {
     private static final String TAG = "GeofenceManager";
     private final GeofencingClient geofencingClient;
@@ -54,19 +51,6 @@ public class GeofenceManager {
         geofencingClient.addGeofences(request, getGeofencePendingIntent())
                 .addOnSuccessListener(aVoid -> Log.d(TAG, "Geofence added: " + requestId))
                 .addOnFailureListener(e -> Log.e(TAG, "Failed to add geofence: " + requestId, e));
-    }
-
-    public void removeGeofence(String requestId) {
-        if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            Log.e(TAG, "Fine location permission not granted, cannot remove geofence.");
-            return;
-        }
-
-        List<String> ids = new ArrayList<>();
-        ids.add(requestId);
-        geofencingClient.removeGeofences(ids)
-                .addOnSuccessListener(aVoid -> Log.d(TAG, "Geofence removed: " + requestId))
-                .addOnFailureListener(e -> Log.e(TAG, "Failed to remove geofence: " + requestId, e));
     }
 
     private PendingIntent getGeofencePendingIntent() {
