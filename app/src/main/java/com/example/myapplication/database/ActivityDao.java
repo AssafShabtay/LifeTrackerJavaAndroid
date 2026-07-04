@@ -73,11 +73,11 @@ public interface ActivityDao {
 
     @NonNull
     @Query("SELECT * FROM still_locations WHERE startTimeDate <= :end AND (endTimeDate IS NULL OR endTimeDate >= :start)")
-    List<StillLocation> getStillForRange(Date start, Date end);
+    List<StillLocation> getStillsFromRange(Date start, Date end);
 
     @NonNull
     @Query("SELECT * FROM movement_activities WHERE startTimeDate <= :end AND (endTimeDate IS NULL OR endTimeDate >= :start)")
-    List<MovementActivity> getMovementForRange(Date start, Date end);
+    List<MovementActivity> getMovementsFromRange(Date start, Date end);
 
     @Query("SELECT COUNT(*) FROM movement_activities WHERE (startTimeDate < :endTime AND (endTimeDate IS NULL OR endTimeDate > :startTime))")
     int countMovementActivitiesBetween(Date startTime, Date endTime);
@@ -122,4 +122,73 @@ public interface ActivityDao {
 
     @Query("SELECT SUM(CASE WHEN endTimeDate IS NULL THEN :now ELSE endTimeDate END - startTimeDate) FROM still_locations WHERE category = 'Home' AND startTimeDate >= :sevenDaysAgo")
     long getTimeAtHomeSince(long sevenDaysAgo, long now);
+
+    /**
+     * Calculates the sum duration of all activities (StillLocation and MovementActivity)
+     * within the last seven days, handling overlapping activities.
+     *     * @param sevenDaysAgoMillis The timestamp representing seven days ago in milliseconds.
+     *      * @param currentTimeMillis  The current timestamp in milliseconds.
+
+     * @return The total merged duration of activities in milliseconds.
+     */
+    @Query("WITH AllEvents AS (" +
+            "    SELECT " +
+            "        startTimeDate AS event_time, " +
+            "        1 AS event_type " + // 1 for start
+            "    FROM " +
+            "        still_locations " +
+            "    WHERE " +
+            "        startTimeDate <= :currentTimeMillis AND (endTimeDate IS NULL OR endTimeDate >= :sevenDaysAgoMillis) " +
+            "    UNION ALL " +
+            "    SELECT " +
+            "        CASE WHEN endTimeDate IS NULL THEN :currentTimeMillis ELSE endTimeDate END AS event_time, " +
+            "        -1 AS event_type " + // -1 for end
+            "    FROM " +
+            "        still_locations " +
+            "    WHERE " +
+            "        startTimeDate <= :currentTimeMillis AND (endTimeDate IS NULL OR endTimeDate >= :sevenDaysAgoMillis) " +
+            "    UNION ALL " +
+            "    SELECT " +
+            "        startTimeDate AS event_time, " +
+            "        1 AS event_type " + // 1 for start
+            "    FROM " +
+            "        movement_activities " +
+            "    WHERE " +
+            "        startTimeDate <= :currentTimeMillis AND (endTimeDate IS NULL OR endTimeDate >= :sevenDaysAgoMillis) " +
+            "    UNION ALL " +
+            "    SELECT " +
+            "        CASE WHEN endTimeDate IS NULL THEN :currentTimeMillis ELSE endTimeDate END AS event_time, " +
+            "        -1 AS event_type " + // -1 for end
+            "    FROM " +
+            "        movement_activities " +
+            "    WHERE " +
+            "        startTimeDate <= :currentTimeMillis AND (endTimeDate IS NULL OR endTimeDate >= :sevenDaysAgoMillis) " +
+            "), " +
+            "Changes AS (" +
+            "    SELECT " +
+            "        event_time, " +
+            "        event_type, " +
+            "        SUM(event_type) OVER (ORDER BY event_time, event_type DESC) AS running_overlap_count " +
+            "    FROM " +
+            "        AllEvents " +
+            "), " +
+            "StartEndPoints AS (" +
+            "    SELECT " +
+            "        event_time AS point_time, " +
+            "        running_overlap_count AS current_count, " +
+            "        LAG(running_overlap_count, 1, 0) OVER (ORDER BY event_time, event_type DESC) AS prev_count " +
+            "    FROM " +
+            "        Changes " +
+            ") " +
+            "SELECT " +
+            "    SUM(CASE " +
+            "        WHEN current_count = 0 AND prev_count > 0 THEN point_time " + // End of a merged interval
+            "        WHEN current_count > 0 AND prev_count = 0 THEN -point_time " + // Start of a merged interval
+            "        ELSE 0 " +
+            "    END) AS total_merged_duration " +
+            "FROM " +
+            "    StartEndPoints " +
+            "WHERE " +
+            "    (current_count = 0 AND prev_count > 0) OR (current_count > 0 AND prev_count = 0)")
+    long getSumDurationOfAllActivitiesLastSevenDays(long sevenDaysAgoMillis, long currentTimeMillis);
 }

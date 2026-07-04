@@ -4,11 +4,9 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="?attr/android:windowBackground">
+    android:layout_height="match_parent">
 
     <com.google.android.material.appbar.AppBarLayout
-        android:id="@+id/app_bar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="?attr/android:windowBackground"
@@ -41,7 +39,6 @@
                     app:cardPreventCornerOverlap="false">
 
                     <LinearLayout
-                        android:id="@+id/header_layout"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="vertical">
@@ -153,7 +150,6 @@
                 </androidx.cardview.widget.CardView>
                 <!-- Map Card -->
                 <com.google.android.material.card.MaterialCardView
-                    android:id="@+id/map_card"
                     android:layout_width="match_parent"
                     android:layout_height="220dp"
                     android:layout_marginHorizontal="16dp"
@@ -193,7 +189,6 @@
 
                 <!-- Label moved inside parallax container -->
                 <TextView
-                    android:id="@+id/tv_timeline_label"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Timeline"
@@ -221,7 +216,6 @@
         app:layout_behavior="@string/appbar_scrolling_view_behavior"
         tools:listitem="@layout/item_still_location" />
     <com.google.android.material.button.MaterialButton
-        android:id="@+id/btn_insert_example"
         style="@style/Widget.Material3.Button.TextButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"

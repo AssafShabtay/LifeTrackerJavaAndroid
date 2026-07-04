@@ -37,8 +37,8 @@ public class ActivityTrackingUtils {
         double sumLat = 0;
         double sumLng = 0;
         for (RoutePoint point : routePoints) {
-            sumLat += point.lat;
-            sumLng += point.lng;
+            sumLat += point.getLat();
+            sumLng += point.getLng();
         }
         double centroidLat = sumLat / routePoints.size();
         double centroidLng = sumLng / routePoints.size();
@@ -49,7 +49,7 @@ public class ActivityTrackingUtils {
         for (int i = 0; i < routePoints.size(); i++) {
             RoutePoint currentPoint = routePoints.get(i);
             // Calculate radius (Distance from centroid to current point)
-            double distanceFromCentroid = (double) distanceInMeters(centroidLat, centroidLng, currentPoint.lat, currentPoint.lng);
+            double distanceFromCentroid = (double) distanceInMeters(centroidLat, centroidLng, currentPoint.getLat(), currentPoint.getLng());
 
             if (distanceFromCentroid <= ALLOWED_RADIUS_METERS) {
                 pointsInsideRadius++;

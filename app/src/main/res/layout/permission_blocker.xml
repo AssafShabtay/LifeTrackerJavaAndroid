@@ -2,6 +2,7 @@
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/permission_blocker"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -11,7 +12,8 @@
     android:visibility="gone"
     android:background="?attr/android:windowBackground"
     android:clickable="true"
-    android:focusable="true">
+    android:focusable="true"
+    tools:ignore="Overdraw">
 
     <com.google.android.material.card.MaterialCardView
         android:layout_width="80dp"

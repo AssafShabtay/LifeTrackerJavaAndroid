@@ -101,13 +101,15 @@ public class LocationProvider {
                                 Logger.saveLog(context, "User lingered for over 10 minutes. Stopping tracking.");
 
                                 Date endTime = new Date(currentTime);
+                                io.execute(() -> {
+                                    Set<Integer> activeMovementTypes = new HashSet<>(LocationService.currentMovementTrackingIds.keySet());
+                                    for (Integer activityType : activeMovementTypes) {
+                                        locationService.endMovementTracking(activityType, endTime);
+                                    }
+                                    locationService.startStillTracking(endTime, null);
+                                    locationService.updateActivityTypeToStill(DetectedActivity.STILL);
+                                });
 
-                                Set<Integer> activeMovementTypes = new HashSet<>(LocationService.currentMovementTrackingIds.keySet());
-                                for (Integer activityType : activeMovementTypes) {
-                                    locationService.endMovementTracking(activityType, endTime);
-                                }
-                                locationService.startStillTracking(endTime, null);
-                                locationService.updateActivityTypeToStill(DetectedActivity.STILL);
                                 stopRouteUpdates();
                                 return;
                             }
@@ -122,10 +124,10 @@ public class LocationProvider {
                     for (Location location : locationResult.getLocations()) {
                         for (Long movementId : LocationService.currentMovementTrackingIds.values()) {
                             RoutePoint point = new RoutePoint();
-                            point.movementActivityId = movementId;
-                            point.lat = location.getLatitude();
-                            point.lng = location.getLongitude();
-                            point.timestamp = location.getTime();
+                            point.setMovementActivityId(movementId);
+                            point.setLat(location.getLatitude());
+                            point.setLng(location.getLongitude());
+                            point.setTimestamp(location.getTime());
                             dao.insertRoutePoint(point);
                         }
                     }
@@ -169,12 +171,12 @@ public class LocationProvider {
                         // Check for good accuracy before updating
                         if (location.hasAccuracy() && location.getAccuracy() <= 30.0f) { // Use a similar accuracy threshold as getLocationOnceBlocking
                             StillLocation still = dao.getStillLocationById(LocationService.currentStillTrackingId);
-                            if (still != null && (still.lat == null || still.lng == null)) {
-                                still.lat = location.getLatitude();
-                                still.lng = location.getLongitude();
+                            if (still != null && (still.getLat() == null || still.getLng() == null)) {
+                                still.setLat(location.getLatitude());
+                                still.setLng(location.getLongitude());
                                 dao.updateStillLocation(still);
 
-                                String msg = String.format(Locale.US, "DB Update from frequentStillLocation: Updated still %d with location [%.6f, %.6f]", still.id, still.lat, still.lng);
+                                String msg = String.format(Locale.US, "DB Update from frequentStillLocation: Updated still %d with location [%.6f, %.6f]", still.getId(), still.getLat(), still.getLng());
                                 Log.d(TAG, msg);
                                 Logger.saveLog(context, msg);
 

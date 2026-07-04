@@ -9,6 +9,7 @@ import android.util.Log;
 
 import androidx.core.content.ContextCompat;
 
+import com.example.myapplication.database.Place;
 import com.example.myapplication.locationTracking.reciever.GeofenceBroadcastReceiver;
 import com.google.android.gms.location.Geofence;
 import com.google.android.gms.location.GeofencingClient;
@@ -26,6 +27,9 @@ public class GeofenceManager {
         this.geofencingClient = LocationServices.getGeofencingClient(context);
     }
 
+    public void addGeofence(Place place) {
+        addGeofence("place_" + place.getId(), place.getLat(), place.getLng(), 75f);
+    }
 
     public void addGeofence(String requestId, double lat, double lng, float radius) {
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {

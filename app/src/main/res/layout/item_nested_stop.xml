@@ -39,7 +39,7 @@
                 android:textStyle="bold"
                 android:textSize="14sp"
                 android:textColor="@color/activity_stop"
-                tools:text="Stop • Starbucks" />
+                tools:text="Starbucks" />
 
             <TextView
                 android:id="@+id/stopDuration"
@@ -50,6 +50,16 @@
                 android:textSize="12sp"
                 tools:text="5m" />
         </RelativeLayout>
+
+        <TextView
+            android:id="@+id/itemCategory"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="24dp"
+            android:textColor="?attr/colorOnSurfaceVariant"
+            android:textSize="12sp"
+            android:visibility="visible"
+            tools:text="Category" />
 
         <TextView
             android:id="@+id/stopAddress"
@@ -89,7 +99,7 @@
                 android:paddingHorizontal="8dp"
                 android:paddingVertical="0dp"
                 android:text="Edit"
-                android:textSize="10sp"
+                android:textSize="11sp"
                 app:icon="@android:drawable/ic_menu_edit"
                 app:iconGravity="textStart"
                 app:iconPadding="2dp"

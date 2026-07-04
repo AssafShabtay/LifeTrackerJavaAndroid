@@ -32,7 +32,7 @@
             android:layout_height="48dp">
 
             <View
-                android:id="@+id/color"
+                android:id="@+id/lineDot"
                 android:layout_width="14dp"
                 android:layout_height="14dp"
                 android:layout_gravity="center"

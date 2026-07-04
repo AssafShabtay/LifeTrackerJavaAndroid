@@ -14,10 +14,51 @@ import androidx.room.PrimaryKey;
 
 public class RoutePoint {
     @PrimaryKey(autoGenerate = true)
-    public long id;
+    private long id;
 
-    public long movementActivityId;
-    public double lat;
-    public double lng;
-    public long timestamp;
+    private long movementActivityId;
+    private double lat;
+    private double lng;
+    private long timestamp;
+
+
+    public long getId() {
+        return id;
+    }
+
+    public void setId(long id) {
+        this.id = id;
+    }
+
+    public long getMovementActivityId() {
+        return movementActivityId;
+    }
+
+    public void setMovementActivityId(long movementActivityId) {
+        this.movementActivityId = movementActivityId;
+    }
+
+    public double getLat() {
+        return lat;
+    }
+
+    public void setLat(double lat) {
+        this.lat = lat;
+    }
+
+    public double getLng() {
+        return lng;
+    }
+
+    public void setLng(double lng) {
+        this.lng = lng;
+    }
+
+    public long getTimestamp() {
+        return timestamp;
+    }
+
+    public void setTimestamp(long timestamp) {
+        this.timestamp = timestamp;
+    }
 }

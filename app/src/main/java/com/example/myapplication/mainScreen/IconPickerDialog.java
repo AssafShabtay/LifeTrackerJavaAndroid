@@ -34,12 +34,6 @@ import java.util.Objects;
 
 public class IconPickerDialog extends DialogFragment {
 
-    public interface OnIconSelectedListener {
-        void onIconSelected(String iconName, int color);
-    }
-    public void setOnIconSelectedListener(OnIconSelectedListener listener) {
-        this.listener = listener;
-    }
 
     interface OnIconClickListener {
         void onIconClick(IconItem icon);
@@ -55,7 +49,6 @@ public class IconPickerDialog extends DialogFragment {
 
     private String selectedIcon;
     private int selectedColor;
-    private OnIconSelectedListener listener;
 
     private List<IconItem> allIcons;
     private IconAdapter iconAdapter;
@@ -151,7 +144,6 @@ public class IconPickerDialog extends DialogFragment {
         allIcons = getIconList();
         iconAdapter = new IconAdapter(icon -> { // implements onIconClick
             selectedIcon = icon.name;
-            if (listener != null) listener.onIconSelected(selectedIcon, selectedColor);
             dismiss();
         });
         recyclerIcons.setAdapter(iconAdapter);

@@ -9,7 +9,7 @@ import androidx.room.TypeConverters;
 
 @Database(
         entities = {StillLocation.class, MovementActivity.class, Place.class, RoutePoint.class},
-        version = 2 ,
+        version = 4 ,
         exportSchema = false
 )
 @TypeConverters({Converters.class})
@@ -29,7 +29,7 @@ public abstract class ActivityDatabase extends RoomDatabase {
                                     ActivityDatabase.class,
                                     "activity_database"
                             )
-                            .fallbackToDestructiveMigration()
+                            .fallbackToDestructiveMigration(true)
                             .build();
                 }
             }

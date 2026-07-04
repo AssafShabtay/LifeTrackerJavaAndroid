@@ -25,11 +25,13 @@ import com.example.myapplication.database.StillLocation;
 import com.example.myapplication.helpers.UiFormatters;
 import com.example.myapplication.helpers.PlaceAutocompleteHelper; // Import the new helper
 import com.example.myapplication.helpers.ColorAndIcons; // Import ColorAndIcons
+import com.example.myapplication.database.Place; // Added import for Place
+import com.example.myapplication.database.PlaceDao; // Added import for PlaceDao
+import com.example.myapplication.database.ActivityDatabase; // Added import for ActivityDatabase
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.libraries.places.api.Places;
 //import com.google.android.libraries.places.api.model.AutocompleteSessionToken; // Can remove if not used elsewhere
 import com.google.android.libraries.places.api.model.CircularBounds;
-import com.google.android.libraries.places.api.model.Place;
 import com.google.android.libraries.places.api.net.PlacesClient;
 import com.google.android.libraries.places.api.net.SearchNearbyRequest;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
@@ -50,6 +52,7 @@ public class EditActivitySheet extends BottomSheetDialogFragment {
     private StillLocation still;
     private OnVisitUpdatedListener listener;
     private PlacesClient placesClient;
+    private PlaceDao placeDao; // Added PlaceDao member variable
 
     private AutoCompleteTextView actvName;
     private AutoCompleteTextView etAddress;
@@ -85,6 +88,9 @@ public class EditActivitySheet extends BottomSheetDialogFragment {
         }
         placesClient = Places.createClient(requireContext());
 
+        // Initialize PlaceDao
+        placeDao = ActivityDatabase.getDatabase(requireContext()).placeDao();
+
         actvName = view.findViewById(R.id.actvName);
         etAddress = view.findViewById(R.id.etAddress);
         btnStartTime = view.findViewById(R.id.btnStartTime);
@@ -97,16 +103,23 @@ public class EditActivitySheet extends BottomSheetDialogFragment {
         View btnSave = view.findViewById(R.id.btnSave);
 
         // Initialize state
-        editedStartTime = still.startTimeDate;
-        editedEndTime = still.endTimeDate;
+        editedStartTime = still.getStartTimeDate();
+        editedEndTime = still.getEndTimeDate();
 
         selectedColor = getStillColor(still, requireContext());
 
-        selectedIcon = still.icon != null ? still.icon : "Still";
+        selectedIcon = still.getIcon() != null ? still.getIcon() : "Still";
+
+        // listener for icon picker dialog
+        getChildFragmentManager().setFragmentResultListener("icon_picker_request", this, (requestKey, bundle) -> {
+            selectedIcon = bundle.getString("selectedIcon");
+            selectedColor = bundle.getInt("selectedColor");
+            updateIconAndColorUi();
+        });
 
         // Set place name and address
-        if (still.placeName != null) actvName.setText(still.placeName);
-        if (still.placeAddress != null) etAddress.setText(still.placeAddress);
+        if (still.getPlaceName() != null) actvName.setText(still.getPlaceName());
+        if (still.getPlaceAddress() != null) etAddress.setText(still.getPlaceAddress());
 
         updateIconAndColorUi();
         fetchNearbyPlaceSuggestions();
@@ -123,12 +136,30 @@ public class EditActivitySheet extends BottomSheetDialogFragment {
         updateTimeButtons();
 
         btnSave.setOnClickListener(v -> {
-            still.placeName = actvName.getText().toString().trim();
-            still.placeAddress = etAddress.getText().toString().trim();
-            still.startTimeDate = editedStartTime;
-            still.endTimeDate = editedEndTime;
-            still.icon = selectedIcon;
-            still.color = selectedColor;
+            still.setPlaceName(actvName.getText().toString().trim());
+            still.setPlaceAddress(etAddress.getText().toString().trim());
+            still.setStartTimeDate(editedStartTime);
+            still.setEndTimeDate(editedEndTime);
+            still.setIcon(selectedIcon);
+            still.setColor(selectedColor);
+            // still.setPlaceId(null); // Remove this line
+
+            // Create and save new Place
+            Place newPlace = new Place();
+            newPlace.setName(actvName.getText().toString().trim());
+            newPlace.setAddress(etAddress.getText().toString().trim());
+            if (still.getLat() != null && still.getLng() != null) {
+                newPlace.setLat(still.getLat());
+                newPlace.setLng(still.getLng());
+            }
+            newPlace.setIcon(selectedIcon);
+            newPlace.setColor(selectedColor);
+            newPlace.setCategory(null); // Or derive from icon if possible, but for now null.
+
+            // TODO: Room database operations should be done on a background thread.
+            // For simplicity, directly calling here, but consider AsyncTask or Coroutines for production.
+            long placeId = placeDao.insertPlace(newPlace);
+            still.setPlaceId(placeId); // Set the generated placeId to StillLocation
 
             if (listener != null) {
                 listener.onUpdate(still);
@@ -149,11 +180,6 @@ public class EditActivitySheet extends BottomSheetDialogFragment {
     private void showIconPickerDialog() {
         Log.d("EditActivitySheet", "showIconPickerDialog called.");
         IconPickerDialog dialog = IconPickerDialog.newInstance(selectedIcon, selectedColor);
-        dialog.setOnIconSelectedListener((iconName, color) -> { // implements onIconSelected
-            selectedIcon = iconName;
-            selectedColor = color;
-            updateIconAndColorUi();
-        });
         dialog.show(getChildFragmentManager(), "icon_picker");
     }
 
@@ -173,7 +199,7 @@ public class EditActivitySheet extends BottomSheetDialogFragment {
         if (ivSelectedIcon != null) {
             // Create a dummy StillLocation to pass to getStillIconRes
             StillLocation tempStill = new StillLocation();
-            tempStill.icon = selectedIcon;
+            tempStill.setIcon(selectedIcon);
             int iconRes = ColorAndIcons.getStillIconRes(tempStill);
 
             ivSelectedIcon.setImageResource(iconRes);
@@ -183,10 +209,10 @@ public class EditActivitySheet extends BottomSheetDialogFragment {
     }
 
     private void fetchNearbyPlaceSuggestions() {
-        if (still.lat == null || still.lng == null) return;
+        if (still.getLat() == null || still.getLng() == null) return;
 
-        List<Place.Field> placeFields = Arrays.asList(Place.Field.DISPLAY_NAME, Place.Field.ID);
-        CircularBounds circle = CircularBounds.newInstance(new LatLng(still.lat, still.lng), 100.0);
+        List<com.google.android.libraries.places.api.model.Place.Field> placeFields = Arrays.asList(com.google.android.libraries.places.api.model.Place.Field.DISPLAY_NAME, com.google.android.libraries.places.api.model.Place.Field.ID);
+        CircularBounds circle = CircularBounds.newInstance(new LatLng(still.getLat(), still.getLng()), 100.0);
         SearchNearbyRequest request = SearchNearbyRequest.builder(circle, placeFields)
                 .setMaxResultCount(10)
                 .build();
@@ -194,7 +220,7 @@ public class EditActivitySheet extends BottomSheetDialogFragment {
         placesClient.searchNearby(request)
                 .addOnSuccessListener(response -> {
                     List<String> names = new ArrayList<>();
-                    for (Place p : response.getPlaces()) {
+                    for (com.google.android.libraries.places.api.model.Place p : response.getPlaces()) {
                         names.add(p.getDisplayName());
                     }
                     if (isAdded()) {

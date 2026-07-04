@@ -27,7 +27,6 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -395,14 +394,14 @@ public class CalendarManager {
         cal.set(Calendar.MILLISECOND, 999);
         long endOfDayMillis = cal.getTimeInMillis();
 
-        List<StillLocation> stills = dao.getStillForRange(new Date(startOfDayMillis), new Date(endOfDayMillis));
-        List<MovementActivity> movements = dao.getMovementForRange(new Date(startOfDayMillis), new Date(endOfDayMillis));
+        List<StillLocation> stills = dao.getStillsFromRange(new Date(startOfDayMillis), new Date(endOfDayMillis));
+        List<MovementActivity> movements = dao.getMovementsFromRange(new Date(startOfDayMillis), new Date(endOfDayMillis));
 
         List<MiniPieChartView.Slice> slices = new ArrayList<>();
 
         for (StillLocation still : stills) {
-            long s = Math.max(still.startTimeDate.getTime(), startOfDayMillis);
-            long e = (still.endTimeDate == null) ? Math.min(System.currentTimeMillis(), endOfDayMillis) : Math.min(still.endTimeDate.getTime(), endOfDayMillis);
+            long s = Math.max(still.getStartTimeDate().getTime(), startOfDayMillis);
+            long e = (still.getEndTimeDate() == null) ? Math.min(System.currentTimeMillis(), endOfDayMillis) : Math.min(still.getEndTimeDate().getTime(), endOfDayMillis);
 
             if (e > s) {
                 float startTimeMinutes = (s - startOfDayMillis) / 60000f;
@@ -412,14 +411,14 @@ public class CalendarManager {
         }
 
         for (MovementActivity movement : movements) {
-            if (movement.startTimeDate == null) continue;
-            long s = Math.max(movement.startTimeDate.getTime(), startOfDayMillis);
-            long e = (movement.endTimeDate == null) ? Math.min(System.currentTimeMillis(), endOfDayMillis) : Math.min(movement.endTimeDate.getTime(), endOfDayMillis);
+            if (movement.getStartTimeDate() == null) continue;
+            long s = Math.max(movement.getStartTimeDate().getTime(), startOfDayMillis);
+            long e = (movement.getEndTimeDate() == null) ? Math.min(System.currentTimeMillis(), endOfDayMillis) : Math.min(movement.getEndTimeDate().getTime(), endOfDayMillis);
 
             if (e > s) {
                 float startTimeMinutes = (s - startOfDayMillis) / 60000f;
                 float durationMinutes = (e - s) / 60000f;
-                slices.add(new MiniPieChartView.Slice(startTimeMinutes, durationMinutes, getColorForActivity(movement.activityTypeName)));
+                slices.add(new MiniPieChartView.Slice(startTimeMinutes, durationMinutes, getColorForActivity(movement.getActivityTypeName())));
             }
         }
 

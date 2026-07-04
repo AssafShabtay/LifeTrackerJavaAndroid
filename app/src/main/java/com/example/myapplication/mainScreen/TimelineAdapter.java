@@ -1,8 +1,10 @@
 package com.example.myapplication.mainScreen;
 
+import static com.example.myapplication.helpers.ColorAndIcons.getMovementColorAndIcon;
 import static com.example.myapplication.helpers.ColorAndIcons.getStillColor;
 import static com.example.myapplication.helpers.ColorAndIcons.getStillIconRes;
 
+import android.annotation.SuppressLint;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -14,6 +16,8 @@ import androidx.annotation.NonNull;
 import androidx.cardview.widget.CardView;
 import androidx.core.content.ContextCompat;
 import androidx.core.graphics.drawable.DrawableCompat;
+import androidx.recyclerview.widget.DiffUtil;
+import androidx.recyclerview.widget.ListAdapter;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.myapplication.R;
@@ -22,53 +26,49 @@ import com.example.myapplication.database.StillLocation;
 import com.example.myapplication.database.TimelineItem;
 import com.example.myapplication.helpers.UiFormatters;
 
-import java.util.ArrayList;
-import java.util.List;
-
-public class TimelineAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
-
-    private static final int TYPE_STILL = 0;
-    private static final int TYPE_MOVEMENT = 1;
-
-
-
-    private final List<TimelineItem> items = new ArrayList<>();
-    private OnItemClickListener listener;
-    private OnEditButtonClickListener labelClickListener;
+public class TimelineAdapter extends ListAdapter<TimelineItem, RecyclerView.ViewHolder> {
 
     public interface OnItemClickListener {
         void onItemClick(TimelineItem item);
-    }
-
-    public interface OnItemLongClickListener {
-        void onItemLongClick(TimelineItem item);
     }
 
     public interface OnEditButtonClickListener {
         void onLabelClick(StillLocation still);
     }
 
-    public void setOnItemClickListener(OnItemClickListener listener) {
-        this.listener = listener;
-    }
-
-    public void setOnEditButtonClickListener(OnEditButtonClickListener labelClickListener) {
+    public TimelineAdapter(OnItemClickListener clickListener, OnEditButtonClickListener labelClickListener) {
+        super(new TimelineDiffCallback());
+        this.clickListener = clickListener;
         this.labelClickListener = labelClickListener;
     }
 
-    public void submitList(List<TimelineItem> newItems) {
-        items.clear();
-        if (newItems != null) items.addAll(newItems);
-        notifyDataSetChanged();
-    }
+    private static final int TYPE_STILL = 0;
+    private static final int TYPE_MOVEMENT = 1;
 
-    public List<TimelineItem> getItems() {
-        return items;
+    private final OnItemClickListener clickListener;
+    private final OnEditButtonClickListener labelClickListener;
+
+
+    static class TimelineDiffCallback extends DiffUtil.ItemCallback<TimelineItem> {
+        @Override
+        public boolean areItemsTheSame(@NonNull TimelineItem oldItem, @NonNull TimelineItem newItem) {
+            if (oldItem instanceof StillLocation && newItem instanceof StillLocation) {
+                return oldItem.getId() == newItem.getId();
+            } else if (oldItem instanceof MovementActivity && newItem instanceof MovementActivity) {
+                return oldItem.getId() == newItem.getId();
+            }
+            return false;
+        }
+
+        @Override
+        public boolean areContentsTheSame(@NonNull TimelineItem oldItem, @NonNull TimelineItem newItem) {
+            return oldItem.equals(newItem);
+        }
     }
 
     @Override
     public int getItemViewType(int position) {
-        return (items.get(position) instanceof StillLocation) ? TYPE_STILL : TYPE_MOVEMENT;
+        return (getItem(position) instanceof StillLocation) ? TYPE_STILL : TYPE_MOVEMENT;
     }
 
     @NonNull
@@ -85,12 +85,13 @@ public class TimelineAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
         }
     }
 
+    @SuppressLint("SetTextI18n")
     @Override
     public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
-        TimelineItem item = items.get(position);
+        TimelineItem item = getItem(position);
 
         holder.itemView.setOnClickListener(v -> {
-            if (listener != null) listener.onItemClick(item);
+            if (clickListener != null) clickListener.onItemClick(item);
         });
 
         if (holder instanceof StillViewHolder) {
@@ -98,53 +99,52 @@ public class TimelineAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
             StillLocation still = (StillLocation) item;
             StillViewHolder stillHolder = (StillViewHolder) holder;
 
-            String title = (still.placeName != null) ? still.placeName : "Stationary";
-
-            if (still.isStop && !title.startsWith("Stop • ")) {
-                title = "Stop • " + title;
-            }
+            // Name
+            String title = "Stationary";
+            if (still.getPlaceName() != null) title = still.getPlaceName();
             stillHolder.itemTitle.setText(title);
 
             // Address
-            if (still.placeAddress != null && !still.placeAddress.isEmpty()) {
-                stillHolder.itemAddress.setText(still.placeAddress);
+            if (still.getPlaceAddress() != null && !still.getPlaceAddress().isEmpty()) {
+                stillHolder.itemAddress.setText(still.getPlaceAddress());
                 stillHolder.itemAddress.setVisibility(View.VISIBLE);
             } else {
                 stillHolder.itemAddress.setVisibility(View.GONE); // Hide address if no address
             }
 
             // Category
-            if (still.category != null && !still.category.isEmpty()) {
-                stillHolder.itemCategory.setText(still.category);
+            if (still.getCategory() != null && !still.getCategory().isEmpty()) {
+                stillHolder.itemCategory.setText(still.getCategory());
                 stillHolder.itemCategory.setVisibility(View.VISIBLE);
             } else {
                 stillHolder.itemCategory.setVisibility(View.GONE);
             }
 
-            stillHolder.itemTimeRange.setText(UiFormatters.timeOnly(still.startTimeDate) + " — " +
-                    UiFormatters.timeOnly(still.endTimeDate));
+            // Time range and duration
+            stillHolder.itemTimeRange.setText(UiFormatters.timeOnly(still.getStartTimeDate()) + " — " +
+                    UiFormatters.timeOnly(still.getEndTimeDate()));
 
-            stillHolder.itemDuration.setText(UiFormatters.duration(still.startTimeDate, still.endTimeDate));
+            stillHolder.itemDuration.setText(UiFormatters.duration(still.getStartTimeDate(), still.getEndTimeDate()));
 
-
-            int stillColor = getStillColor(still, stillHolder.itemView.getContext());
-
-            if (stillHolder.color.getBackground() != null) {
-                DrawableCompat.setTint(stillHolder.color.getBackground().mutate(), stillColor);
-            }
-
-            // Set icon
+            // Icon
             int iconXml = R.drawable.ic_still;
-            if (still.icon != null) {
+            if (still.getIcon() != null) {
                 iconXml = getStillIconRes(still);
             }
             stillHolder.itemIcon.setImageResource(iconXml);
 
             // Apply colors
+            int stillColor = getStillColor(still, stillHolder.itemView.getContext());
             stillHolder.itemTitle.setTextColor(stillColor);
             stillHolder.itemIcon.setColorFilter(stillColor);
             stillHolder.iconContainer.setCardBackgroundColor(stillColor & 0x20FFFFFF);
 
+            // The dot on the left line
+            if (stillHolder.lineDot.getBackground() != null) {
+                DrawableCompat.setTint(stillHolder.lineDot.getBackground().mutate(), stillColor);
+            }
+
+            // Click listener
             stillHolder.btnLabel.setOnClickListener(v -> {
                 if (labelClickListener != null) labelClickListener.onLabelClick(still);
             });
@@ -154,49 +154,38 @@ public class TimelineAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
             MovementActivity movement = (MovementActivity) item;
             MovementViewHolder movementHolder = (MovementViewHolder) holder;
 
-            String type = (movement.activityTypeName != null) ? movement.activityTypeName : "Movement";
+            // Name
+            String type = "Movement";
+            if (movement.getActivityTypeName() != null) type = movement.getActivityTypeName();
             movementHolder.itemTitle.setText(type);
 
-            movementHolder.itemTimeRange.setText(UiFormatters.timeOnly(movement.startTimeDate) + " — " +
-                      UiFormatters.timeOnly(movement.endTimeDate));
 
-            movementHolder.itemDuration.setText(UiFormatters.duration(movement.startTimeDate, movement.endTimeDate));
+            // Time range and duration
+            movementHolder.itemTimeRange.setText(UiFormatters.timeOnly(movement.getStartTimeDate()) + " — " +
+                      UiFormatters.timeOnly(movement.getEndTimeDate()));
 
-            // Activity type logic
-            int colorRes = R.color.activity_walking;
-            int iconRes = R.drawable.ic_walk;
+            movementHolder.itemDuration.setText(UiFormatters.duration(movement.getStartTimeDate(), movement.getEndTimeDate()));
 
-            String t = type.toLowerCase();
-            if (t.contains("driving") || t.contains("vehicle")) {
-                colorRes = R.color.activity_vehicle;
-                iconRes = R.drawable.ic_car;
-            } else if (t.contains("running")) {
-                colorRes = R.color.activity_running;
-                iconRes = R.drawable.ic_walk; // Use walk icon for running as well
-            } else if (t.contains("cycling") || t.contains("bicycle")) {
-                colorRes = R.color.activity_cycling;
-                iconRes = R.drawable.ic_bike;
-            } else if (t.contains("walking") || t.contains("foot")) {
-                colorRes = R.color.activity_walking;
-                iconRes = R.drawable.ic_walk;
-            }
-
-            int moveColor = ContextCompat.getColor(movementHolder.itemView.getContext(), colorRes);
-            if (movementHolder.color.getBackground() != null) {
-                DrawableCompat.setTint(movementHolder.color.getBackground().mutate(), moveColor);
+            // Geet movement color and icon
+            int[] colorAndIcon = getMovementColorAndIcon(type.toLowerCase());
+            int colorRes = colorAndIcon[0];
+            int iconRes = colorAndIcon[1];
+            
+            // Color and icon
+            int movementColor = ContextCompat.getColor(movementHolder.itemView.getContext(), colorRes);
+            if (movementHolder.lineDot.getBackground() != null) {
+                DrawableCompat.setTint(movementHolder.lineDot.getBackground().mutate(), movementColor);
             }
             movementHolder.itemIcon.setImageResource(iconRes);
-            movementHolder.itemIcon.setColorFilter(moveColor);
-            movementHolder.iconContainer.setCardBackgroundColor(moveColor & 0x20FFFFFF);
-
-
-
+            movementHolder.itemIcon.setColorFilter(movementColor);
+            movementHolder.iconContainer.setCardBackgroundColor(movementColor & 0x20FFFFFF);
+            
             // Handle nested stops
             movementHolder.stopsContainer.removeAllViews();
-            if (movement.stops != null && !movement.stops.isEmpty()) {
+            if (movement.getStops() != null && !movement.getStops().isEmpty()) {
                 movementHolder.stopsContainer.setVisibility(View.VISIBLE);
                 LayoutInflater inflater = LayoutInflater.from(movementHolder.itemView.getContext());
-                for (StillLocation stop : movement.stops) {
+                for (StillLocation stop : movement.getStops()) {
                     View stopView = inflater.inflate(R.layout.item_nested_stop, movementHolder.stopsContainer, false);
 
                     TextView stopTitle = stopView.findViewById(R.id.stopTitle);
@@ -205,39 +194,48 @@ public class TimelineAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
                     android.widget.ImageView stopIcon = stopView.findViewById(R.id.stopIcon);
                     View btnLabelStop = stopView.findViewById(R.id.btnLabelStop);
                     TextView stopAddress = stopView.findViewById(R.id.stopAddress);
+                    TextView stopCategory = stopView.findViewById(R.id.itemCategory);
 
-                    String sTitle = (stop.placeName != null) ? stop.placeName : "Stationary";
-                    if (!sTitle.startsWith("Stop • ")) {
-                        sTitle = "Stop • " + sTitle;
-                    }
+                    // Name
+                    String sTitle = "Stationary";
+                    if (stop.getPlaceName() != null) sTitle = stop.getPlaceName();
                     stopTitle.setText(sTitle);
-                    stopDuration.setText(UiFormatters.duration(stop.startTimeDate, stop.endTimeDate));
-                    stopTimeRange.setText(UiFormatters.timeOnly(stop.startTimeDate) + " — " + UiFormatters.timeOnly(stop.endTimeDate));
 
-                    // Set stop address
-                    if (stop.placeAddress != null && !stop.placeAddress.isEmpty()) {
-                        stopAddress.setText(stop.placeAddress);
+                    // Address
+                    if (stop.getPlaceAddress() != null && !stop.getPlaceAddress().isEmpty()) {
+                        stopAddress.setText(stop.getPlaceAddress());
                         stopAddress.setVisibility(View.VISIBLE);
                     } else {
                         stopAddress.setVisibility(View.GONE);
                     }
 
-                    // Set stop icon based on category
-                    int stopIconXml = R.drawable.ic_still;
-                    if (stop.icon != null) {;
-                        stopIconXml = getStillIconRes(stop);
+                    // Category
+                    if (stop.getCategory() != null && !stop.getCategory().isEmpty()) {
+                        stopCategory.setText(stop.getCategory());
+                        stopCategory.setVisibility(View.VISIBLE);
+                    } else {
+                        stopCategory.setVisibility(View.GONE);
+                    }
 
+                    // Time range and duration
+                    stopDuration.setText(UiFormatters.duration(stop.getStartTimeDate(), stop.getEndTimeDate()));
+                    stopTimeRange.setText(UiFormatters.timeOnly(stop.getStartTimeDate()) + " — " + UiFormatters.timeOnly(stop.getEndTimeDate()));
+
+                    // Icon
+                    int stopIconXml = R.drawable.ic_still;
+                    if (stop.getIcon() != null) {
+                        stopIconXml = getStillIconRes(stop);
                     }
                     stopIcon.setImageResource(stopIconXml);
 
-                    // Apply custom color to stop if exists
-                    if (stop.color != null) {
-                        stopTitle.setTextColor(stop.color);
-                        stopIcon.setColorFilter(stop.color);
-                    }
+                    //Color
+                    int stopColor = getStillColor(stop, stopView.getContext());
+                    stopTitle.setTextColor(stopColor);
+                    stopIcon.setColorFilter(stopColor);
 
+                    // Listeners
                     stopView.setOnClickListener(v -> {
-                        if (listener != null) listener.onItemClick(stop);
+                        if (clickListener != null) clickListener.onItemClick(stop);
                     });
 
                     btnLabelStop.setOnClickListener(v -> {
@@ -252,14 +250,9 @@ public class TimelineAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
         }
     }
 
-    @Override
-    public int getItemCount() {
-        return items.size();
-    }
-
     static class StillViewHolder extends RecyclerView.ViewHolder {
         TextView itemTitle, itemTimeRange, itemDuration, itemAddress, itemCategory;
-        View color;
+        View lineDot;
         android.widget.ImageView itemIcon;
         Button btnLabel;
         CardView iconContainer;
@@ -269,7 +262,7 @@ public class TimelineAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
             itemTitle = itemView.findViewById(R.id.itemTitle);
             itemTimeRange = itemView.findViewById(R.id.itemTimeRange);
             itemDuration = itemView.findViewById(R.id.itemDuration);
-            color = itemView.findViewById(R.id.color);
+            lineDot = itemView.findViewById(R.id.lineDot);
             itemIcon = itemView.findViewById(R.id.itemIcon);
             btnLabel = itemView.findViewById(R.id.btnLabel);
             itemAddress = itemView.findViewById(R.id.itemAddress);
@@ -282,7 +275,7 @@ public class TimelineAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
         TextView itemTitle;
         TextView itemTimeRange;
         TextView itemDuration;
-        View color;
+        View lineDot;
         android.widget.ImageView itemIcon;
         LinearLayout stopsContainer;
         CardView iconContainer;
@@ -290,10 +283,9 @@ public class TimelineAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
         MovementViewHolder(@NonNull View itemView) {
             super(itemView);
             itemTitle = itemView.findViewById(R.id.itemTitle);
-
             itemTimeRange = itemView.findViewById(R.id.itemTimeRange);
             itemDuration = itemView.findViewById(R.id.itemDuration);
-            color = itemView.findViewById(R.id.color);
+            lineDot = itemView.findViewById(R.id.lineDot);
             itemIcon = itemView.findViewById(R.id.itemIcon);
             stopsContainer = itemView.findViewById(R.id.stopsContainer);
             iconContainer = itemView.findViewById(R.id.iconContainer);

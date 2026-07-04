@@ -6,10 +6,8 @@ import androidx.core.content.ContextCompat;
 
 import com.example.myapplication.R;
 import com.example.myapplication.database.StillLocation;
-import com.example.myapplication.mainScreen.IconPickerDialog;
 import com.example.myapplication.mainScreen.IconPickerDialog.IconItem;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -30,22 +28,43 @@ public class ColorAndIcons {
     };
 
     public static int getStillColor(StillLocation still, Context context) {
-        if (still.color != null) {
-            return still.color;
-        } else if (still.isStop) { // If it's a stop, use activity_stop
+        if (still.getColor() != null) {
+            return still.getColor();
+        } else if (still.getIsStop()) { // If it's a stop, use activity_stop
             return ContextCompat.getColor(context, R.color.activity_stop); //TODO CHANGE ACTIVITY STOP
-        } else if("gym".equals(still.category)){
+        } else if("gym".equals(still.getCategory())){ //TODO ADD MORE CATEGORIES
             return ContextCompat.getColor(context, R.color.gym);
         } else {
             // If there is no color assigned to still, use the default colors
-            int index = (int) (Math.abs(still.id) % DEFAULT_COLORS.length);
+            int index = (int) (Math.abs(still.getId()) % DEFAULT_COLORS.length);
             return ContextCompat.getColor(context, DEFAULT_COLORS[index]);
         }
     }
+
+    public static int[] getMovementColorAndIcon(String type){
+        int colorRes = R.color.activity_walking;
+        int iconRes = R.drawable.ic_walk;
+
+
+        if (type.contains("driving") || type.contains("vehicle")) {
+            colorRes = R.color.activity_vehicle;
+            iconRes = R.drawable.ic_car;
+        } else if (type.contains("running")) {
+            colorRes = R.color.activity_running;
+            iconRes = R.drawable.sprint_24px;
+        } else if (type.contains("cycling") || type.contains("bicycle")) {
+            colorRes = R.color.activity_cycling;
+            iconRes = R.drawable.ic_bike;
+        } else if (type.contains("walking") || type.contains("foot")) {
+            colorRes = R.color.activity_walking;
+            iconRes = R.drawable.ic_walk;
+        }
+        return new int[]{colorRes, iconRes};
+    }
     public static int getStillIconRes(StillLocation still) {
         int iconXml = R.drawable.ic_still;
-        if (still.icon != null) {
-            String icon = still.icon.toLowerCase();
+        if (still.getIcon() != null) {
+            String icon = still.getIcon().toLowerCase();
 
             // Base / Original Places
             if (icon.contains("home")) iconXml = R.drawable.ic_home;

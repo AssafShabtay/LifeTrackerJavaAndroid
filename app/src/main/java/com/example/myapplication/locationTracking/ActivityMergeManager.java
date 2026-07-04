@@ -34,16 +34,16 @@ public class ActivityMergeManager {
 
         if (currentStillTrackingId != null) {
             StillLocation activeStill = dao.getStillLocationById(currentStillTrackingId);
-            if (activeStill != null && activeStill.lat != null && activeStill.lng != null && currentLocation != null) {
-                float distance = distanceInMeters(currentLocation.getLatitude(), currentLocation.getLongitude(), activeStill.lat, activeStill.lng);
+            if (activeStill != null && activeStill.getLat() != null && activeStill.getLng() != null && currentLocation != null) {
+                float distance = distanceInMeters(currentLocation.getLatitude(), currentLocation.getLongitude(), activeStill.getLat(), activeStill.getLng());
                 if (distance < DISTANCE_THRESHOLD_FOR_STILL_MERGE_METERS) {
-                    String msg = String.format(Locale.US, "DB Update from startStillTracking: Extending current active still %d (location-based merge at [%.6f, %.6f])", activeStill.id, currentLocation.getLatitude(), currentLocation.getLongitude());
+                    String msg = String.format(Locale.US, "DB Update from startStillTracking: Extending current active still %d (location-based merge at [%.6f, %.6f])", activeStill.getId(), currentLocation.getLatitude(), currentLocation.getLongitude());
                     Log.d(TAG, msg);
                     Logger.saveLog(locationService, msg);
-                    dao.updateStillEndTime(activeStill.id, null);
+                    dao.updateStillEndTime(activeStill.getId(), null);
                     Log.d(TAG, "STILL already active at similar location: ID=" + currentStillTrackingId);
                     // If we successfully merged and the unactive still already has a location, stop any frequent updates.
-                    if (locationProvider.isRequestingStillLocationUpdates() && activeStill.lat != null) {
+                    if (locationProvider.isRequestingStillLocationUpdates() && activeStill.getLat() != null) {
                         locationProvider.stopFrequentStillLocationUpdates();
                     }
                     return true;
@@ -56,10 +56,10 @@ public class ActivityMergeManager {
             }else if (activeStill != null) {
                 // If the ongoing location doesnt have a location but we have the current location,
                 // Merge and update the ongoing still with the current location if available
-                if ((activeStill.lat == null || activeStill.lng == null) && currentLocation != null) {
+                if ((activeStill.getLat() == null || activeStill.getLng() == null) && currentLocation != null) {
                     //current location is available, so merge
-                    activeStill.lat = currentLocation.getLatitude();
-                    activeStill.lng = currentLocation.getLongitude();
+                    activeStill.setLat(currentLocation.getLatitude());
+                    activeStill.setLng(currentLocation.getLongitude());
                     geofenceUtilsManager.findPlaceAndUpdateStill(currentLocation, activeStill);
                     dao.updateStillLocation(activeStill);
                     // location obtained, stop frequent updates
@@ -67,7 +67,7 @@ public class ActivityMergeManager {
                         locationProvider.stopFrequentStillLocationUpdates();
                     }
                 }
-                String msg = String.format(Locale.US, "2DB Update from startStillTracking: Extending current active still %d (location-based merge at [%.6f, %.6f])", activeStill.id, currentLocation.getLatitude(), currentLocation.getLongitude());
+                String msg = String.format(Locale.US, "2DB Update from startStillTracking: Extending current active still %d (location-based merge at [%.6f, %.6f])", activeStill.getId(), currentLocation.getLatitude(), currentLocation.getLongitude());
                 Log.d(TAG, msg);
                 Logger.saveLog(locationService, msg);
                 Log.d(TAG, "STILL already active (location missing). Merging ID=" + currentStillTrackingId);
@@ -86,8 +86,8 @@ public class ActivityMergeManager {
             boolean shouldMerge = false;
 
             // if the last still is close enough, merge
-            if (lastStill.lat != null && lastStill.lng != null && currentLocation != null) {
-                float distance = distanceInMeters(currentLocation.getLatitude(), currentLocation.getLongitude(), lastStill.lat, lastStill.lng);
+            if (lastStill.getLat() != null && lastStill.getLng() != null && currentLocation != null) {
+                float distance = distanceInMeters(currentLocation.getLatitude(), currentLocation.getLongitude(), lastStill.getLat(), lastStill.getLng());
                 if (distance < DISTANCE_THRESHOLD_FOR_STILL_MERGE_METERS) {
                     shouldMerge = true;
                 }
@@ -99,8 +99,8 @@ public class ActivityMergeManager {
             //    //TODO IMPLEMENT FALLBACK TO NOT HAVING A LOCATION
             //}
             // if there is no location but the last still is close enough in time, merge
-            else if (lastStill.endTimeDate != null) {
-                long gapMs = startTime.getTime() - lastStill.endTimeDate.getTime();
+            else if (lastStill.getEndTimeDate() != null) {
+                long gapMs = startTime.getTime() - lastStill.getEndTimeDate().getTime();
                 // If the gap is less than the max threshold, merge
                 if (gapMs >= MIN_GAP_THRESHOLD_FOR_STILL_MERGE_MS && gapMs < MAX_GAP_THRESHOLD_FOR_STILL_MERGE_MS) {
                     shouldMerge = true;
@@ -110,9 +110,9 @@ public class ActivityMergeManager {
 
             if (shouldMerge) {
                 // Check for intervening movement activities
-                if (lastStill.endTimeDate != null && startTime != null && dao.countMovementActivitiesBetween(lastStill.endTimeDate, startTime) > 0) {
+                if (lastStill.getEndTimeDate() != null && startTime != null && dao.countMovementActivitiesBetween(lastStill.getEndTimeDate(), startTime) > 0) {
                     String msg = String.format(Locale.US, "Not merging with last still %d due to intervening movement activity between %s and %s",
-                            lastStill.id, lastStill.endTimeDate.toString(), startTime.toString());
+                            lastStill.getId(), lastStill.getEndTimeDate().toString(), startTime.toString());
                     Log.d(TAG, msg);
                     Logger.saveLog(locationService, msg);
                     return false; // Do not merge if there was movement
@@ -127,11 +127,11 @@ public class ActivityMergeManager {
                     dao.updateStillEndTime(currentStillTrackingId, null);
                     Log.d(TAG, "STILL merged with last: ID=" + currentStillTrackingId);
                 } else {
-                    dao.updateStillEndTime(lastStill.id, null);
-                    Log.d(TAG, "STILL merged with last: ID=" + lastStill.id);
+                    dao.updateStillEndTime(lastStill.getId(), null);
+                    Log.d(TAG, "STILL merged with last: ID=" + lastStill.getId());
                 }
                 // If merged with a still that already has a location, stop location updates
-                if (locationProvider.isRequestingStillLocationUpdates() && lastStill.lat != null) {
+                if (locationProvider.isRequestingStillLocationUpdates() && lastStill.getLat() != null) {
                     locationProvider.stopFrequentStillLocationUpdates();
                 }
                 return true;
@@ -141,12 +141,12 @@ public class ActivityMergeManager {
         return false;
     }
     boolean attemptMergeWithLastCompletedStillEnd(Long id, Location currentLocation,  StillLocation lastStill) {
-        if (lastStill != null && lastStill.lat != null && lastStill.lng != null && currentLocation != null) {
-            float distance = distanceInMeters(currentLocation.getLatitude(), currentLocation.getLongitude(), lastStill.lat, lastStill.lng);
+        if (lastStill != null && lastStill.getLat() != null && lastStill.getLng() != null && currentLocation != null) {
+            float distance = distanceInMeters(currentLocation.getLatitude(), currentLocation.getLongitude(), lastStill.getLat(), lastStill.getLng());
             if (distance < DISTANCE_THRESHOLD_FOR_STILL_MERGE_METERS) { // meter threshold for merging
                 // merge with last still
                 dao.deleteStillLocation(id);
-                long lastStillId = lastStill.id;
+                long lastStillId = lastStill.getId();
                 String msg = String.format(Locale.US, "DB Update from endStillTracking: Merging with last still %d at [%.6f, %.6f]", id, currentLocation.getLatitude(), currentLocation.getLongitude());
                 Log.d(TAG, msg);
                 Logger.saveLog(locationService, msg);
@@ -163,11 +163,11 @@ public class ActivityMergeManager {
         // Check for an ongoing activity of the same type
         MovementActivity activeMovement = dao.getActiveMovementActivityByType(activityName);
         if (activeMovement != null) {
-            String msg = "DB Update: Found active " + activityName + " activity " + activeMovement.id + ". Resuming.";
+            String msg = "DB Update: Found active " + activityName + " activity " + activeMovement.getId() + ". Resuming.";
             Log.d(TAG, msg);
             Logger.saveLog(locationService, msg);
             locationProvider.startRouteUpdates();
-            return activeMovement.id;
+            return activeMovement.getId();
         }
         return null;
     }
@@ -175,15 +175,15 @@ public class ActivityMergeManager {
     Long attemptMergeWithLastCompletedMovement(String activityName, Date startTime) {
         // Check if a similar activity ended recently, if so, merge
         MovementActivity lastMovement = dao.getLastCompletedMovementActivity(activityName);
-        if (lastMovement != null && lastMovement.endTimeDate != null) {
-            long gapMs = startTime.getTime() - lastMovement.endTimeDate.getTime();
+        if (lastMovement != null && lastMovement.getEndTimeDate() != null) {
+            long gapMs = startTime.getTime() - lastMovement.getEndTimeDate().getTime();
             if (gapMs >= -20000 && gapMs < 180000) { // 3 minute threshold, allowing for small overlaps/jitter
-                String msg = "DB Update: Resuming recent " + activityName + " activity " + lastMovement.id + " (gap: " + (gapMs/1000) + "s)";
+                String msg = "DB Update: Resuming recent " + activityName + " activity " + lastMovement.getId() + " (gap: " + (gapMs/1000) + "s)";
                 Log.d(TAG, msg);
                 Logger.saveLog(locationService, msg);
-                dao.resumeMovementActivity(lastMovement.id);
+                dao.resumeMovementActivity(lastMovement.getId());
                 locationProvider.startRouteUpdates();
-                return lastMovement.id;
+                return lastMovement.getId();
             } else {
                 Log.d(TAG, "Not merging " + activityName + ". Gap: " + gapMs + "ms");
             }

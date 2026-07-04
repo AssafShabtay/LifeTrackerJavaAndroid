@@ -28,11 +28,13 @@ public class GeofenceUtilsManager {
     private final PlaceDao placeDao;
     private final Context context;
     private final PlacesClient placesClient;
+    private final GeofenceManager geofenceManager;
 
-    public GeofenceUtilsManager(PlaceDao placeDao, Context context, PlacesClient placesClient) {
+    public GeofenceUtilsManager(PlaceDao placeDao, Context context, PlacesClient placesClient, GeofenceManager geofenceManager) {
         this.placeDao = placeDao;
         this.context = context;
         this.placesClient = placesClient;
+        this.geofenceManager = geofenceManager;
     }
 
 
@@ -40,13 +42,14 @@ public class GeofenceUtilsManager {
         Place nearby = findNearbyPlace(currentLocation.getLatitude(), currentLocation.getLongitude());
         if (nearby != null) {
             // Use geofence data
-            still.placeId = String.valueOf(nearby.id);
-            still.placeName = nearby.name;
-            still.icon = nearby.category;
-            still.placeAddress = nearby.address;
-            still.category = nearby.category;
-            still.lat = nearby.lat;
-            still.lng = nearby.lng;
+            still.setPlaceId(nearby.getId());
+            still.setPlaceName(nearby.getName());
+            still.setIcon(nearby.getIcon());
+            still.setPlaceAddress(nearby.getAddress());
+            still.setCategory(nearby.getCategory());
+            still.setLat(nearby.getLat());
+            still.setLng(nearby.getLng());
+            still.setColor(nearby.getColor());
         } else {
             // Otherwise, use Google places
             detectGooglePlace(still, currentLocation);
@@ -83,19 +86,38 @@ public class GeofenceUtilsManager {
             if (response != null && !response.getPlaces().isEmpty()) {
 
                 // Extract the closest place
-                com.google.android.libraries.places.api.model.Place place = response.getPlaces().get(0);
+                com.google.android.libraries.places.api.model.Place googlePlace = response.getPlaces().get(0);
 
-                // Extract place data
-                still.placeName = place.getDisplayName();
-                still.placeId = place.getId();
-                still.placeAddress = place.getFormattedAddress();
+                Place newPlace = new Place();
+                newPlace.setName(googlePlace.getDisplayName());
+                newPlace.setAddress(googlePlace.getFormattedAddress());
 
-                // Map Google Types to your icon/category if needed
-                if (place.getPlaceTypes() != null && !place.getPlaceTypes().isEmpty()) {
-                    still.icon = place.getPlaceTypes().get(0);
+                    newPlace.setLat(location.getLatitude()); // Fallback to current location if Google Place doesn't have LatLng
+                    newPlace.setLng(location.getLongitude());
+
+
+                if (googlePlace.getPlaceTypes() != null && !googlePlace.getPlaceTypes().isEmpty()) {
+                    newPlace.setIcon(googlePlace.getPlaceTypes().get(0));
+                    newPlace.setCategory(googlePlace.getPlaceTypes().get(0)); // Assuming category is the first type
                 }
 
-                String msg = String.format(Locale.US, "Google Places detected: %s at [%.6f, %.6f]", still.placeName, location.getLatitude(), location.getLongitude());
+                long newPlaceId = placeDao.insertPlace(newPlace);
+                newPlace.setId(newPlaceId);
+
+                // Update still location with newly created place data
+                still.setPlaceId(newPlace.getId());
+                still.setPlaceName(newPlace.getName());
+                still.setIcon(newPlace.getIcon());
+                still.setPlaceAddress(newPlace.getAddress());
+                still.setCategory(newPlace.getCategory());
+                still.setLat(newPlace.getLat());
+                still.setLng(newPlace.getLng());
+                still.setColor(newPlace.getColor()); // Color will be default as it's not from Google Places API
+
+                // Add a geofence for the newly created place
+                geofenceManager.addGeofence(newPlace);
+
+                String msg = String.format(Locale.US, "Google Places detected and new Place created: %s at [%.6f, %.6f]", still.getPlaceName(), location.getLatitude(), location.getLongitude());
                 Log.d(TAG, msg);
                 Logger.saveLog(context, msg);
             }
@@ -105,9 +127,9 @@ public class GeofenceUtilsManager {
     }
 
     private Place findNearbyPlace(double lat, double lng) {
-        List<Place> places = placeDao.getAllPlacesSync();
+        List<Place> places = placeDao.getAllPlaces();
         for (Place p : places) {
-            float dist = distanceInMeters(lat, lng, p.lat, p.lng);
+            float dist = distanceInMeters(lat, lng, p.getLat(), p.getLng());
             if (dist < 75f) {
                 return p;
             }

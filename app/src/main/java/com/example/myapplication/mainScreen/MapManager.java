@@ -117,15 +117,15 @@ public class MapManager implements OnMapReadyCallback {
         if (item instanceof StillLocation) {
             addStillToMap((StillLocation) item, 1, true);
             StillLocation still = (StillLocation) item;
-            if (still.lat != null && still.lng != null) {
-                mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(still.lat, still.lng), 15f));
+            if (still.getLat() != null && still.getLng() != null) {
+                mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(still.getLat(), still.getLng()), 15f));
             }
         } else if (item instanceof MovementActivity) {
             MovementActivity movement = (MovementActivity) item;
 
             io.execute(() -> {
                 ActivityDao dao = ActivityDatabase.getDatabase(fragment.requireContext()).activityDao();
-                List<RoutePoint> points = dao.getRoutePointsForMovement(movement.id);
+                List<RoutePoint> points = dao.getRoutePointsForMovement(movement.getId());
 
                 fragment.requireActivity().runOnUiThread(() -> {
                     LatLngBounds bounds = drawMovementOnMap(movement, points, 1, true);
@@ -133,8 +133,8 @@ public class MapManager implements OnMapReadyCallback {
                         try {
                             mMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 100));
                         } catch (IllegalStateException e) {
-                            if (movement.startLat != null) {
-                                mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(movement.startLat, movement.startLng), 15f));
+                            if (movement.getStartLat() != null) {
+                                mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(movement.getStartLat(), movement.getStartLng()), 15f));
                             }
                         }
                     }
@@ -224,14 +224,14 @@ public class MapManager implements OnMapReadyCallback {
     }
 
     private void addStillToMap(StillLocation still, int number, boolean useIcon) {
-        if (still.lat != null && still.lng != null) {
-            LatLng pos = new LatLng(still.lat, still.lng);
-            String title = (still.placeName != null) ? still.placeName : "Still Location";
+        if (still.getLat() != null && still.getLng() != null) {
+            LatLng pos = new LatLng(still.getLat(), still.getLng());
+            String title = (still.getPlaceName() != null) ? still.getPlaceName() : "Still Location";
 
             // Determine the color for the still location
             int color = getStillColor(still, fragment.requireContext());
 
-            if (still.isStop) {
+            if (still.getIsStop()) {
                 title = "Stop: " + title;
             }
 
@@ -270,32 +270,32 @@ public class MapManager implements OnMapReadyCallback {
                     fragment.requireActivity().runOnUiThread(() -> {
                         addStillToMap(still, number, false);
                     });
-                    if (still.lat != null && still.lng != null) {
-                        totalBounds.include(new LatLng(still.lat, still.lng));
+                    if (still.getLat() != null && still.getLng() != null) {
+                        totalBounds.include(new LatLng(still.getLat(), still.getLng()));
                     }
                 } else if (item instanceof MovementActivity) {
                     MovementActivity movement = (MovementActivity) item;
-                    List<RoutePoint> points = dao.getRoutePointsForMovement(movement.id);
+                    List<RoutePoint> points = dao.getRoutePointsForMovement(movement.getId());
 
                     fragment.requireActivity().runOnUiThread(() -> {
                         drawMovementOnMap(movement, points, number, false);
                     });
 
-                    if (movement.startLat != null && movement.startLng != null) {
-                        totalBounds.include(new LatLng(movement.startLat, movement.startLng));
+                    if (movement.getStartLat() != null && movement.getStartLng() != null) {
+                        totalBounds.include(new LatLng(movement.getStartLat(), movement.getStartLng()));
                     }
-                    if (movement.endLat != null && movement.endLng != null) {
-                        totalBounds.include(new LatLng(movement.endLat, movement.endLng));
+                    if (movement.getEndLat() != null && movement.getEndLng() != null) {
+                        totalBounds.include(new LatLng(movement.getEndLat(), movement.getEndLng()));
                     }
                     if (points != null) {
                         for (RoutePoint p : points) {
-                            totalBounds.include(new LatLng(p.lat, p.lng));
+                            totalBounds.include(new LatLng(p.getLat(), p.getLng()));
                         }
                     }
-                    if (movement.stops != null) {
-                        for (StillLocation stop : movement.stops) {
-                            if (stop.lat != null && stop.lng != null) {
-                                totalBounds.include(new LatLng(stop.lat, stop.lng));
+                    if (movement.getStops() != null) {
+                        for (StillLocation stop : movement.getStops()) {
+                            if (stop.getLat() != null && stop.getLng() != null) {
+                                totalBounds.include(new LatLng(stop.getLat(), stop.getLng()));
                             }
                         }
                     }
@@ -315,22 +315,22 @@ public class MapManager implements OnMapReadyCallback {
 
         LatLngBounds.Builder builder = new LatLngBounds.Builder();
         boolean hasPoints = false;
-        int color = getMovementColor(movement.activityTypeName);
+        int color = getMovementColor(movement.getActivityTypeName());
 
         // Add marker for start position
-        if (movement.startLat != null && movement.startLng != null) {
-            LatLng start = new LatLng(movement.startLat, movement.startLng);
+        if (movement.getStartLat() != null && movement.getStartLng() != null) {
+            LatLng start = new LatLng(movement.getStartLat(), movement.getStartLng());
 
             BitmapDescriptor icon;
             if (useIcon) {
-                icon = getIconMarkerIcon(getMovementIconRes(movement.activityTypeName), color);
+                icon = getIconMarkerIcon(getMovementIconRes(movement.getActivityTypeName()), color);
             } else {
                 icon = getNumberedMarkerIcon(number, color);
             }
 
             mMap.addMarker(new MarkerOptions()
                     .position(start)
-                    .title((useIcon ? "" : (number + ". ")) + "Start: " + movement.activityTypeName)
+                    .title((useIcon ? "" : (number + ". ")) + "Start: " + movement.getActivityTypeName())
                     .icon(icon));
             builder.include(start);
             hasPoints = true;
@@ -344,15 +344,15 @@ public class MapManager implements OnMapReadyCallback {
 
         if (routePoints != null && !routePoints.isEmpty()) {
             for (RoutePoint p : routePoints) {
-                LatLng latLng = new LatLng(p.lat, p.lng);
+                LatLng latLng = new LatLng(p.getLat(), p.getLng());
                 polylineOptions.add(latLng);
                 builder.include(latLng);
                 hasPoints = true;
             }
-        } else if (movement.startLat != null && movement.startLng != null && movement.endLat != null && movement.endLng != null) {
+        } else if (movement.getStartLat() != null && movement.getStartLng() != null && movement.getEndLat() != null && movement.getEndLng() != null) {
             // Straight line if no route points
-            polylineOptions.add(new LatLng(movement.startLat, movement.startLng));
-            polylineOptions.add(new LatLng(movement.endLat, movement.endLng));
+            polylineOptions.add(new LatLng(movement.getStartLat(), movement.getStartLng()));
+            polylineOptions.add(new LatLng(movement.getEndLat(), movement.getEndLng()));
             hasPoints = true;
         }
 
@@ -361,11 +361,11 @@ public class MapManager implements OnMapReadyCallback {
         }
 
         // Add markers for nested stops
-        if (movement.stops != null && !movement.stops.isEmpty()) {
-            for (StillLocation stop : movement.stops) {
-                if (stop.lat != null && stop.lng != null) {
-                    LatLng stopPos = new LatLng(stop.lat, stop.lng);
-                    String stopTitle = (stop.placeName != null) ? stop.placeName : "Stop";
+        if (movement.getStops() != null && !movement.getStops().isEmpty()) {
+            for (StillLocation stop : movement.getStops()) {
+                if (stop.getLat() != null && stop.getLng() != null) {
+                    LatLng stopPos = new LatLng(stop.getLat(), stop.getLng());
+                    String stopTitle = (stop.getPlaceName() != null) ? stop.getPlaceName() : "Stop";
 
                     // Determine the color for the stop location
                     int stopColor = getStillColor(stop, fragment.requireContext());
@@ -383,19 +383,19 @@ public class MapManager implements OnMapReadyCallback {
         }
 
         // Add marker for end position
-        if (movement.endLat != null && movement.endLng != null) {
-            LatLng end = new LatLng(movement.endLat, movement.endLng);
+        if (movement.getEndLat() != null && movement.getEndLng() != null) {
+            LatLng end = new LatLng(movement.getEndLat(), movement.getEndLng());
 
             BitmapDescriptor icon;
             if (useIcon) {
-                icon = getIconMarkerIcon(getMovementIconRes(movement.activityTypeName), color);
+                icon = getIconMarkerIcon(getMovementIconRes(movement.getActivityTypeName()), color);
             } else {
                 icon = getNumberedMarkerIcon(number, color);
             }
 
             mMap.addMarker(new MarkerOptions()
                     .position(end)
-                    .title((useIcon ? "" : (number + ". ")) + "End: " + movement.activityTypeName)
+                    .title((useIcon ? "" : (number + ". ")) + "End: " + movement.getActivityTypeName())
                     .icon(icon));
             builder.include(end);
             hasPoints = true;

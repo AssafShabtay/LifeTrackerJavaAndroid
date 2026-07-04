@@ -23,11 +23,7 @@ public interface PlaceDao {
     void deletePlace(Place place);
     @NonNull
     @Query("SELECT * FROM places")
-    LiveData<List<Place>> getAllPlaces();
-
-    @NonNull
-    @Query("SELECT * FROM places")
-    List<Place> getAllPlacesSync();
+    List<Place> getAllPlaces();
 
     @Query("SELECT * FROM places WHERE id = :id")
     Place getPlaceById(long id);

@@ -3,7 +3,6 @@ package com.example.myapplication.mainScreen;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
@@ -16,15 +15,12 @@ import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.example.myapplication.MainActivity;
-import com.example.myapplication.database.PlaceDao;
 // Removed import com.example.myapplication.locationTracking.GeofenceManager;
 import com.example.myapplication.database.ActivityDao;
 import com.example.myapplication.database.ActivityDatabase;
 import com.example.myapplication.database.MovementActivity;
 import com.example.myapplication.database.StillLocation;
 import com.example.myapplication.database.TimelineItem;
-import com.example.myapplication.helpers.ExampleData;
 import com.example.myapplication.R;
 
 import java.util.ArrayList;
@@ -32,55 +28,32 @@ import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class HomeFragment extends Fragment implements MainActivity.OnHomeAddressChangedListener {
+public class HomeFragment extends Fragment {
 
     private static final String TAG = "HomeFragment";
 
     private static final long UPDATE_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
-    // Removed permissionBlocker, permissionAction, permissionSubtitle, headerLayout
-
-    private Button btnInsertExample;
-    private Button btnShowFullDay;
-
     private ActivityDao dao;
-    private PlaceDao placeDao;
-    // Removed private GeofenceManager geofenceManager;
 
-    // Removed private boolean transitionsRegistered = false;
-    // Removed private boolean trackingServiceStarted = false;
-    // Removed private boolean areServicesInitialized = false;
-
-    private RecyclerView rvTimeline;
     private TimelineAdapter timelineAdapter;
 
     private MapManager mapManager;
     private CalendarManager calendarManager;
 
+    private final ExecutorService io = Executors.newSingleThreadExecutor();
 
-    //refresh ui every 5 minutes
+    // refresh ui every 5 minutes
     private final Handler refreshHandler = new Handler(Looper.getMainLooper());
     private final Runnable refreshRunnable = new Runnable() {
         public void run() {
-            Log.d(TAG, "ui refreshed😁:)))");
             loadTimelineData(calendarManager.getSelectedDate());
             refreshHandler.postDelayed(this, UPDATE_INTERVAL_MS);
         }
     };
-
-    // Removed onPermissionsGranted method
-
-    @Override
-    public void onHomeAddressChanged() {
-        Log.d(TAG, "Home address changed, reloading timeline data.");
-        loadTimelineData(calendarManager.getSelectedDate());
-    }
-
-    // Removed onAllPermissionsGranted method
-
-    // refreshPermissionUi method moved to MainActivity
 
     @Nullable
     @Override
@@ -91,32 +64,16 @@ public class HomeFragment extends Fragment implements MainActivity.OnHomeAddress
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-
-        MainActivity mainActivity = (MainActivity) requireActivity();
-
-        // Removed mainActivity.setOnPermissionsGrantedListener(this);
-        mainActivity.setOnHomeAddressChangedListener(this); // Register HomeFragment as listener
-
-        // Removed initialization of permissionBlocker, permissionAction, permissionSubtitle, headerLayout
-
-        btnInsertExample = view.findViewById(R.id.btn_insert_example);
-        btnShowFullDay = view.findViewById(R.id.btn_show_full_day);
-        rvTimeline = view.findViewById(R.id.rvTimeline);
-
+        Button btnShowFullDay = view.findViewById(R.id.btn_show_full_day);
+        RecyclerView rvTimeline = view.findViewById(R.id.rvTimeline);
         ActivityDatabase db = ActivityDatabase.getDatabase(requireContext());
         dao = db.activityDao();
-        placeDao = db.placeDao();
-        // Removed geofenceManager = new GeofenceManager(requireContext());
 
-        btnInsertExample.setOnClickListener(v -> {
-            ExampleData.insertExampleDataAsync(dao);
-            loadTimelineData(calendarManager.getSelectedDate());
-        });
-
+        // --------------- initialize map ---------------
         if (btnShowFullDay != null) {
             btnShowFullDay.setOnClickListener(v -> {
                 if (mapManager != null && timelineAdapter != null) {
-                    mapManager.showFullDay(timelineAdapter.getItems());
+                    mapManager.showFullDay(timelineAdapter.getCurrentList());
                 }
             });
         }
@@ -158,34 +115,32 @@ public class HomeFragment extends Fragment implements MainActivity.OnHomeAddress
                 return false;
             });
         }
-
+        // ---------------- initialize calendar -----------------
         calendarManager = new CalendarManager(view, date -> {
             loadTimelineData(date);
         });
 
-        setupRecyclerView();
-    }
-
-    private void setupRecyclerView() {
-        timelineAdapter = new TimelineAdapter();
-        timelineAdapter.setOnItemClickListener(item -> {
+        // ----------------- initialize timeline --------------------
+        timelineAdapter = new TimelineAdapter(item -> {
             if (mapManager != null) {
                 mapManager.focusOnItem(item);
             }
-        });
-        timelineAdapter.setOnEditButtonClickListener(this::showEditSheet);
+        },
+                still -> this.showEditSheet(still));
         rvTimeline.setLayoutManager(new LinearLayoutManager(requireContext()));
         rvTimeline.setAdapter(timelineAdapter);
+
     }
 
     private void showEditSheet(StillLocation still) {
         EditActivitySheet sheet = EditActivitySheet.newInstance(still, updatedStill -> {
-            Executors.newSingleThreadExecutor().execute(() -> {
+            io.execute(() -> {
                 dao.updateStillLocation(updatedStill);
+                if (isAdded()) {
                 requireActivity().runOnUiThread(() -> {
                     loadTimelineData(calendarManager.getSelectedDate());
                 });
-            });
+            }});
         });
         sheet.show(getChildFragmentManager(), "PlaceLabelSheet");
     }
@@ -207,35 +162,34 @@ public class HomeFragment extends Fragment implements MainActivity.OnHomeAddress
         cal.set(Calendar.MILLISECOND, 999);
         Date end = cal.getTime();
 
-        Executors.newSingleThreadExecutor().execute(() -> { // runs on a background thread
-            List<StillLocation> stills = dao.getStillForRange(start, end);
-            List<MovementActivity> movements = dao.getMovementForRange(start, end);
+        io.execute(() -> {
+            List<StillLocation> stills = dao.getStillsFromRange(start, end);
+            List<MovementActivity> movements = dao.getMovementsFromRange(start, end);
 
             List<TimelineItem> rawCombined = new ArrayList<>();
             rawCombined.addAll(stills);
             rawCombined.addAll(movements);
 
             // Sort by start time, from earliest to latest
-            Collections.sort(rawCombined, (a, b) -> {
-                if (a.getStartTime() == null || b.getStartTime() == null) return 0;
-                return a.getStartTime().compareTo(b.getStartTime());
+            rawCombined.sort((a, b) -> {
+                if (a.getStartTimeDate() == null || b.getStartTimeDate() == null) return 0;
+                return a.getStartTimeDate().compareTo(b.getStartTimeDate());
             });
 
-            // Group stops into preceding movement activities
+            // check which stills are stops and add them to movement activities
             List<TimelineItem> processedCombined = new ArrayList<>();
             MovementActivity lastMovement = null;
-
-
             for (TimelineItem item : rawCombined) {
                 if (item instanceof StillLocation) {
                     StillLocation still = (StillLocation) item;
                     // Check if this is a stop
-                    if (lastMovement != null && ((still.startTimeDate != null && still.endTimeDate != null &&
-                            lastMovement.startTimeDate != null && lastMovement.endTimeDate != null &&
-                            still.startTimeDate.after(lastMovement.startTimeDate) &&
-                            still.endTimeDate.before(lastMovement.endTimeDate)))) {
-                        still.isStop = true;
-                        lastMovement.stops.add(still);
+                    if (lastMovement != null && ((still.getStartTimeDate() != null && still.getEndTimeDate() != null &&
+                            lastMovement.getStartTimeDate() != null && lastMovement.getEndTimeDate() != null &&
+                            still.getStartTimeDate().after(lastMovement.getStartTimeDate()) &&
+                            still.getEndTimeDate().before(lastMovement.getEndTimeDate())))) {
+                        still.setIsStop(true);
+                        lastMovement.getStops().add(still);
+                        // stops not added to processedCombined
                     } else {
                         // Not a stop, add to combined list
                         processedCombined.add(still);
@@ -256,8 +210,6 @@ public class HomeFragment extends Fragment implements MainActivity.OnHomeAddress
     @Override
     public void onResume() {
         super.onResume();
-        // Assuming MainActivity handles starting services based on permissions.
-        // HomeFragment only needs to load data and manage its UI lifecycle.
         loadTimelineData(calendarManager.getSelectedDate());
         if (mapManager != null) {
             mapManager.onResume();
@@ -271,6 +223,14 @@ public class HomeFragment extends Fragment implements MainActivity.OnHomeAddress
         stopPeriodicRefresh();
     }
 
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        if (io != null && !io.isShutdown()) {
+            io.shutdownNow();
+        }
+    }
+
     private void startPeriodicRefresh() {
         refreshHandler.removeCallbacks(refreshRunnable);
         refreshHandler.postDelayed(refreshRunnable, UPDATE_INTERVAL_MS);
@@ -280,8 +240,5 @@ public class HomeFragment extends Fragment implements MainActivity.OnHomeAddress
         refreshHandler.removeCallbacks(refreshRunnable);
     }
 
-    // Removed requestTransitions method
-
-    // Removed startTrackingService method
 
 }

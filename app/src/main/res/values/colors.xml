@@ -25,7 +25,6 @@
     <color name="on_secondary_container">#173218</color>
 
     <color name="green_dark">#25351C</color>
-    <color name="green_medium">#435338</color>
     <color name="green_light">#59684E</color>
     <color name="green_extra_light">#C2C9B9</color>
 
@@ -38,7 +37,7 @@
     
     <!-- Activity Specific - Material Colors -->
     <color name="activity_still">#34A853</color> <!-- Google Green -->
-    <color name="activity_stop">#EB6457</color> <!-- Google Red -->
+    <color name="activity_stop">#7B0F0F</color> <!-- Google Red -->
     <color name="activity_walking">#4285F4</color> <!-- Google Blue -->
     <color name="activity_vehicle">#9334E6</color> <!-- Soft Purple -->
     <color name="activity_running">#EA4335</color> <!-- Google Red -->

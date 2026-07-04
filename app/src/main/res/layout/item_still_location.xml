@@ -30,7 +30,7 @@
             android:layout_height="48dp">
 
             <View
-                android:id="@+id/color"
+                android:id="@+id/lineDot"
                 android:layout_width="12dp"
                 android:layout_height="12dp"
                 android:layout_gravity="center"
@@ -104,27 +104,27 @@
                             android:textColor="?attr/colorOnSurface"
                             tools:text="Home" />
 
+                        <TextView
+                            android:id="@+id/itemCategory"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textColor="?attr/colorOnSurfaceVariant"
+                            android:textSize="12sp"
+                            android:visibility="visible"
+                            tools:text="Gym" />
 
                         <TextView
                             android:id="@+id/itemAddress"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="0dp"
+                            android:layout_marginTop="2dp"
                             android:textColor="?attr/colorOnSurfaceVariant"
                             android:textSize="14sp"
                             android:maxLines="1"
                             android:ellipsize="end"
                             tools:text="1600 Amphitheatre Parkway, Mountain View, CA" />
 
-                        <TextView
-                            android:id="@+id/itemCategory"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="4dp"
-                            android:textColor="?attr/colorOnSurfaceVariant"
-                            android:textSize="12sp"
-                            android:visibility="gone"
-                            tools:text="Category" />
+
                     </LinearLayout>
 
                     <TextView
