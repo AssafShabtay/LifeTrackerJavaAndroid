@@ -19,7 +19,7 @@ public class ActivityTransitionReceiver extends BroadcastReceiver {
     public static final String ACTION_ACTIVITY_UPDATE = "com.example.myapplication.ACTIVITY_UPDATE";
     public static final String EXTRA_ACTIVITY_TYPE = "activity_type";
     public static final String EXTRA_TRANSITION_TYPE = "transition_type";
-    public static final String EXTRA_TIMESTAMP_NANOS = "timestamp_nanos";
+    public static final String EXTRA_TIMESTAMP_MS = "timestamp_ms";
 
     @Override
     public void onReceive(Context context, Intent intent) {
@@ -30,12 +30,14 @@ public class ActivityTransitionReceiver extends BroadcastReceiver {
         if (ActivityTransitionResult.hasResult(intent)) {
             ActivityTransitionResult result = ActivityTransitionResult.extractResult(intent);
             if (result != null) {
-                long receiptTimestampNanos = android.os.SystemClock.elapsedRealtimeNanos();
                 for (ActivityTransitionEvent event : result.getTransitionEvents()) {
+                    long eventElapsedNanos = event.getElapsedRealTimeNanos();
+                    long ageMs = (android.os.SystemClock.elapsedRealtimeNanos() - eventElapsedNanos) / 1_000_000L;
+                    long eventTimestampMs = System.currentTimeMillis() - ageMs;
                     String eventMsg = "onReceive: Processing transition for " + getActivityName(event.getActivityType()) + " (" + getTransitionName(event.getTransitionType()) + ")";
                     Log.d(TAG, eventMsg);
                     Logger.saveLog(context, eventMsg);
-                    notifyService(context, event.getActivityType(), event.getTransitionType(), receiptTimestampNanos);
+                    notifyService(context, event.getActivityType(), event.getTransitionType(), eventTimestampMs);
                 }
             }
         }
@@ -63,7 +65,7 @@ public class ActivityTransitionReceiver extends BroadcastReceiver {
         }
     }
 
-    private void notifyService(Context context, int activityType, int transitionType, long timestampNanos) {
+    private void notifyService(Context context, int activityType, int transitionType, long timestampMs) {
         String msg = "notifyService: Sending activity update to LocationService for DB processing";
         Log.d(TAG, msg);
         Logger.saveLog(context, msg);
@@ -72,7 +74,7 @@ public class ActivityTransitionReceiver extends BroadcastReceiver {
         serviceIntent.setAction(ACTION_ACTIVITY_UPDATE);
         serviceIntent.putExtra(EXTRA_ACTIVITY_TYPE, activityType);
         serviceIntent.putExtra(EXTRA_TRANSITION_TYPE, transitionType);
-        serviceIntent.putExtra(EXTRA_TIMESTAMP_NANOS, timestampNanos);
+        serviceIntent.putExtra(EXTRA_TIMESTAMP_MS, timestampMs);
 
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {

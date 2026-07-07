@@ -16,6 +16,16 @@ public class Place {
     private String icon;
     private Integer color;
 
+    public Long getGeofencePlaceId() {
+        return geofencePlaceId;
+    }
+
+    public void setGeofencePlaceId(Long geofencePlaceId) {
+        this.geofencePlaceId = geofencePlaceId;
+    }
+
+    private Long geofencePlaceId;
+
 
     public long getId() {
         return id;

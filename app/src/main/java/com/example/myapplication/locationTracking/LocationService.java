@@ -125,21 +125,21 @@ public class LocationService extends Service {
                 }
             }
             // Recover active movement activities
-            for (MovementActivity m : dao.getActiveMovementActivities()) { //TODO COMEBACK TO ENSURE YOU UNDERSTAND
-                int type = getActivityTypeFromName(m.getActivityTypeName());
+            for (MovementActivity movement : dao.getActiveMovementActivities()) {
+                int type = getActivityTypeFromName(movement.getActivityTypeName());
                 if (type != DetectedActivity.UNKNOWN) {
-                    currentMovementTrackingIds.put(type, m.getId());
+                    currentMovementTrackingIds.put(type, movement.getId());
                     currentActivityType = type;
                 }
             }
 
-            if (!currentMovementTrackingIds.isEmpty()) { // if there are active movement activities, start route updates
+            // if there are active movement activities, start route updates
+            if (!currentMovementTrackingIds.isEmpty()) {
                 locationProvider.startRouteUpdates();
             }
 
             // If no activities were recovered, start a new still activity
             if (currentStillTrackingId == null && currentMovementTrackingIds.isEmpty()) {
-                Log.d(TAG, "No activity recovered, starting a new STILL activity.");
                 currentActivityType = DetectedActivity.STILL;
                 isInitializing = true;
                 updateNotificationSafe();
@@ -155,8 +155,8 @@ public class LocationService extends Service {
     private void syncGeofences() {
         // initializing all geofence points, and in geofence manager android watches out if the boundaries are crossed
         List<Place> places = placeDao.getAllPlaces();
-        for (Place p : places) {
-            geofenceManager.addGeofence("place_" + p.getId(), p.getLat(), p.getLng(), 75f);
+        for (Place place : places) {
+            geofenceManager.addGeofence("place_" + place.getId(), place.getLat(), place.getLng(), 75f);
         }
     }
 
@@ -182,10 +182,10 @@ public class LocationService extends Service {
                     // Extracts the activity data
                     int activityType = intent.getIntExtra(ActivityTransitionReceiver.EXTRA_ACTIVITY_TYPE, DetectedActivity.UNKNOWN);
                     int transitionType = intent.getIntExtra(ActivityTransitionReceiver.EXTRA_TRANSITION_TYPE, -1);
-                    long timestampNanos = intent.getLongExtra(ActivityTransitionReceiver.EXTRA_TIMESTAMP_NANOS, System.nanoTime()); // in nanoseconds
+                    long timestampMs = intent.getLongExtra(ActivityTransitionReceiver.EXTRA_TIMESTAMP_MS, System.currentTimeMillis());
 
                     // calling handleActivityUpdate in background
-                    io.execute(() -> handleActivityUpdate(activityType, transitionType, timestampNanos));
+                    io.execute(() -> handleActivityUpdate(activityType, transitionType, timestampMs));
                 } else if (GeofenceBroadcastReceiver.ACTION_GEOFENCE_UPDATE.equals(action)) { // checks if the intent came from geofence
                     // Extracts the geofence data
                     String geofenceId = intent.getStringExtra(GeofenceBroadcastReceiver.EXTRA_GEOFENCE_ID);
@@ -212,11 +212,26 @@ public class LocationService extends Service {
                 long placeId = Long.parseLong(geofenceId.replace("place_", ""));
                 Place place = placeDao.getPlaceById(placeId);
                 if (place != null) {
-                    updateActiveStillWithPlace(place);
-                    // If we got a location from geofence, stop frequent still location updates
-                    if (isRequestingStillLocationUpdates) {
-                        locationProvider.stopFrequentStillLocationUpdates();
+                    if (currentStillTrackingId != null) {
+                        updateActiveStillWithPlace(place);
+                        // If we got a location from geofence, stop frequent still location updates
+                        if (isRequestingStillLocationUpdates) {
+                            locationProvider.stopFrequentStillLocationUpdates();
+
+                        }
+                        return;
                     }
+                    if (!currentMovementTrackingIds.isEmpty()){
+                        for (Integer type : currentMovementTrackingIds.keySet()) {
+                            endMovementTracking(type, now);
+                        }
+                        currentMovementTrackingIds.clear();
+                        locationProvider.stopRouteUpdates();
+                        startStillTracking(now, null);
+                        updateActiveStillWithPlace(place);
+
+                    }
+
                 }
             }
         } else if (transitionType == Geofence.GEOFENCE_TRANSITION_EXIT) {
@@ -258,67 +273,67 @@ public class LocationService extends Service {
         return null;
     }
 
-    private void handleActivityUpdate(int activityType, int transitionType, long timestampNanos) {
+    private void handleActivityUpdate(int activityType, int transitionType, long timestampMs) {
+
 
 
         // keep the cpu running until the activity is processed
         PowerManager powerManager = (PowerManager) getSystemService(POWER_SERVICE);
-        PowerManager.WakeLock wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "MyApp::LocationProcessingLock");
+        PowerManager.WakeLock wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "MyApp::LocationProcessingLock"); // TODO CHANGE TAG
 
         wakeLock.acquire(30 * 1000L); // 30 seconds
 
         try {
 
+            if (activityType == DetectedActivity.UNKNOWN) return;
 
-        if (activityType == DetectedActivity.UNKNOWN) return;
+            Date eventTime = new Date(timestampMs);
 
-        Date eventTime = new Date(System.currentTimeMillis() - TimeUnit.NANOSECONDS.toMillis(android.os.SystemClock.elapsedRealtimeNanos() - timestampNanos));
-
-        if (transitionType == ActivityTransition.ACTIVITY_TRANSITION_ENTER) {
-            String previousActivityName = null;
-            if (activityType == DetectedActivity.STILL) {
-                if (!currentMovementTrackingIds.isEmpty()) {
-                    // Transitioning from a movement activity to STILL
-                    int prevType = currentMovementTrackingIds.keySet().iterator().next();
-                    previousActivityName = getActivityName(prevType);
+            if (transitionType == ActivityTransition.ACTIVITY_TRANSITION_ENTER) {
+                String previousActivityName = null;
+                if (activityType == DetectedActivity.STILL) {
+                    if (!currentMovementTrackingIds.isEmpty()) {
+                        // Transitioning from a movement activity to STILL
+                        int prevType = currentMovementTrackingIds.keySet().iterator().next();
+                        previousActivityName = getActivityName(prevType);
+                    }
                 }
-            }
 
-            // Ensure only one activity is active by ending any ongoing ones before starting the new one
-            // if the ongoing activity is the same as the new one, do nothing(later in the script they will be merged)
-            if (currentStillTrackingId != null && activityType != DetectedActivity.STILL) {
-                endStillTracking(eventTime);
-            }
-            for (Integer type : new HashSet<>(currentMovementTrackingIds.keySet())) {
-                if (type != activityType) {
-                    endMovementTracking(type, eventTime);
+                // Ensure only one activity is active by ending any ongoing ones before starting the new one
+                // if the ongoing activity is the same as the new one, do nothing(later in the script they will be merged)
+                if (currentStillTrackingId != null && activityType != DetectedActivity.STILL) {
+                    endStillTracking(eventTime);
                 }
+                for (Integer type : new HashSet<>(currentMovementTrackingIds.keySet())) {
+                    if (type != activityType) {
+                        endMovementTracking(type, eventTime);
+                    }
+                }
+
+                currentActivityType = activityType;
+
+                isInitializing = true;
+                updateNotificationSafe();
+
+                // call functions to start activities according to activity type
+                if (activityType == DetectedActivity.STILL) {
+                    startStillTracking(eventTime, previousActivityName);
+                } else if (MOVEMENT_ACTIVITIES.contains(activityType)) {
+                    startMovementTracking(activityType, eventTime);
+                }
+                isInitializing = false;
+
+            } else if (transitionType == ActivityTransition.ACTIVITY_TRANSITION_EXIT) {
+                // call functions to end activities according to activity type
+                if (activityType == DetectedActivity.STILL) {
+                    endStillTracking(eventTime);
+                } else if (MOVEMENT_ACTIVITIES.contains(activityType)) {
+                    endMovementTracking(activityType, eventTime);
+                }
+                updateCurrentActivityAfterExit(activityType);
             }
 
-            currentActivityType = activityType;
-
-            isInitializing = true;
             updateNotificationSafe();
-
-            // call functions to start activities according to activity type
-            if (activityType == DetectedActivity.STILL) {
-                startStillTracking(eventTime, previousActivityName);
-            } else if (MOVEMENT_ACTIVITIES.contains(activityType)) {
-                startMovementTracking(activityType, eventTime);
-            }
-            isInitializing = false;
-
-        } else if (transitionType == ActivityTransition.ACTIVITY_TRANSITION_EXIT) {
-            // call functions to end activities according to activity type
-            if (activityType == DetectedActivity.STILL) {
-                endStillTracking(eventTime);
-            } else if (MOVEMENT_ACTIVITIES.contains(activityType)) {
-                endMovementTracking(activityType, eventTime);
-            }
-            updateCurrentActivityAfterExit(activityType);
-        }
-
-        updateNotificationSafe();
         } finally {
             if (wakeLock.isHeld()) {
                 wakeLock.release();

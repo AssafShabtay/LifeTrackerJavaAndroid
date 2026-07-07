@@ -21,6 +21,7 @@ import com.google.android.libraries.places.api.net.SearchNearbyResponse;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 public class GeofenceUtilsManager {
@@ -100,7 +101,7 @@ public class GeofenceUtilsManager {
                     newPlace.setIcon(googlePlace.getPlaceTypes().get(0));
                     newPlace.setCategory(googlePlace.getPlaceTypes().get(0)); // Assuming category is the first type
                 }
-
+                newPlace.setGeofencePlaceId(Long.valueOf(Objects.requireNonNull(googlePlace.getId())));
                 long newPlaceId = placeDao.insertPlace(newPlace);
                 newPlace.setId(newPlaceId);
 
@@ -112,7 +113,8 @@ public class GeofenceUtilsManager {
                 still.setCategory(newPlace.getCategory());
                 still.setLat(newPlace.getLat());
                 still.setLng(newPlace.getLng());
-                still.setColor(newPlace.getColor()); // Color will be default as it's not from Google Places API
+                still.setColor(newPlace.getColor());
+                still.setGeofencePlaceId(newPlace.getGeofencePlaceId());
 
                 // Add a geofence for the newly created place
                 geofenceManager.addGeofence(newPlace);

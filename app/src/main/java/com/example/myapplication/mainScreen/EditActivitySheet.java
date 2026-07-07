@@ -142,7 +142,6 @@ public class EditActivitySheet extends BottomSheetDialogFragment {
             still.setEndTimeDate(editedEndTime);
             still.setIcon(selectedIcon);
             still.setColor(selectedColor);
-            // still.setPlaceId(null); // Remove this line
 
             // Create and save new Place
             Place newPlace = new Place();
