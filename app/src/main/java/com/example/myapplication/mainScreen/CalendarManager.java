@@ -37,7 +37,7 @@ public class CalendarManager {
         void onDateSelected(Date date);
     }
 
-    private static final ExecutorService diskExecutor = Executors.newSingleThreadExecutor();
+    private static final ExecutorService diskExecutor = Executors.newSingleThreadExecutor(); //todo change
 
     private final Context context;
     private final View dateCard;

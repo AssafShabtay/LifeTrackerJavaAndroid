@@ -34,7 +34,7 @@ public class StillLocation implements TimelineItem {
     private Integer color;
     private boolean isStop;
     private String placeAddress;
-    private Long geofencePlaceId;
+    private String geofencePlaceId;
 
 
 
@@ -49,11 +49,11 @@ public class StillLocation implements TimelineItem {
     public int hashCode() {
         return Objects.hash(id, lat, lng, startTimeDate, endTimeDate, wasSupposedToBeActivity, placeId, placeName, category, icon, color, isStop, placeAddress);
     }
-    public Long getGeofencePlaceId() {
+    public String getGeofencePlaceId() {
         return geofencePlaceId;
     }
 
-    public void setGeofencePlaceId(Long geofencePlaceId) {
+    public void setGeofencePlaceId(String geofencePlaceId) {
         this.geofencePlaceId = geofencePlaceId;
     }
 

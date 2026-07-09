@@ -6,12 +6,8 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.PowerManager;
-import android.provider.Settings;
-import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
@@ -23,11 +19,12 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate; // Import AppCompatDelegate
 import androidx.fragment.app.Fragment;
 
+import com.example.myapplication.helpers.Logger;
 import com.example.myapplication.helpers.PermissionManager;
 import com.example.myapplication.mainScreen.HomeFragment;
 import com.example.myapplication.mainScreen.SettingsFragment;
 import com.example.myapplication.mainScreen.StatisticsFragment;
-import com.example.myapplication.locationTracking.reciever.ActivityTransitionReceiver;
+import com.example.myapplication.locationTracking.receiver.ActivityTransitionReceiver;
 import com.example.myapplication.locationTracking.LocationService;
 import com.google.android.gms.location.ActivityRecognition;
 import com.google.android.gms.location.ActivityTransition;
@@ -90,8 +87,11 @@ public class MainActivity extends AppCompatActivity {
             registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
                 permissionManager.markPermissionRequested(Manifest.permission.ACCESS_BACKGROUND_LOCATION); // TODO FIX API LEVEL
                 if (isGranted) {
+                    Logger.saveLog(this, TAG + ": Background location granted. Requesting transitions and starting service.");
                     requestTransitions();
                     startTrackingService();
+                } else {
+                    Logger.saveLog(this, TAG + ": Background location denied.");
                 }
                 refreshPermissionUi(permissionManager.hasAllPermissions());
             });
@@ -108,11 +108,11 @@ public class MainActivity extends AppCompatActivity {
                 // if decline is clicked
                 isShowingRationaleDialog = false;
                 // If user declines rationale, send them to settings
-                permissionManager.showGoToSettingsDialog(permissionManager::openAppSettings, () -> Log.d(TAG, "Settings dialog cancelled from rationale cancel"));
+                permissionManager.showGoToSettingsDialog(permissionManager::openAppSettings, () -> Logger.saveLog(this, TAG + ": Settings dialog cancelled from rationale cancel"));
             });
         } else if (permissionManager.isAnyPermissionPermanentlyDenied()) {
             // go to settings
-            permissionManager.showGoToSettingsDialog(permissionManager::openAppSettings, () -> Log.d(TAG, "Settings dialog cancelled"));
+            permissionManager.showGoToSettingsDialog(permissionManager::openAppSettings, () -> Logger.saveLog(this, TAG + ": Settings dialog cancelled"));
         }
     }
 
@@ -127,21 +127,26 @@ public class MainActivity extends AppCompatActivity {
         }
 
         if (hasForeground) {
+            Logger.saveLog(this, TAG + ": All foreground permissions granted. Checking background location.");
             // request background location if all foreground perms are granted
             checkAndRequestBackgroundLocation();
         } else {
+            Logger.saveLog(this, TAG + ": Not all foreground permissions granted. Requesting foreground permissions.");
             // if not all foreground permission are granted, request them
             foregroundPermissionLauncher.launch(foregroundPermissions);
         }
     }
 
     private void checkAndRequestBackgroundLocation() {
+        Logger.saveLog(this, TAG + ": checkAndRequestBackgroundLocation called.");
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             if (permissionManager.hasPermission(Manifest.permission.ACCESS_BACKGROUND_LOCATION)) {
+                Logger.saveLog(this, TAG + ": Background location permission already granted. Requesting transitions and starting service.");
                 // if all permissions are granted start tracking
                 requestTransitions();
                 startTrackingService();
             } else {
+                Logger.saveLog(this, TAG + ": Background location permission not granted. Showing rationale dialog.");
                 // Show a custom dialog explaining why background location is needed before showing the system/settings prompt
                 new AlertDialog.Builder(this) //TODO CHANGE TEXT AND IMAGE EXPLANATION
                         .setTitle("Background Location Access")
@@ -150,11 +155,11 @@ public class MainActivity extends AppCompatActivity {
                             backgroundPermissionLauncher.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION);
                         })
                         .setNegativeButton("No thanks", (dialog, which) -> {
-
+                            Logger.saveLog(this, TAG + ": Background location rationale declined.");
                             // If the user declines, check if the permission is permanently denied
-                            // and offer to open settings.
+                            // and offer to open settings.\n
                             if (permissionManager.isPermanentlyDenied(Manifest.permission.ACCESS_BACKGROUND_LOCATION)) {
-                                permissionManager.showGoToSettingsDialog(permissionManager::openAppSettings, () -> Log.d(TAG, "Settings dialog cancelled after background rationale decline"));
+                                permissionManager.showGoToSettingsDialog(permissionManager::openAppSettings, () -> Logger.saveLog(this, TAG + ": Settings dialog cancelled after background rationale decline"));
                             }
                             // Otherwise, if not permanently denied, just continue without background access.
                             // The UI in HomeFragment should reflect the missing permission.
@@ -164,6 +169,7 @@ public class MainActivity extends AppCompatActivity {
                         .show();
             }
         } else {
+            Logger.saveLog(this, TAG + ": Android version < Q. Requesting transitions and starting service directly.");
             requestTransitions();
             startTrackingService();
         }
@@ -234,6 +240,7 @@ public class MainActivity extends AppCompatActivity {
 
 
     private void refreshPermissionUi(boolean hasPerms) {
+        Logger.saveLog(this, TAG + ": refreshPermissionUi called with hasPerms: " + hasPerms);
         if (hasPerms) {
             permissionBlocker.setVisibility(View.GONE);
             getSupportFragmentManager().beginTransaction().show(activeFragment).commit();
@@ -257,12 +264,14 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void requestTransitions() {
+        Logger.saveLog(this, TAG + ": requestTransitions called. Current transitionsRegistered: " + transitionsRegistered + ", hasAllPermissions: " + permissionManager.hasAllPermissions());
         if (!permissionManager.hasAllPermissions()) { //check if permissions are granted
-            Log.w(TAG, "Aborting requestTransitions: permissions not fully granted.");
+            Logger.saveLog(this, TAG + ": Aborting requestTransitions: permissions not fully granted.");
             return;
         }
 
         if (transitionsRegistered) {
+            Logger.saveLog(this, TAG + ": requestTransitions: Already registered, skipping.");
             return;
         }
 
@@ -295,7 +304,6 @@ public class MainActivity extends AppCompatActivity {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             flags |= PendingIntent.FLAG_MUTABLE;
         }
-
         PendingIntent pendingIntent = PendingIntent.getBroadcast(
                 this,
                 0,
@@ -316,22 +324,22 @@ public class MainActivity extends AppCompatActivity {
                     .requestActivityTransitionUpdates(request, pendingIntent)
                     .addOnSuccessListener(unused -> {
                         transitionsRegistered = true;
-                        Log.d(TAG, "Activity transitions registered successfully");
+                        Logger.saveLog(this, TAG + ": Activity transitions registered successfully");
                     })
                     .addOnFailureListener(e -> {
                         transitionsRegistered = false;
-                        Log.e(TAG, "Registration failed", e);
+                        Logger.saveLog(this, TAG + ": Registration failed: " + e.getMessage());
                     });
 
             // Initial quick detection to avoid "idle" state
             ActivityRecognition.getClient(this) //TODO THIS CHUNK MIGHT BE USELESS
                     .requestActivityUpdates(5000, activityUpdatePendingIntent)
-                    .addOnSuccessListener(unused -> Log.d(TAG, "Initial activity updates requested"))
-                    .addOnFailureListener(e -> Log.e(TAG, "Failed to request initial activity updates", e));
+                    .addOnSuccessListener(unused -> Logger.saveLog(this, TAG + ": Initial activity updates requested"))
+                    .addOnFailureListener(e -> Logger.saveLog(this, TAG + ": Failed to request initial activity updates: " + e.getMessage()));
 
         } catch (SecurityException e) {
             transitionsRegistered = false;
-            Log.e(TAG, "missing permission for transitions", e);
+            Logger.saveLog(this, TAG + ": Missing permission for transitions: " + e.getMessage());
         }
     }
 
@@ -348,9 +356,10 @@ public class MainActivity extends AppCompatActivity {
                 this.startService(intent);
             }
             trackingServiceStarted = true;
+            Logger.saveLog(this, TAG + ": Tracking service started successfully.");
         } catch (Throwable t) {
             trackingServiceStarted = false;
-            Log.e(TAG, "Failed to start tracking service", t);
+            Logger.saveLog(this, TAG + ": Failed to start tracking service: " + t.getMessage());
         }
     }
 

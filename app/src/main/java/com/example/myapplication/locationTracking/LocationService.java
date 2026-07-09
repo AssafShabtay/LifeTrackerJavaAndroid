@@ -24,6 +24,7 @@ import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.ServiceCompat;
 
+import com.example.myapplication.LifeTrackerApp;
 import com.example.myapplication.MainActivity;
 import com.example.myapplication.database.ActivityDao;
 import com.example.myapplication.database.ActivityDatabase;
@@ -33,8 +34,8 @@ import com.example.myapplication.database.PlaceDao;
 import com.example.myapplication.database.RoutePoint;
 import com.example.myapplication.database.StillLocation;
 import com.example.myapplication.helpers.Logger;
-import com.example.myapplication.locationTracking.reciever.ActivityTransitionReceiver;
-import com.example.myapplication.locationTracking.reciever.GeofenceBroadcastReceiver;
+import com.example.myapplication.locationTracking.receiver.ActivityTransitionReceiver;
+import com.example.myapplication.locationTracking.receiver.GeofenceBroadcastReceiver;
 import com.google.android.gms.location.ActivityTransition;
 import com.google.android.gms.location.DetectedActivity;
 import com.google.android.gms.location.FusedLocationProviderClient;
@@ -51,9 +52,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
 import com.example.myapplication.BuildConfig;
 
@@ -72,8 +70,7 @@ public class LocationService extends Service {
     private GeofenceUtilsManager geofenceUtilsManager;
     private ActivityMergeManager activityMergeManager;
     private LocationProvider locationProvider;
-    private final ExecutorService io = Executors.newSingleThreadExecutor();
-
+    private LifeTrackerApp app;
     public static final int NOTIFICATION_ID = 101;
     public static final String CHANNEL_ID = "LocationServiceChannel";
     public static final String TAG = "LocationService";
@@ -91,6 +88,7 @@ public class LocationService extends Service {
     public void onCreate() {
 
         super.onCreate();
+        app = (LifeTrackerApp) getApplication();
         FusedLocationProviderClient fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
         ActivityDatabase db = ActivityDatabase.getDatabase(getApplicationContext());
         dao = db.activityDao();
@@ -104,11 +102,11 @@ public class LocationService extends Service {
 
         geofenceUtilsManager = new GeofenceUtilsManager(placeDao, this, placesClient, geofenceManager);
 
-        locationProvider = new LocationProvider(this, fusedLocationClient, dao, io, geofenceUtilsManager, this);
+        locationProvider = new LocationProvider(this, fusedLocationClient, dao, app.getDatabaseWriteExecutor(), geofenceUtilsManager, this);
         activityMergeManager = new ActivityMergeManager(dao, this, locationProvider);
         createNotificationChannel();
 
-        io.execute(() -> {
+        app.getDatabaseWriteExecutor().execute(() -> {
             // Recover previous activity state after restart in background thread
 
             // Recover still activity
@@ -167,7 +165,6 @@ public class LocationService extends Service {
         Logger.saveLog(this, "LocationService onDestroy");
         locationProvider.stopRouteUpdates();
         locationProvider.stopFrequentStillLocationUpdates();
-        io.shutdownNow();
     }
 
     @Override
@@ -185,13 +182,13 @@ public class LocationService extends Service {
                     long timestampMs = intent.getLongExtra(ActivityTransitionReceiver.EXTRA_TIMESTAMP_MS, System.currentTimeMillis());
 
                     // calling handleActivityUpdate in background
-                    io.execute(() -> handleActivityUpdate(activityType, transitionType, timestampMs));
+                    app.getDatabaseWriteExecutor().execute(() -> handleActivityUpdate(activityType, transitionType, timestampMs));
                 } else if (GeofenceBroadcastReceiver.ACTION_GEOFENCE_UPDATE.equals(action)) { // checks if the intent came from geofence
                     // Extracts the geofence data
                     String geofenceId = intent.getStringExtra(GeofenceBroadcastReceiver.EXTRA_GEOFENCE_ID);
                     int transitionType = intent.getIntExtra(GeofenceBroadcastReceiver.EXTRA_TRANSITION_TYPE, -1);
                     // calling handleGeofenceUpdate in background
-                    io.execute(() -> handleGeofenceUpdate(geofenceId, transitionType));
+                    app.getDatabaseWriteExecutor().execute(() -> handleGeofenceUpdate(geofenceId, transitionType));
 
                 }
             }
@@ -358,7 +355,6 @@ public class LocationService extends Service {
 
         // MERGE CHECK - check if possible to merge with ongoing activity
         if (activityMergeManager.attemptMergeWithOngoingStill(currentStillTrackingId, startTime,  currentLocation, geofenceUtilsManager)) {
-            currentStillTrackingId = null;
             return;
         }
 

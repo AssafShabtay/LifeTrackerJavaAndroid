@@ -101,7 +101,7 @@ public class GeofenceUtilsManager {
                     newPlace.setIcon(googlePlace.getPlaceTypes().get(0));
                     newPlace.setCategory(googlePlace.getPlaceTypes().get(0)); // Assuming category is the first type
                 }
-                newPlace.setGeofencePlaceId(Long.valueOf(Objects.requireNonNull(googlePlace.getId())));
+                newPlace.setGeofencePlaceId(googlePlace.getId());
                 long newPlaceId = placeDao.insertPlace(newPlace);
                 newPlace.setId(newPlaceId);
 

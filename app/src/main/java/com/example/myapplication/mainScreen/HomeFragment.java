@@ -16,6 +16,8 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 // Removed import com.example.myapplication.locationTracking.GeofenceManager;
+import com.example.myapplication.LifeTrackerApp;
+import com.example.myapplication.MainActivity;
 import com.example.myapplication.database.ActivityDao;
 import com.example.myapplication.database.ActivityDatabase;
 import com.example.myapplication.database.MovementActivity;
@@ -28,14 +30,12 @@ import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 public class HomeFragment extends Fragment {
 
     private static final String TAG = "HomeFragment";
 
-    private static final long UPDATE_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+    private static final long UPDATE_INTERVAL_MS = 2 * 60 * 1000; // 2 minutes
 
     private ActivityDao dao;
 
@@ -44,7 +44,7 @@ public class HomeFragment extends Fragment {
     private MapManager mapManager;
     private CalendarManager calendarManager;
 
-    private final ExecutorService io = Executors.newSingleThreadExecutor();
+    private LifeTrackerApp app;
 
     // refresh ui every 5 minutes
     private final Handler refreshHandler = new Handler(Looper.getMainLooper());
@@ -68,6 +68,7 @@ public class HomeFragment extends Fragment {
         RecyclerView rvTimeline = view.findViewById(R.id.rvTimeline);
         ActivityDatabase db = ActivityDatabase.getDatabase(requireContext());
         dao = db.activityDao();
+        app = (LifeTrackerApp) requireActivity().getApplication();
 
         // --------------- initialize map ---------------
         if (btnShowFullDay != null) {
@@ -134,7 +135,7 @@ public class HomeFragment extends Fragment {
 
     private void showEditSheet(StillLocation still) {
         EditActivitySheet sheet = EditActivitySheet.newInstance(still, updatedStill -> {
-            io.execute(() -> {
+            app.getDatabaseWriteExecutor().execute(() -> {
                 dao.updateStillLocation(updatedStill);
                 if (isAdded()) {
                 requireActivity().runOnUiThread(() -> {
@@ -162,7 +163,7 @@ public class HomeFragment extends Fragment {
         cal.set(Calendar.MILLISECOND, 999);
         Date end = cal.getTime();
 
-        io.execute(() -> {
+        app.getDatabaseWriteExecutor().execute(() -> {
             List<StillLocation> stills = dao.getStillsFromRange(start, end);
             List<MovementActivity> movements = dao.getMovementsFromRange(start, end);
 
@@ -223,13 +224,6 @@ public class HomeFragment extends Fragment {
         stopPeriodicRefresh();
     }
 
-    @Override
-    public void onDestroy() {
-        super.onDestroy();
-        if (io != null && !io.isShutdown()) {
-            io.shutdownNow();
-        }
-    }
 
     private void startPeriodicRefresh() {
         refreshHandler.removeCallbacks(refreshRunnable);

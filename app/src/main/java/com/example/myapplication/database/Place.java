@@ -15,16 +15,16 @@ public class Place {
     private String category;
     private String icon;
     private Integer color;
+    private String geofencePlaceId;
 
-    public Long getGeofencePlaceId() {
+
+    public String getGeofencePlaceId() {
         return geofencePlaceId;
     }
 
-    public void setGeofencePlaceId(Long geofencePlaceId) {
+    public void setGeofencePlaceId(String geofencePlaceId) {
         this.geofencePlaceId = geofencePlaceId;
     }
-
-    private Long geofencePlaceId;
 
 
     public long getId() {

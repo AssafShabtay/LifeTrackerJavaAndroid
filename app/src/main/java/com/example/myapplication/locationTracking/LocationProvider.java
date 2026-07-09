@@ -38,7 +38,7 @@ public class LocationProvider {
     private final Context context;
     private final FusedLocationProviderClient fusedLocationClient;
     private final ActivityDao dao;
-    private final ExecutorService io;
+    private final ExecutorService databaseWriteExecutor;
     private final GeofenceUtilsManager geofenceUtilsManager;
 
     private LocationCallback routeLocationCallback;
@@ -52,13 +52,13 @@ public class LocationProvider {
     public LocationProvider(Context context,
                                 FusedLocationProviderClient fusedLocationClient,
                                 ActivityDao dao,
-                                ExecutorService io,
+                                ExecutorService databaseWriteExecutor,
                                 GeofenceUtilsManager geofenceUtilsManager,
     LocationService locationService) {
         this.context = context;
         this.fusedLocationClient = fusedLocationClient;
         this.dao = dao;
-        this.io = io;
+        this.databaseWriteExecutor = databaseWriteExecutor;
         this.geofenceUtilsManager = geofenceUtilsManager;
         this.locationService = locationService;
     }
@@ -101,7 +101,7 @@ public class LocationProvider {
                                 Logger.saveLog(context, "User lingered for over 10 minutes. Stopping tracking.");
 
                                 Date endTime = new Date(currentTime);
-                                io.execute(() -> {
+                                databaseWriteExecutor.execute(() -> {
                                     Set<Integer> activeMovementTypes = new HashSet<>(LocationService.currentMovementTrackingIds.keySet());
                                     for (Integer activityType : activeMovementTypes) {
                                         locationService.endMovementTracking(activityType, endTime);
@@ -120,7 +120,7 @@ public class LocationProvider {
                         }
                     }
                 }
-                io.execute(() -> {
+                databaseWriteExecutor.execute(() -> {
                     for (Location location : locationResult.getLocations()) {
                         for (Long movementId : LocationService.currentMovementTrackingIds.values()) {
                             RoutePoint point = new RoutePoint();
@@ -166,7 +166,7 @@ public class LocationProvider {
             @Override
             public void onLocationResult(LocationResult locationResult) {
                 if (locationResult == null) return;
-                io.execute(() -> {
+                databaseWriteExecutor.execute(() -> {
                     for (Location location : locationResult.getLocations()) {
                         // Check for good accuracy before updating
                         if (location.hasAccuracy() && location.getAccuracy() <= 30.0f) { // Use a similar accuracy threshold as getLocationOnceBlocking

@@ -23,8 +23,7 @@
             android:id="@+id/etHomeAddressInput"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:inputType="textPostalAddress"
-            android:overlapAnchor="true" />
+            android:inputType="textPostalAddress" />
     </com.google.android.material.textfield.TextInputLayout>
 
     <Button

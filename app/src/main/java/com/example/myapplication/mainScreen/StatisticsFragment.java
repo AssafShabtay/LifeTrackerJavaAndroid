@@ -19,6 +19,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
+import com.example.myapplication.LifeTrackerApp;
 import com.example.myapplication.MainActivity;
 import com.example.myapplication.R;
 import com.example.myapplication.database.ActivityDatabase;
@@ -33,8 +34,8 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+
+
 
 public class StatisticsFragment extends Fragment implements HomeAddressPickerBottomSheet.OnHomeAddressSelectedListener, MainActivity.OnHomeAddressChangedListener {
 
@@ -44,7 +45,7 @@ public class StatisticsFragment extends Fragment implements HomeAddressPickerBot
     private View cabinFeverContent;
     private View cabinFeverPlaceholder;
 
-    private final ExecutorService executor = Executors.newSingleThreadExecutor();
+    private LifeTrackerApp app;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
     private Map<String, Long> placeDuration = new HashMap<>();
@@ -71,6 +72,7 @@ public class StatisticsFragment extends Fragment implements HomeAddressPickerBot
         cabinFeverContent = view.findViewById(R.id.cabin_fever_content);
         cabinFeverPlaceholder = view.findViewById(R.id.cabin_fever_placeholder);
         Button btnOpenHomeAddressPicker = view.findViewById(R.id.btnOpenHomeAddressPicker);
+        app = (LifeTrackerApp) requireActivity().getApplication();
 
         btnOpenHomeAddressPicker.setOnClickListener(v -> {
             HomeAddressPickerBottomSheet bottomSheet = HomeAddressPickerBottomSheet.newInstance(this, placeDuration);
@@ -87,7 +89,7 @@ public class StatisticsFragment extends Fragment implements HomeAddressPickerBot
     }
 
     private void loadStatistics() {
-        executor.execute(() -> {
+        app.getDatabaseWriteExecutor().execute(() -> {
             if (!isAdded()) return;
 
             Calendar cal = Calendar.getInstance();
@@ -196,7 +198,7 @@ public class StatisticsFragment extends Fragment implements HomeAddressPickerBot
             return;
         }
 
-        executor.execute(() -> {
+        app.getDatabaseWriteExecutor().execute(() -> {
             if (!isAdded()) return;
             double[] coords = getCoordinatesFromAddress(address, requireContext());
 
@@ -245,7 +247,7 @@ public class StatisticsFragment extends Fragment implements HomeAddressPickerBot
         long sevenDaysMs = 7L * 24 * 60 * 60 * 1000;
         long sevenDaysAgo = now - sevenDaysMs;
 
-        executor.execute(() -> {
+        app.getDatabaseWriteExecutor().execute(() -> {
             if (!isAdded()) return;
             ActivityDatabase db = ActivityDatabase.getDatabase(requireContext());
             Place homePlace = db.placeDao().getHomePlace();

@@ -1,4 +1,4 @@
-package com.example.myapplication.locationTracking.reciever;
+package com.example.myapplication.locationTracking.receiver;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;

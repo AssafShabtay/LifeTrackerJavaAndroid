@@ -12,6 +12,7 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
 
     <application
+        android:name=".LifeTrackerApp"
         android:allowBackup="true"
         android:label="MyApplication"
         android:supportsRtl="true"
@@ -33,11 +34,11 @@
         </activity>
 
         <receiver
-            android:name=".locationTracking.reciever.ActivityTransitionReceiver"
+            android:name=".locationTracking.receiver.ActivityTransitionReceiver"
             android:exported="false" />
 
         <receiver
-            android:name=".locationTracking.reciever.GeofenceBroadcastReceiver"
+            android:name=".locationTracking.receiver.GeofenceBroadcastReceiver"
             android:exported="false" />
 
         <service
