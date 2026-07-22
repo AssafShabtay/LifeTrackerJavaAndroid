@@ -1,6 +1,7 @@
 package com.example.myapplication.mainScreen;
 
 import static com.example.myapplication.helpers.ColorAndIcons.getStillColor;
+import static com.example.myapplication.helpers.UiFormatters.category;
 
 import android.app.TimePickerDialog;
 import android.graphics.drawable.GradientDrawable;
@@ -17,9 +18,9 @@ import android.widget.ImageView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.core.content.ContextCompat;
 
 import com.example.myapplication.BuildConfig;
+import com.example.myapplication.LifeTrackerApp;
 import com.example.myapplication.R;
 import com.example.myapplication.database.StillLocation;
 import com.example.myapplication.helpers.UiFormatters;
@@ -36,7 +37,6 @@ import com.google.android.libraries.places.api.net.PlacesClient;
 import com.google.android.libraries.places.api.net.SearchNearbyRequest;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
 
-import java.lang.ref.ReferenceQueue;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -53,6 +53,7 @@ public class EditActivitySheet extends BottomSheetDialogFragment {
     private OnVisitUpdatedListener listener;
     private PlacesClient placesClient;
     private PlaceDao placeDao; // Added PlaceDao member variable
+    private PlaceAutocompleteHelper placeAutocompleteHelper; // Declare PlaceAutocompleteHelper
 
     private AutoCompleteTextView actvName;
     private AutoCompleteTextView etAddress;
@@ -64,6 +65,8 @@ public class EditActivitySheet extends BottomSheetDialogFragment {
     private Date editedStartTime, editedEndTime;
     private Integer selectedColor;
     private String selectedIcon;
+    private String selectedCategory;
+    private LifeTrackerApp app;
 
     public static EditActivitySheet newInstance(StillLocation still, OnVisitUpdatedListener listener) {
         EditActivitySheet fragment = new EditActivitySheet();
@@ -102,12 +105,14 @@ public class EditActivitySheet extends BottomSheetDialogFragment {
 
         View btnSave = view.findViewById(R.id.btnSave);
 
+        app = (LifeTrackerApp) requireActivity().getApplication();
+
         // Initialize state
         editedStartTime = still.getStartTimeDate();
         editedEndTime = still.getEndTimeDate();
 
         selectedColor = getStillColor(still, requireContext());
-
+        selectedCategory = still.getCategory();
         selectedIcon = still.getIcon() != null ? still.getIcon() : "Still";
 
         // listener for icon picker dialog
@@ -123,15 +128,15 @@ public class EditActivitySheet extends BottomSheetDialogFragment {
 
         updateIconAndColorUi();
         fetchNearbyPlaceSuggestions();
-        new PlaceAutocompleteHelper(requireContext(), etAddress);
+        placeAutocompleteHelper = new PlaceAutocompleteHelper(requireContext(), etAddress); // Initialize the member variable
 
         // Set up icon picker
         if (layoutIconPicker != null) {
             layoutIconPicker.setOnClickListener(v -> showIconPickerDialog());
         }
 
-        btnStartTime.setOnClickListener(v -> showTimePicker(true));
-        btnEndTime.setOnClickListener(v -> showTimePicker(false));
+        btnStartTime.setOnClickListener(v -> showTimePickerDialog(true));
+        btnEndTime.setOnClickListener(v -> showTimePickerDialog(false));
 
         updateTimeButtons();
 
@@ -153,13 +158,12 @@ public class EditActivitySheet extends BottomSheetDialogFragment {
             }
             newPlace.setIcon(selectedIcon);
             newPlace.setColor(selectedColor);
-            newPlace.setCategory(null); // Or derive from icon if possible, but for now null.
+            newPlace.setCategory(selectedCategory);
 
-            // TODO: Room database operations should be done on a background thread.
-            // For simplicity, directly calling here, but consider AsyncTask or Coroutines for production.
-            long placeId = placeDao.insertPlace(newPlace);
-            still.setPlaceId(placeId); // Set the generated placeId to StillLocation
-
+            app.getDatabaseWriteExecutor().execute(() -> {
+                long placeId = placeDao.insertPlace(newPlace);
+                still.setPlaceId(placeId); // Set the generated placeId to StillLocation
+            });
             if (listener != null) {
                 listener.onUpdate(still);
             }
@@ -210,7 +214,14 @@ public class EditActivitySheet extends BottomSheetDialogFragment {
     private void fetchNearbyPlaceSuggestions() {
         if (still.getLat() == null || still.getLng() == null) return;
 
-        List<com.google.android.libraries.places.api.model.Place.Field> placeFields = Arrays.asList(com.google.android.libraries.places.api.model.Place.Field.DISPLAY_NAME, com.google.android.libraries.places.api.model.Place.Field.ID);
+        // 1. Add FORMATTED_ADDRESS and TYPES to the fields request
+        List<com.google.android.libraries.places.api.model.Place.Field> placeFields = Arrays.asList(
+                com.google.android.libraries.places.api.model.Place.Field.DISPLAY_NAME,
+                com.google.android.libraries.places.api.model.Place.Field.ID,
+                com.google.android.libraries.places.api.model.Place.Field.FORMATTED_ADDRESS,
+                com.google.android.libraries.places.api.model.Place.Field.TYPES
+        );
+
         CircularBounds circle = CircularBounds.newInstance(new LatLng(still.getLat(), still.getLng()), 100.0);
         SearchNearbyRequest request = SearchNearbyRequest.builder(circle, placeFields)
                 .setMaxResultCount(10)
@@ -218,18 +229,57 @@ public class EditActivitySheet extends BottomSheetDialogFragment {
 
         placesClient.searchNearby(request)
                 .addOnSuccessListener(response -> {
-                    List<String> names = new ArrayList<>();
-                    for (com.google.android.libraries.places.api.model.Place p : response.getPlaces()) {
-                        names.add(p.getDisplayName());
-                    }
+                    List<com.google.android.libraries.places.api.model.Place> places = new ArrayList<>(response.getPlaces());
                     if (isAdded()) {
-                        ArrayAdapter<String> adapter = new ArrayAdapter<>(requireContext(),
-                                android.R.layout.simple_dropdown_item_1line, names);
+                        ArrayAdapter<com.google.android.libraries.places.api.model.Place> adapter = new ArrayAdapter<>(requireContext(),
+                                android.R.layout.simple_dropdown_item_1line, places) {
+
+                            @NonNull
+                            @Override
+                            public View getView(int position, @Nullable View convertView, @NonNull ViewGroup parent) {
+                                android.widget.TextView tv = (android.widget.TextView) super.getView(position, convertView, parent);
+
+                                com.google.android.libraries.places.api.model.Place place = getItem(position);
+                                if (place != null) {
+                                    String displayText = place.getDisplayName();
+
+                                    // Append the first category if it exists
+                                    if (place.getPlaceTypes() != null && !place.getPlaceTypes().isEmpty()) {
+                                        String category = category(place.getPlaceTypes().get(0));
+                                        displayText += " (" + category + ")";
+                                    }
+
+                                    tv.setText(displayText);
+                                }
+                                return tv;
+                            }
+                        };
                         actvName.setAdapter(adapter);
+
+                        // listener to handle when the user taps a suggestion
+                        actvName.setOnItemClickListener((parent, view, position, id) -> {
+                            com.google.android.libraries.places.api.model.Place selectedPlace = adapter.getItem(position);
+                            if (selectedPlace == null) return;
+
+                            // Update Name
+                            actvName.setText(selectedPlace.getDisplayName());
+
+                            // Update Address
+                            if (selectedPlace.getFormattedAddress() != null) {
+                                etAddress.setText(selectedPlace.getFormattedAddress());
+                            }
+
+                            // Update Category
+                            if (selectedPlace.getPlaceTypes() != null && !selectedPlace.getPlaceTypes().isEmpty()) {
+                                selectedCategory = selectedPlace.getPlaceTypes().get(0);
+                            }
+                            // Refresh the UI to reflect the new icon and color
+                            updateIconAndColorUi();
+                        });
                     }
                 })
                 .addOnFailureListener(e -> {
-                    // Silently fail
+                    Log.e("EditActivitySheet", "Failed to fetch nearby places", e);
                 });
     }
 
@@ -242,7 +292,8 @@ public class EditActivitySheet extends BottomSheetDialogFragment {
         btnEndTime.setAlpha(isOngoing ? 0.5f : 1.0f);
     }
 
-    private void showTimePicker(boolean isStart) {
+    private void showTimePickerDialog(boolean isStart) {
+        // time picker dialog
         if (!isStart && editedEndTime == null) return;
 
         Date baseDate = isStart ? editedStartTime : editedEndTime;
@@ -264,5 +315,17 @@ public class EditActivitySheet extends BottomSheetDialogFragment {
             updateTimeButtons();
         }, cal.get(Calendar.HOUR_OF_DAY), cal.get(Calendar.MINUTE), false);
         picker.show();
+    }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        if (placesClient != null) {
+            placesClient = null;
+        }
+        if (placeAutocompleteHelper != null) {
+            placeAutocompleteHelper.release(); // Call release on the helper
+            placeAutocompleteHelper = null;
+         }
     }
 }

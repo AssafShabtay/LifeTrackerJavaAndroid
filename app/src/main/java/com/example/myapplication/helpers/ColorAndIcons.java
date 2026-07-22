@@ -6,7 +6,7 @@ import androidx.core.content.ContextCompat;
 
 import com.example.myapplication.R;
 import com.example.myapplication.database.StillLocation;
-import com.example.myapplication.mainScreen.IconPickerDialog.IconItem;
+
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -14,6 +14,41 @@ import java.util.List;
 
 public class ColorAndIcons {
 
+    public static class IconItem {
+        private String name;
+        private int resId;
+        private List<String> keywords;
+
+        public IconItem(String name, int resId, List<String> keywords) {
+            this.name = name;
+            this.resId = resId;
+            this.keywords = keywords;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        public int getResId() {
+            return resId;
+        }
+
+        public void setResId(int resId) {
+            this.resId = resId;
+        }
+
+        public List<String> getKeywords() {
+            return keywords;
+        }
+
+        public void setKeywords(List<String> keywords) {
+            this.keywords = keywords;
+        }
+    }
 
 
     public static final int[] DEFAULT_COLORS = {

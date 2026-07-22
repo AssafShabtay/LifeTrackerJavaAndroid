@@ -19,6 +19,9 @@ import android.os.Build;
 import android.os.IBinder;
 import android.os.PowerManager;
 import android.util.Log;
+import android.app.ActivityManager;
+import android.app.AlarmManager;
+import android.os.SystemClock;
 
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
@@ -36,6 +39,7 @@ import com.example.myapplication.database.StillLocation;
 import com.example.myapplication.helpers.Logger;
 import com.example.myapplication.locationTracking.receiver.ActivityTransitionReceiver;
 import com.example.myapplication.locationTracking.receiver.GeofenceBroadcastReceiver;
+import com.example.myapplication.locationTracking.receiver.LocationServiceRestartReceiver;
 import com.google.android.gms.location.ActivityTransition;
 import com.google.android.gms.location.DetectedActivity;
 import com.google.android.gms.location.FusedLocationProviderClient;
@@ -71,6 +75,7 @@ public class LocationService extends Service {
     private ActivityMergeManager activityMergeManager;
     private LocationProvider locationProvider;
     private LifeTrackerApp app;
+    private PlacesClient placesClient; // Added PlacesClient member variable
     public static final int NOTIFICATION_ID = 101;
     public static final String CHANNEL_ID = "LocationServiceChannel";
     public static final String TAG = "LocationService";
@@ -98,13 +103,16 @@ public class LocationService extends Service {
         if (!Places.isInitialized()) {
             Places.initializeWithNewPlacesApiEnabled(getApplicationContext(), BuildConfig.GOOGLE_API_KEY);
         }
-        PlacesClient placesClient = Places.createClient(this);
+        placesClient = Places.createClient(this); // Initialize the member variable
 
         geofenceUtilsManager = new GeofenceUtilsManager(placeDao, this, placesClient, geofenceManager);
 
         locationProvider = new LocationProvider(this, fusedLocationClient, dao, app.getDatabaseWriteExecutor(), geofenceUtilsManager, this);
         activityMergeManager = new ActivityMergeManager(dao, this, locationProvider);
         createNotificationChannel();
+
+        // Schedule the service restart alarm
+        scheduleServiceRestartAlarm();
 
         app.getDatabaseWriteExecutor().execute(() -> {
             // Recover previous activity state after restart in background thread
@@ -165,31 +173,44 @@ public class LocationService extends Service {
         Logger.saveLog(this, "LocationService onDestroy");
         locationProvider.stopRouteUpdates();
         locationProvider.stopFrequentStillLocationUpdates();
+        // Cancel the service restart alarm
+        cancelServiceRestartAlarm();
+        if (placesClient != null) {
+            // There is no explicit shutdown method for PlacesClient.
+            // Setting it to null allows for garbage collection.
+            placesClient = null;
+        }
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        Logger.saveLog(this, "sent");
+
         try {
             startForeground();
 
             // Handles when intents are sent( activity is recognized or geofence is triggered)
             if (intent != null) {
                 String action = intent.getAction();
+                Logger.saveLog(this, "Action received: " + action);
                 if (ActivityTransitionReceiver.ACTION_ACTIVITY_UPDATE.equals(action)) { // checks if the intent came from activity recognition
                     // Extracts the activity data
                     int activityType = intent.getIntExtra(ActivityTransitionReceiver.EXTRA_ACTIVITY_TYPE, DetectedActivity.UNKNOWN);
                     int transitionType = intent.getIntExtra(ActivityTransitionReceiver.EXTRA_TRANSITION_TYPE, -1);
                     long timestampMs = intent.getLongExtra(ActivityTransitionReceiver.EXTRA_TIMESTAMP_MS, System.currentTimeMillis());
-
+                    Logger.saveLog(this, "ActivityType mapped: " + activityType);
                     // calling handleActivityUpdate in background
-                    app.getDatabaseWriteExecutor().execute(() -> handleActivityUpdate(activityType, transitionType, timestampMs));
-                } else if (GeofenceBroadcastReceiver.ACTION_GEOFENCE_UPDATE.equals(action)) { // checks if the intent came from geofence
-                    // Extracts the geofence data
-                    String geofenceId = intent.getStringExtra(GeofenceBroadcastReceiver.EXTRA_GEOFENCE_ID);
-                    int transitionType = intent.getIntExtra(GeofenceBroadcastReceiver.EXTRA_TRANSITION_TYPE, -1);
-                    // calling handleGeofenceUpdate in background
-                    app.getDatabaseWriteExecutor().execute(() -> handleGeofenceUpdate(geofenceId, transitionType));
-
+                    app.getDatabaseWriteExecutor().execute(() -> {
+                        Logger.saveLog(this, "Executor thread started for handleActivityUpdate!");
+                        handleActivityUpdate(activityType, transitionType, timestampMs);;
+                    });
+//TODO                } else if (GeofenceBroadcastReceiver.ACTION_GEOFENCE_UPDATE.equals(action)) { // checks if the intent came from geofence
+//TODO                    // Extracts the geofence data
+//TODO                    String geofenceId = intent.getStringExtra(GeofenceBroadcastReceiver.EXTRA_GEOFENCE_ID);
+//TODO                    int transitionType = intent.getIntExtra(GeofenceBroadcastReceiver.EXTRA_TRANSITION_TYPE, -1);
+//TODO                    // calling handleGeofenceUpdate in background
+//TODO                    app.getDatabaseWriteExecutor().execute(() -> handleGeofenceUpdate(geofenceId, transitionType));
+//TODO
                 }
             }
         } catch (Exception e) {
@@ -272,20 +293,12 @@ public class LocationService extends Service {
 
     private void handleActivityUpdate(int activityType, int transitionType, long timestampMs) {
 
-
-
-        // keep the cpu running until the activity is processed
-        PowerManager powerManager = (PowerManager) getSystemService(POWER_SERVICE);
-        PowerManager.WakeLock wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "MyApp::LocationProcessingLock"); // TODO CHANGE TAG
-
-        wakeLock.acquire(30 * 1000L); // 30 seconds
-
         try {
 
             if (activityType == DetectedActivity.UNKNOWN) return;
 
             Date eventTime = new Date(timestampMs);
-
+            Logger.saveLog(this, "1");
             if (transitionType == ActivityTransition.ACTIVITY_TRANSITION_ENTER) {
                 String previousActivityName = null;
                 if (activityType == DetectedActivity.STILL) {
@@ -331,10 +344,10 @@ public class LocationService extends Service {
             }
 
             updateNotificationSafe();
-        } finally {
-            if (wakeLock.isHeld()) {
-                wakeLock.release();
-            }
+        }
+        catch (Exception e) {
+            Log.e(TAG, "Error in handleActivityUpdate: " + e.getMessage(), e);
+            Logger.saveLog(this, "Error in handleActivityUpdate: " + e.getMessage());
         }
     }
 
@@ -351,6 +364,13 @@ public class LocationService extends Service {
     }
 
     void startStillTracking(Date startTime, String wasSupposedToBeActivity) {
+        // If there's already an active still, prevent creating a duplicate
+        if (currentStillTrackingId != null) {
+            Log.w(TAG, "Attempted to start new still tracking while one is already active (ID: " + currentStillTrackingId + "). Aborting new still creation.");
+            Logger.saveLog(this, "Attempted to start new still tracking while one is already active (ID: " + currentStillTrackingId + "). Aborting new still creation.");
+            return;
+        }
+
         Location currentLocation = locationProvider.getLocationOnceBlocking();
 
         // MERGE CHECK - check if possible to merge with ongoing activity
@@ -459,7 +479,8 @@ public class LocationService extends Service {
                 Logger.saveLog(this, msg);
 
                 dao.endStillLocation(id, endTime);
-            } else {
+            }
+            else {
                 MovementActivity movement = new MovementActivity();
                 movement.setActivityTypeName(resolved);
                 movement.setStartLat(startLat);
@@ -534,7 +555,7 @@ public class LocationService extends Service {
             MovementActivity movement = dao.getMovementActivityById(id);
             if (movement != null && movement.getStartLat() != null && movement.getStartLng() != null && currentLocation != null) {
                 List<RoutePoint> routePoints = dao.getRoutePointsForMovement(id);
-                boolean resolved = checkIfMovementIsStill(routePoints);
+                boolean resolved = checkIfMovementIsStill(routePoints, movement.getStartLat(), movement.getStartLng(), currentLocation.getLatitude(), currentLocation.getLongitude());
 
 
                 if (resolved) {
@@ -609,7 +630,8 @@ public class LocationService extends Service {
                     Logger.saveLog(this, msg);
                     dao.endMovementActivity(id, currentLocation.getLatitude(), currentLocation.getLongitude(), endTime);
                 }
-            } else {
+            }
+            else {
                 String msg = String.format(Locale.US, "DB Update from endMovementTracking: Ending movement activity %d (no location info)", id);
                 Log.d(TAG, msg);
                 Logger.saveLog(this, msg);
@@ -681,5 +703,42 @@ public class LocationService extends Service {
             Log.e(TAG, "Error updating notification: " + e.getMessage(), e);
             Logger.saveLog(this, "Error updating notification: " + e.getMessage());
         }
+    }
+
+    public static boolean isServiceRunning(Context context) {
+        ActivityManager manager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
+        if (manager != null) {
+            for (ActivityManager.RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {
+                if (LocationService.class.getName().equals(service.service.getClassName())) {
+                    return service.foreground;
+                }
+            }
+        }
+        return false;
+    }
+
+    private void scheduleServiceRestartAlarm() {
+        Log.d(TAG, "Scheduling service restart alarm.");
+        AlarmManager alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+        Intent intent = new Intent(this, LocationServiceRestartReceiver.class);
+        intent.setAction(LocationServiceRestartReceiver.ACTION_RESTART_SERVICE);
+        PendingIntent pendingIntent = PendingIntent.getBroadcast(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+        // Repeat every 5 minutes (300 * 1000 milliseconds)
+        alarmManager.setRepeating(
+                AlarmManager.ELAPSED_REALTIME_WAKEUP,
+                SystemClock.elapsedRealtime() + 5 * 60 * 1000, // Initial trigger after 5 minutes
+                5 * 60 * 1000, // Repeat every 5 minutes
+                pendingIntent
+        );
+    }
+
+    private void cancelServiceRestartAlarm() {
+        Log.d(TAG, "Cancelling service restart alarm.");
+        AlarmManager alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+        Intent intent = new Intent(this, LocationServiceRestartReceiver.class);
+        intent.setAction(LocationServiceRestartReceiver.ACTION_RESTART_SERVICE);
+        PendingIntent pendingIntent = PendingIntent.getBroadcast(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        alarmManager.cancel(pendingIntent);
     }
 }

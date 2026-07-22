@@ -28,11 +28,15 @@ public class ActivityTrackingUtils {
         return location.getAccuracy() <= maxAllowedMeters;
     }
 
-    public static boolean checkIfMovementIsStill (List<RoutePoint> routePoints) {
-        // finds the center of all the route points
+    public static boolean checkIfMovementIsStill (List<RoutePoint> routePoints, double startLat, double startLng, double endLat, double endLng) {
+
         if (routePoints == null || routePoints.size() <= 1) {
-            return true;
+            if (distanceInMeters(startLat, startLng, endLat, endLng) <  75f){
+                return true;
+            }
+            return false;
         }
+        // finds the center of all the route points
         // Calculate the Centroid (Average Lat and Lng)
         double sumLat = 0;
         double sumLng = 0;

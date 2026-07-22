@@ -2,8 +2,10 @@ package com.example.myapplication.helpers;
 
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.Locale;
+import java.util.stream.Collectors;
 
 public class UiFormatters {
 
@@ -13,6 +15,11 @@ public class UiFormatters {
         return new DecimalFormat("0.0000").format(value);
     }
 
+    public static String category(String category) {
+        return Arrays.stream(category.replace("_", " ").toLowerCase().trim().split("\\s+"))
+                .map(word -> word.substring(0, 1).toUpperCase() + word.substring(1))
+                .collect(Collectors.joining(" "));
+    }
     public static String speed(float metersPerSecond) {
         return new DecimalFormat("0.0").format(metersPerSecond) + " m/s";
     }

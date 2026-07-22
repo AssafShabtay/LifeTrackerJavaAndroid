@@ -48,11 +48,10 @@ public class MainActivity extends AppCompatActivity {
     private Button permissionAction;
     private TextView permissionSubtitle;
     private boolean transitionsRegistered = false;
-    private boolean trackingServiceStarted = false;
 
-    private final HomeFragment homeFragment = new HomeFragment();
-    private final StatisticsFragment statisticsFragment = new StatisticsFragment();
-    private final SettingsFragment settingsFragment = new SettingsFragment();
+    private HomeFragment homeFragment = new HomeFragment();
+    private StatisticsFragment statisticsFragment = new StatisticsFragment();
+    private SettingsFragment settingsFragment = new SettingsFragment();
     private Fragment activeFragment = homeFragment;
 
     private static final String PREFS_NAME = "MyPrefs";
@@ -150,7 +149,7 @@ public class MainActivity extends AppCompatActivity {
                 // Show a custom dialog explaining why background location is needed before showing the system/settings prompt
                 new AlertDialog.Builder(this) //TODO CHANGE TEXT AND IMAGE EXPLANATION
                         .setTitle("Background Location Access")
-                        .setMessage("This app collects location data to enable timeline visits and geofencing even when the app is closed or not in use. Please select 'Allow all the time' in the next screen.")
+                        .setMessage("This app collects location data to enable timeline visits and geofencing even when the app is closed or not in use. Please select \'Allow all the time\' in the next screen.")
                         .setPositiveButton("Grant", (dialog, which) -> {
                             backgroundPermissionLauncher.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION);
                         })
@@ -179,13 +178,8 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         // applies themes before super
         SharedPreferences preferences = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-        boolean isDarkModePreferred = preferences.getBoolean(THEME_KEY, false);
-        if (isDarkModePreferred) {
-            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES);
-        } else {
-            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
-        }
-
+        int currentMode = preferences.getInt("theme_mode", AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
+        AppCompatDelegate.setDefaultNightMode(currentMode);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
@@ -207,18 +201,50 @@ public class MainActivity extends AppCompatActivity {
         BottomNavigationView bottomNav = findViewById(R.id.bottom_navigation);
         bottomNav.setOnItemSelectedListener(navListener);
 
-        getSupportFragmentManager().beginTransaction().add(R.id.fragment_container, settingsFragment, "3").hide(settingsFragment).commit();
-        getSupportFragmentManager().beginTransaction().add(R.id.fragment_container, statisticsFragment, "2").hide(statisticsFragment).commit();
-        getSupportFragmentManager().beginTransaction().add(R.id.fragment_container, homeFragment, "1").commit();
+        if (savedInstanceState == null) {
+            // Initial load: add new fragments
+            getSupportFragmentManager().beginTransaction().add(R.id.fragment_container, settingsFragment, "3").hide(settingsFragment).commit();
+            getSupportFragmentManager().beginTransaction().add(R.id.fragment_container, statisticsFragment, "2").hide(statisticsFragment).commit();
+            getSupportFragmentManager().beginTransaction().add(R.id.fragment_container, homeFragment, "1").commit();
+            activeFragment = homeFragment;
+        } else {
+            // Recreation (e.g., theme change): retrieve existing fragments
+            homeFragment = (HomeFragment) getSupportFragmentManager().findFragmentByTag("1");
+            statisticsFragment = (StatisticsFragment) getSupportFragmentManager().findFragmentByTag("2");
+            settingsFragment = (SettingsFragment) getSupportFragmentManager().findFragmentByTag("3");
 
+            // Pull the manually saved tab ID from the bundle, defaulting to nav_home
+            int selectedId = savedInstanceState.getInt("selected_nav_id", R.id.nav_home);
+
+            if (selectedId == R.id.nav_statistics) {
+                activeFragment = statisticsFragment;
+            } else if (selectedId == R.id.nav_settings) {
+                activeFragment = settingsFragment;
+            } else {
+                activeFragment = homeFragment;
+            }
+        }
 
         refreshPermissionUi(permissionManager.hasAllPermissions());
     }
-
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        BottomNavigationView bottomNav = findViewById(R.id.bottom_navigation);
+        if (bottomNav != null) {
+            outState.putInt("selected_nav_id", bottomNav.getSelectedItemId());
+        }
+    }
     @Override
     protected void onResume() {
         super.onResume();
-        refreshPermissionUi(permissionManager.hasAllPermissions());
+        // Refresh UI and ensure services are running if permissions are granted
+        boolean hasAllPerms = permissionManager.hasAllPermissions();
+        refreshPermissionUi(hasAllPerms);
+        if (hasAllPerms) {
+            requestTransitions();
+            startTrackingService();
+        }
     }
 
     private final BottomNavigationView.OnItemSelectedListener navListener =
@@ -299,6 +325,8 @@ public class MainActivity extends AppCompatActivity {
         ActivityTransitionRequest request = new ActivityTransitionRequest(transitions);
         Intent intent = new Intent(this, ActivityTransitionReceiver.class);
 
+        intent.setAction(ActivityTransitionReceiver.ACTION_ACTIVITY_UPDATE);
+        intent.setPackage(getPackageName());
 
         int flags = PendingIntent.FLAG_UPDATE_CURRENT;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -333,7 +361,7 @@ public class MainActivity extends AppCompatActivity {
 
             // Initial quick detection to avoid "idle" state
             ActivityRecognition.getClient(this) //TODO THIS CHUNK MIGHT BE USELESS
-                    .requestActivityUpdates(5000, activityUpdatePendingIntent)
+                    .requestActivityUpdates(60000, activityUpdatePendingIntent)
                     .addOnSuccessListener(unused -> Logger.saveLog(this, TAG + ": Initial activity updates requested"))
                     .addOnFailureListener(e -> Logger.saveLog(this, TAG + ": Failed to request initial activity updates: " + e.getMessage()));
 
@@ -344,9 +372,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void startTrackingService() {
-        if (trackingServiceStarted) {
-            return;
-        }
 
         Intent intent = new Intent(this, LocationService.class);
         try {
@@ -355,10 +380,8 @@ public class MainActivity extends AppCompatActivity {
             } else {
                 this.startService(intent);
             }
-            trackingServiceStarted = true;
             Logger.saveLog(this, TAG + ": Tracking service started successfully.");
         } catch (Throwable t) {
-            trackingServiceStarted = false;
             Logger.saveLog(this, TAG + ": Failed to start tracking service: " + t.getMessage());
         }
     }

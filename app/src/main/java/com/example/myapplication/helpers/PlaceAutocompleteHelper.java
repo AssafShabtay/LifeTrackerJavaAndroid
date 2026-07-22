@@ -138,4 +138,11 @@ public class PlaceAutocompleteHelper {
             return suggestions.get(position);
         }
     }
+
+    public void release() {
+        if (placesClient != null) {
+            placesClient = null;
+            autocompleteSessionToken = null;
+        }
+    }
 }

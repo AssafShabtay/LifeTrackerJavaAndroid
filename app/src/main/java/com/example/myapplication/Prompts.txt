@@ -1,9 +1,5 @@
 add to the settings fragment those settings options:
 
-- Light / Dark Theme:
-  Options: Light, Dark, Follow device default. default is device default
-
-
 - Location Tracking
   Toggle: Enable / Disable location tracking. default is on
 
@@ -17,9 +13,6 @@ add to the settings fragment those settings options:
   Toggle: Daily timeline summary
   Toggle: Visit suggestions
   Toggle: Travel highlights
-
-- Map Style: // dont implement, add the ui but dont implement the function add toto comment to implement
-  Options: Default, Satellite, Terrain
 
 - Units:
   Options: Kilometers / Meters, Miles / Feet
@@ -70,3 +63,18 @@ if you click on the iconcontainer, it will open iconPickerDialog
 
 add nested movmeent activities
 
+
+-------------------------\
+
+1. The "Golden Path" (Routine Regularity Score)
+This measures how closely your current week adheres to your historical baseline. It answers the question: "Is this a normal week, or is my schedule chaotic right now?"
+
+The Concept: The app builds a "fingerprint" of a typical Monday, Tuesday, etc., based on historical data. It then compares the current day's timeline to that fingerprint.
+
+The Visuals:
+
+A simple percentage (e.g., "82% Routine Adherence").
+
+A comparative timeline: Your historical average timeline for a Tuesday faded in the background, overlaid with your actual timeline for this Tuesday.
+
+The Insight: It visually highlights anomalies. For instance, if you usually study at the library from 2 PM to 5 PM, but this week you were at home, that block will be flagged as a deviation.

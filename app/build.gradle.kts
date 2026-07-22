@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.kotlin.ksp)
     alias(libs.plugins.compose.compiler)
     id("com.google.android.libraries.mapsplatform.secrets-gradle-plugin")
+    id("com.google.gms.google-services")
 }
 secrets {
     propertiesFileName = "secrets.properties"
@@ -47,7 +48,9 @@ android {
 }
 
 dependencies {
-
+    implementation("com.google.firebase:firebase-ai")
+    implementation("com.google.firebase:firebase-appcheck-debug")
+    implementation(platform("com.google.firebase:firebase-bom:34.16.0"))
     implementation (libs.ui)
     implementation(libs.androidx.compose.material3)
     implementation (libs.androidx.runtime)

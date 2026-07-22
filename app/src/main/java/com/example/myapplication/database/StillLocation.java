@@ -37,18 +37,18 @@ public class StillLocation implements TimelineItem {
     private String geofencePlaceId;
 
 
-
     @Override
     public boolean equals(Object o) {
         if (o == null || getClass() != o.getClass()) return false;
         StillLocation that = (StillLocation) o;
-        return id == that.id && isStop == that.isStop && Objects.equals(lat, that.lat) && Objects.equals(lng, that.lng) && Objects.equals(startTimeDate, that.startTimeDate) && Objects.equals(endTimeDate, that.endTimeDate) && Objects.equals(wasSupposedToBeActivity, that.wasSupposedToBeActivity) && Objects.equals(placeId, that.placeId) && Objects.equals(placeName, that.placeName) && Objects.equals(category, that.category) && Objects.equals(icon, that.icon) && Objects.equals(color, that.color) && Objects.equals(placeAddress, that.placeAddress);
+        return id == that.id && isStop == that.isStop && Objects.equals(lat, that.lat) && Objects.equals(lng, that.lng) && Objects.equals(startTimeDate, that.startTimeDate) && Objects.equals(endTimeDate, that.endTimeDate) && Objects.equals(wasSupposedToBeActivity, that.wasSupposedToBeActivity) && Objects.equals(placeId, that.placeId) && Objects.equals(placeName, that.placeName) && Objects.equals(category, that.category) && Objects.equals(icon, that.icon) && Objects.equals(color, that.color) && Objects.equals(placeAddress, that.placeAddress) && Objects.equals(geofencePlaceId, that.geofencePlaceId);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, lat, lng, startTimeDate, endTimeDate, wasSupposedToBeActivity, placeId, placeName, category, icon, color, isStop, placeAddress);
+        return Objects.hash(id, lat, lng, startTimeDate, endTimeDate, wasSupposedToBeActivity, placeId, placeName, category, icon, color, isStop, placeAddress, geofencePlaceId);
     }
+
     public String getGeofencePlaceId() {
         return geofencePlaceId;
     }

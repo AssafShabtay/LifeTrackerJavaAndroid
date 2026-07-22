@@ -3,6 +3,7 @@ package com.example.myapplication.mainScreen;
 import static com.example.myapplication.helpers.ColorAndIcons.getMovementColorAndIcon;
 import static com.example.myapplication.helpers.ColorAndIcons.getStillColor;
 import static com.example.myapplication.helpers.ColorAndIcons.getStillIconRes;
+import static com.example.myapplication.helpers.UiFormatters.category;
 
 import android.annotation.SuppressLint;
 import android.view.LayoutInflater;
@@ -68,7 +69,8 @@ public class TimelineAdapter extends ListAdapter<TimelineItem, RecyclerView.View
 
     @Override
     public int getItemViewType(int position) {
-        return (getItem(position) instanceof StillLocation) ? TYPE_STILL : TYPE_MOVEMENT;
+        if (getItem(position) instanceof StillLocation) return TYPE_STILL;
+        else return TYPE_MOVEMENT;
     }
 
     @NonNull
@@ -114,7 +116,7 @@ public class TimelineAdapter extends ListAdapter<TimelineItem, RecyclerView.View
 
             // Category
             if (still.getCategory() != null && !still.getCategory().isEmpty()) {
-                stillHolder.itemCategory.setText(still.getCategory());
+                stillHolder.itemCategory.setText(category(still.getCategory()));
                 stillHolder.itemCategory.setVisibility(View.VISIBLE);
             } else {
                 stillHolder.itemCategory.setVisibility(View.GONE);
@@ -211,7 +213,7 @@ public class TimelineAdapter extends ListAdapter<TimelineItem, RecyclerView.View
 
                     // Category
                     if (stop.getCategory() != null && !stop.getCategory().isEmpty()) {
-                        stopCategory.setText(stop.getCategory());
+                        stopCategory.setText(category(stop.getCategory()));
                         stopCategory.setVisibility(View.VISIBLE);
                     } else {
                         stopCategory.setVisibility(View.GONE);

@@ -21,6 +21,10 @@ public interface PlaceDao {
 
     @Delete
     void deletePlace(Place place);
+
+    @Query("DELETE FROM places")
+    void deleteAllPlaces();
+
     @NonNull
     @Query("SELECT * FROM places")
     List<Place> getAllPlaces();

@@ -62,6 +62,8 @@ public class GeofenceManager {
             return geofencePendingIntent;
         }
         Intent intent = new Intent(context, GeofenceBroadcastReceiver.class);
+        intent.setAction(GeofenceBroadcastReceiver.ACTION_GEOFENCE_UPDATE);
+        intent.setPackage(context.getPackageName());
         geofencePendingIntent = PendingIntent.getBroadcast(context, 0, intent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_MUTABLE);
         return geofencePendingIntent;

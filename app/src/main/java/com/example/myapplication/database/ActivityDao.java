@@ -113,6 +113,18 @@ public interface ActivityDao {
         updateStillStartTime(stillId, newStartTime);
     }
 
+    @Query("DELETE FROM still_locations")
+    void deleteStillLocations();
+
+    @Query("DELETE FROM movement_activities")
+    void deleteMovementActivities();
+
+    @Transaction
+    default void deleteAllActivities() {
+        deleteStillLocations();
+        deleteMovementActivities();
+    }
+
     @Query("UPDATE still_locations SET category = :category, " +
             "placeName = CASE WHEN :category = 'Home' THEN 'Home' ELSE placeName END, " +
             "icon = CASE WHEN :category = 'Home' THEN 'Home' ELSE icon END " +

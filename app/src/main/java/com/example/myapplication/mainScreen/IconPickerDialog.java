@@ -28,6 +28,8 @@ import androidx.recyclerview.widget.ListAdapter;
 
 import com.example.myapplication.R;
 
+import com.example.myapplication.helpers.ColorAndIcons.IconItem;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -92,7 +94,7 @@ public class IconPickerDialog extends DialogFragment {
             params.y = 70;
             window.setAttributes(params);
 
-            // layout is wrap content so it floats like a popover
+            // layout is wrap_content so it floats like a popover
             window.setLayout(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.WRAP_CONTENT
@@ -122,8 +124,8 @@ public class IconPickerDialog extends DialogFragment {
         List<IconItem> filteredList = new ArrayList<>();
         String lowerCaseQuery = query.toLowerCase();
         for (IconItem item : allIcons) {
-            if (item.name.toLowerCase().contains(lowerCaseQuery) ||
-                (item.keywords != null && containsKeyword(item.keywords, lowerCaseQuery))) { // Check keywords
+            if (item.getName().toLowerCase().contains(lowerCaseQuery) ||
+                (item.getKeywords() != null && containsKeyword(item.getKeywords(), lowerCaseQuery))) { // Check keywords
                 filteredList.add(item);
             }
         }
@@ -143,7 +145,7 @@ public class IconPickerDialog extends DialogFragment {
         // initialize the adapter and the icon list
         allIcons = getIconList();
         iconAdapter = new IconAdapter(icon -> { // implements onIconClick
-            selectedIcon = icon.name;
+            selectedIcon = icon.getName();
             dismiss();
         });
         recyclerIcons.setAdapter(iconAdapter);
@@ -179,17 +181,7 @@ public class IconPickerDialog extends DialogFragment {
         }
         return colors;
     }
-    public static class IconItem {
-        String name;
-        int resId;
-        List<String> keywords;
 
-        public IconItem(String name, int resId, List<String> keywords) { // Add new constructor
-            this.name = name;
-            this.resId = resId;
-            this.keywords = keywords;
-        }
-    }
 
     class ColorAdapter extends RecyclerView.Adapter<ColorAdapter.ViewHolder> {
         private final int[] colors;
@@ -275,14 +267,14 @@ public class IconPickerDialog extends DialogFragment {
         // handles icon filtering in an optimized way, instead of rebuilding the entire list, remove items that don't match the query
         @Override
         public boolean areItemsTheSame(@NonNull IconItem oldItem, @NonNull IconItem newItem) {
-            return oldItem.name.equals(newItem.name);
+            return oldItem.getName().equals(newItem.getName());
         }
 
         @Override
         public boolean areContentsTheSame(@NonNull IconItem oldItem, @NonNull IconItem newItem) {
-            return oldItem.name.equals(newItem.name) &&
-                   oldItem.resId == newItem.resId &&
-                   Objects.equals(oldItem.keywords, newItem.keywords);
+            return oldItem.getName().equals(newItem.getName()) &&
+                   oldItem.getResId() == newItem.getResId() &&
+                   Objects.equals(oldItem.getKeywords(), newItem.getKeywords());
         }
     }
 
@@ -304,10 +296,10 @@ public class IconPickerDialog extends DialogFragment {
         @Override
         public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
             IconItem item = getItem(position);
-            holder.iconView.setImageResource(item.resId);
+            holder.iconView.setImageResource(item.getResId());
             holder.iconView.setColorFilter(selectedColor);
 
-            if (item.name.equalsIgnoreCase(selectedIcon)) {
+            if (item.getName().equalsIgnoreCase(selectedIcon)) {
                 holder.background.setVisibility(View.VISIBLE);
             } else {
                 holder.background.setVisibility(View.GONE);

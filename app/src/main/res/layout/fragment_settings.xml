@@ -1,27 +1,29 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp">
 
-    <com.google.android.material.appbar.AppBarLayout
+    <!-- Appearance Section -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Appearance"
+        android:textAppearance="@style/TextAppearance.Material3.TitleSmall"
+        android:textColor="?attr/colorPrimary"
+        android:layout_marginTop="24dp"
+        android:layout_marginBottom="8dp"
+        android:layout_marginStart="8dp"/>
+
+    <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@android:color/transparent"
-        app:elevation="0dp">
+        app:cardElevation="0dp"
+        app:strokeWidth="1dp"
 
-        <com.google.android.material.appbar.MaterialToolbar
-            android:layout_width="match_parent"
-            android:layout_height="?attr/actionBarSize"
-            app:title="Settings"
-            app:titleCentered="true"
-            app:titleTextAppearance="@style/TextAppearance.Material3.TitleLarge" />
-    </com.google.android.material.appbar.AppBarLayout>
-
-    <androidx.core.widget.NestedScrollView
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        app:layout_behavior="@string/appbar_scrolling_view_behavior">
+        app:cardCornerRadius="16dp">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -32,191 +34,100 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="General"
-                android:textColor="?attr/colorPrimary"
-                android:textSize="14sp"
-                android:textStyle="bold"
-                android:layout_marginStart="8dp"
-                android:layout_marginBottom="8dp"/>
+                android:text="App Theme"
+                android:textAppearance="@style/TextAppearance.Material3.BodyLarge"
+                android:layout_marginBottom="12dp"/>
 
-            <com.google.android.material.card.MaterialCardView
+            <com.google.android.material.button.MaterialButtonToggleGroup
+                android:id="@+id/themeToggleGroup"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:cardCornerRadius="20dp"
-                app:cardElevation="0dp"
-                app:strokeWidth="1dp"
-                app:strokeColor="@color/outline_variant">
+                app:singleSelection="true"
+                app:selectionRequired="true">
 
-                <LinearLayout
-                    android:layout_width="match_parent"
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_theme_system"
+                    style="?attr/materialButtonOutlinedStyle"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical">
+                    android:layout_weight="1"
+                    android:text="System" />
 
-                    <RelativeLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="64dp"
-                        android:paddingHorizontal="16dp"
-                        android:background="?attr/selectableItemBackground">
-                        <ImageView
-                            android:id="@+id/icon_notif"
-                            android:layout_width="24dp"
-                            android:layout_height="24dp"
-                            android:layout_centerVertical="true"
-                            android:src="@android:drawable/ic_lock_idle_alarm"
-                            app:tint="?attr/colorOnSurfaceVariant"/>
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_toEndOf="@id/icon_notif"
-                            android:layout_marginStart="16dp"
-                            android:layout_centerVertical="true"
-                            android:text="Notifications"
-                            android:textColor="?attr/colorOnSurface"
-                            android:textSize="16sp"/>
-                        <com.google.android.material.materialswitch.MaterialSwitch
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_alignParentEnd="true"
-                            android:layout_centerVertical="true"
-                            android:checked="true"/>
-                    </RelativeLayout>
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_theme_light"
+                    style="?attr/materialButtonOutlinedStyle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Light" />
 
-                    <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/outline_variant" android:layout_marginHorizontal="16dp"/>
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_theme_dark"
+                    style="?attr/materialButtonOutlinedStyle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Dark" />
+            </com.google.android.material.button.MaterialButtonToggleGroup>
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
 
-                    <RelativeLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="64dp"
-                        android:paddingHorizontal="16dp"
-                        android:background="?attr/selectableItemBackground">
-                        <ImageView
-                            android:id="@+id/icon_battery"
-                            android:layout_width="24dp"
-                            android:layout_height="24dp"
-                            android:layout_centerVertical="true"
-                            android:src="@android:drawable/ic_lock_idle_low_battery"
-                            app:tint="?attr/colorOnSurfaceVariant"/>
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_toEndOf="@id/icon_battery"
-                            android:layout_marginStart="16dp"
-                            android:layout_centerVertical="true"
-                            android:text="Battery Optimization"
-                            android:textColor="?attr/colorOnSurface"
-                            android:textSize="16sp"/>
-                    </RelativeLayout>
+    <!-- Data & Privacy Section -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Data &amp; Privacy"
+        android:textAppearance="@style/TextAppearance.Material3.TitleSmall"
+        android:textColor="?attr/colorPrimary"
+        android:layout_marginTop="24dp"
+        android:layout_marginBottom="8dp"
+        android:layout_marginStart="8dp"/>
 
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
+    <com.google.android.material.card.MaterialCardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:cardElevation="0dp"
+        app:strokeWidth="1dp"
+        app:strokeColor="@color/outline_variant"
+        app:cardCornerRadius="16dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
 
             <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Appearance"
-                android:textColor="?attr/colorPrimary"
-                android:textSize="14sp"
-                android:textStyle="bold"
-                android:layout_marginStart="8dp"
-                android:layout_marginTop="24dp"
-                android:layout_marginBottom="8dp"/>
-
-            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/btn_export_data"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:cardCornerRadius="20dp"
-                app:cardElevation="0dp"
-                app:strokeWidth="1dp"
-                app:strokeColor="@color/outline_variant">
+                android:padding="16dp"
+                android:text="Export my data"
+                android:textAppearance="@style/TextAppearance.Material3.BodyLarge"
+                android:drawableStart="@android:drawable/ic_menu_share"
+                android:drawablePadding="16dp"
+                android:background="?attr/selectableItemBackground"
+                android:clickable="true"
+                android:focusable="true"/>
 
-                <RelativeLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="64dp"
-                    android:paddingHorizontal="16dp"
-                    android:background="?attr/selectableItemBackground">
-                    <ImageView
-                        android:id="@+id/icon_dark_mode"
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
-                        android:layout_centerVertical="true"
-                        android:src="@drawable/ic_dark_mode"
-                        app:tint="?attr/colorOnSurfaceVariant"/>
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_toEndOf="@+id/icon_dark_mode"
-                        android:layout_marginStart="16dp"
-                        android:layout_centerVertical="true"
-                        android:text="Dark Mode"
-                        android:textColor="?attr/colorOnSurface"
-                        android:textSize="16sp"/>
-                    <com.google.android.material.materialswitch.MaterialSwitch
-                        android:id="@+id/theme_switch"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_alignParentEnd="true"
-                        android:layout_centerVertical="true"/>
-                </RelativeLayout>
-
-            </com.google.android.material.card.MaterialCardView>
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@color/outline_variant"/>
 
             <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Data"
-                android:textColor="?attr/colorPrimary"
-                android:textSize="14sp"
-                android:textStyle="bold"
-                android:layout_marginStart="8dp"
-                android:layout_marginTop="24dp"
-                android:layout_marginBottom="8dp"/>
-
-            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/btn_delete_history"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:cardCornerRadius="20dp"
-                app:cardElevation="0dp"
-                app:strokeWidth="1dp"
-                app:strokeColor="@color/outline_variant">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical">
-
-                    <RelativeLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="64dp"
-                        android:paddingHorizontal="16dp"
-                        android:background="?attr/selectableItemBackground">
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_centerVertical="true"
-                            android:text="Export History (CSV)"
-                            android:textColor="?attr/colorOnSurface"
-                            android:textSize="16sp"/>
-                    </RelativeLayout>
-
-                    <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/outline_variant" android:layout_marginHorizontal="16dp"/>
-
-                    <RelativeLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="64dp"
-                        android:paddingHorizontal="16dp"
-                        android:background="?attr/selectableItemBackground">
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_centerVertical="true"
-                            android:text="Clear All Data"
-                            android:textColor="#D32F2F"
-                            android:textSize="16sp"/>
-                    </RelativeLayout>
-
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
+                android:padding="16dp"
+                android:text="Delete all location history"
+                android:textAppearance="@style/TextAppearance.Material3.BodyLarge"
+                android:textColor="?attr/colorError"
+                android:drawableStart="@android:drawable/ic_menu_delete"
+                android:drawablePadding="16dp"
+                android:background="?attr/selectableItemBackground"
+                android:clickable="true"
+                android:focusable="true"/>
 
         </LinearLayout>
-    </androidx.core.widget.NestedScrollView>
-
-</androidx.coordinatorlayout.widget.CoordinatorLayout>
+    </com.google.android.material.card.MaterialCardView>
+</LinearLayout>
