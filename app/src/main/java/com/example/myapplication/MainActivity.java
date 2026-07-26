@@ -3,8 +3,10 @@ package com.example.myapplication;
 import android.Manifest;
 import android.app.AlertDialog;
 import android.app.PendingIntent;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.os.Build;
 import android.os.Bundle;
@@ -17,6 +19,7 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate; // Import AppCompatDelegate
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
 import com.example.myapplication.helpers.Logger;
@@ -31,6 +34,9 @@ import com.google.android.gms.location.ActivityTransition;
 import com.google.android.gms.location.ActivityTransitionRequest;
 import com.google.android.gms.location.DetectedActivity;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.google.firebase.FirebaseApp;
+import com.google.firebase.appcheck.FirebaseAppCheck;
+import com.google.firebase.appcheck.debug.DebugAppCheckProviderFactory;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -181,8 +187,14 @@ public class MainActivity extends AppCompatActivity {
         int currentMode = preferences.getInt("theme_mode", AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
         AppCompatDelegate.setDefaultNightMode(currentMode);
         super.onCreate(savedInstanceState);
+
         setContentView(R.layout.activity_main);
 
+        FirebaseApp.initializeApp(this);
+        FirebaseAppCheck firebaseAppCheck = FirebaseAppCheck.getInstance();
+        firebaseAppCheck.installAppCheckProviderFactory(
+                DebugAppCheckProviderFactory.getInstance()
+        );
         permissionBlocker = findViewById(R.id.permission_blocker);
         permissionAction = findViewById(R.id.permission_action);
         permissionSubtitle = findViewById(R.id.permission_subtitle);
@@ -238,6 +250,13 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
+
+        ContextCompat.registerReceiver(
+                this,
+                permissionRevokedReceiver,
+                new IntentFilter("com.example.myapplication.PERMISSION_REVOKED"),
+                ContextCompat.RECEIVER_NOT_EXPORTED
+        );
         // Refresh UI and ensure services are running if permissions are granted
         boolean hasAllPerms = permissionManager.hasAllPermissions();
         refreshPermissionUi(hasAllPerms);
@@ -246,7 +265,25 @@ public class MainActivity extends AppCompatActivity {
             startTrackingService();
         }
     }
+    @Override
+    protected void onPause() {
+        super.onPause();
+        unregisterReceiver(permissionRevokedReceiver);
+    }
+    private final BroadcastReceiver permissionRevokedReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if ("com.example.myapplication.PERMISSION_REVOKED".equals(intent.getAction())) {
+                refreshPermissionUi(permissionManager.hasAllPermissions());
 
+                new AlertDialog.Builder(MainActivity.this)
+                        .setTitle("Tracking Paused")
+                        .setMessage("Background location access was revoked. Please grant it in settings to resume timeline tracking.")
+                        .show();
+            }
+
+        }
+    };
     private final BottomNavigationView.OnItemSelectedListener navListener =
             // the navigation bar listener
             item -> {
@@ -368,6 +405,8 @@ public class MainActivity extends AppCompatActivity {
         } catch (SecurityException e) {
             transitionsRegistered = false;
             Logger.saveLog(this, TAG + ": Missing permission for transitions: " + e.getMessage());
+            Intent PermIntent = new Intent("com.example.myapplication.PERMISSION_REVOKED").setPackage(getPackageName());;
+            sendBroadcast(PermIntent);
         }
     }
 

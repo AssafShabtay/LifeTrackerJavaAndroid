@@ -508,9 +508,10 @@ public class StatisticsFragment extends Fragment implements HomeAddressPickerBot
                 }
 
                 // Call the LLM (placeholder)
-                CompletableFuture<LlmResponse> llmResponseFuture = LlmApiClient.getHabitAndAnomaly(timelineSequence);
-                LlmResponse llmResponse = llmResponseFuture.get();
 
+                //CompletableFuture<LlmResponse> llmResponseFuture = LlmApiClient.getHabitAndAnomaly(timelineSequence);
+                //LlmResponse llmResponse = llmResponseFuture.get();
+                LlmResponse llmResponse = null;
 
                 mainHandler.post(() -> {
                     if (!isAdded()) return;

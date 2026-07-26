@@ -4,11 +4,13 @@ import static com.example.myapplication.locationTracking.ActivityTrackingUtils.i
 
 import android.Manifest;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.Looper;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.WorkerThread;
 import androidx.core.app.ActivityCompat;
 
@@ -44,8 +46,9 @@ public class LocationProvider {
     private LocationCallback routeLocationCallback;
     private LocationCallback stillLocationCallback;
     private volatile boolean isRequestingStillLocationUpdates = false;
-    private static final float STATIONARY_RADIUS_METERS = 30.0f; // Accounts for GPS drift
     private static final long LINGER_TIME_THRESHOLD_MS = 10 * 60 * 1000;
+
+    private static final float STILL_RADIUS_THRESHOLD = 75.0f;
     private Location anchorLocation = null;
     private long anchorLocationTime = 0;
     private final LocationService locationService;
@@ -69,15 +72,14 @@ public class LocationProvider {
     void startRouteUpdates() {
         if (routeLocationCallback != null) return;
 
-        LocationRequest locationRequest = new LocationRequest.Builder(Priority.PRIORITY_BALANCED_POWER_ACCURACY, 30000)
-                .setMinUpdateIntervalMillis(10000)
-                .setMaxUpdateDelayMillis(60000)
+        LocationRequest locationRequest = new LocationRequest.Builder(Priority.PRIORITY_BALANCED_POWER_ACCURACY, 30000) // 30 seconds
+                .setMinUpdateIntervalMillis(10000) // 10 seconds
+                .setMaxUpdateDelayMillis(60000) // 60 seconds
                 .build();
 
         routeLocationCallback = new LocationCallback() {
             @Override
-            public void onLocationResult(LocationResult locationResult) {
-                if (locationResult == null) return;
+            public void onLocationResult(@NonNull LocationResult locationResult) {
 
                 Location currentLocation = locationResult.getLastLocation();
                 if (currentLocation != null) {
@@ -94,9 +96,10 @@ public class LocationProvider {
                         float distance = currentLocation.distanceTo(anchorLocation);
 
                         // Check if the user is inside the stationary radius
-                        if (distance <= STATIONARY_RADIUS_METERS) {
-                            // User is still within the stationary radius,  Check the time.
+                        if (distance <= STILL_RADIUS_THRESHOLD) { // 50 meters
+                            // User is still within the stationary radius,  check the time.
                             if (currentTime - anchorLocationTime >= LINGER_TIME_THRESHOLD_MS) {
+                                // if user is still for over 10 minutes, stop tracking
                                 Log.i(TAG, "User lingered for over 10 minutes. Stopping tracking.");
                                 Logger.saveLog(context, "User lingered for over 10 minutes. Stopping tracking.");
 
@@ -107,7 +110,7 @@ public class LocationProvider {
                                         locationService.endMovementTracking(activityType, endTime);
                                     }
                                     locationService.startStillTracking(endTime, null);
-                                    locationService.updateActivityTypeToStill(DetectedActivity.STILL);
+                                    locationService.updateCurrentActivityType(DetectedActivity.STILL);
                                 });
 
                                 stopRouteUpdates();
@@ -121,6 +124,7 @@ public class LocationProvider {
                     }
                 }
                 databaseWriteExecutor.execute(() -> {
+                    // Insert the route point
                     for (Location location : locationResult.getLocations()) {
                         for (Long movementId : LocationService.currentMovementTrackingIds.values()) {
                             RoutePoint point = new RoutePoint();
@@ -139,6 +143,10 @@ public class LocationProvider {
             fusedLocationClient.requestLocationUpdates(locationRequest, routeLocationCallback, Looper.getMainLooper());
         } catch (SecurityException e) {
             Log.e(TAG, "Location permission missing", e);
+            stopRouteUpdates();
+            Intent PermIntent = new Intent("com.example.myapplication.PERMISSION_REVOKED").setPackage(context.getPackageName());;
+            context.sendBroadcast(PermIntent);
+
         }
     }
 
@@ -149,17 +157,17 @@ public class LocationProvider {
         }
     }
 
-    // New: Start frequent location updates specifically for still activities without a location
+    // Start frequent location updates for still activities without a location to find their location
     void startFrequentStillLocationUpdates() {
-        if (stillLocationCallback != null) return; // Already requesting updates
-        if (LocationService.currentStillTrackingId == null) return; // No still activity to update
+        if (stillLocationCallback != null) return;
+        if (LocationService.currentStillTrackingId == null) return;
 
         Log.d(TAG, "Starting frequent still location updates for ID=" + LocationService.currentStillTrackingId);
         Logger.saveLog(context, "Starting frequent still location updates");
 
-        LocationRequest locationRequest = new LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 5000) // Every 5 seconds
-                .setMinUpdateIntervalMillis(20000) // Minimum every 20 seconds
-                .setMaxUpdateDelayMillis(120000) // At most every 2 min
+        LocationRequest locationRequest = new LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 30000) // Every 5 seconds
+                .setMinUpdateIntervalMillis(20000) // 20 seconds
+                .setMaxUpdateDelayMillis(90000) // 1 min and 30 seconds
                 .build();
 
         stillLocationCallback = new LocationCallback() {
@@ -168,25 +176,23 @@ public class LocationProvider {
                 if (locationResult == null) return;
                 databaseWriteExecutor.execute(() -> {
                     for (Location location : locationResult.getLocations()) {
-                        // Check for good accuracy before updating
-                        if (location.hasAccuracy() && location.getAccuracy() <= 30.0f) { // Use a similar accuracy threshold as getLocationOnceBlocking
+                        if (location.hasAccuracy() && location.getAccuracy() <= STILL_RADIUS_THRESHOLD) {
                             StillLocation still = dao.getStillLocationById(LocationService.currentStillTrackingId);
                             if (still != null && (still.getLat() == null || still.getLng() == null)) {
                                 still.setLat(location.getLatitude());
                                 still.setLng(location.getLongitude());
+
+                                // try to find a place for the still
+                                geofenceUtilsManager.findPlaceAndUpdateStill(location, still);
+
                                 dao.updateStillLocation(still);
 
                                 String msg = String.format(Locale.US, "DB Update from frequentStillLocation: Updated still %d with location [%.6f, %.6f]", still.getId(), still.getLat(), still.getLng());
                                 Log.d(TAG, msg);
                                 Logger.saveLog(context, msg);
 
-                                // Once we get a good location, try to find a place for it
-                                geofenceUtilsManager.findPlaceAndUpdateStill(location, still);
-
-                                dao.updateStillLocation(still);
-
-                                stopFrequentStillLocationUpdates(); // Stop updates once location is obtained
-                                return; // We only need one good location
+                                stopFrequentStillLocationUpdates(); // Stop updates once location is acquired
+                                return;
                             }
                         }
                     }
@@ -200,11 +206,13 @@ public class LocationProvider {
         } catch (SecurityException e) {
             Log.e(TAG, "Location permission missing for frequent still updates", e);
             Logger.saveLog(context, "Location permission missing for frequent still updates");
-            isRequestingStillLocationUpdates = false;
+            Intent PermIntent = new Intent("com.example.myapplication.PERMISSION_REVOKED").setPackage(context.getPackageName());;
+            context.sendBroadcast(PermIntent);
+            stopFrequentStillLocationUpdates();
         }
     }
 
-    // New: Stop frequent location updates for still activities
+    // Stop frequent location updates for still activities
     void stopFrequentStillLocationUpdates() {
         if (stillLocationCallback != null && isRequestingStillLocationUpdates) {
             Log.d(TAG, "Stopping frequent still location updates.");
@@ -218,25 +226,24 @@ public class LocationProvider {
 
     @WorkerThread
     Location getLocationOnceBlocking() {
-        Location loc = null;
+        Location loc;
 
-        // STEP 1: Try Fresh High Accuracy (GPS-preferred)
+        // Try  High Accuracy
         loc = tryCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, 12, TimeUnit.SECONDS);
 
-        // STEP 2: Try Fresh Balanced Accuracy (Wi-Fi/Cell-preferred, great for indoors)
-        if (loc == null || !isValidAccuracy(loc, 75.0f)) {
+        //Try Balanced Accuracy
+        if (!isValidAccuracy(loc, STILL_RADIUS_THRESHOLD)) {
             String msg = String.format(TAG + ": High accuracy failed or too inaccurate. Trying Balanced Power...");
             Log.d(TAG, msg);
             Logger.saveLog(context, msg);
             loc = tryCurrentLocation(Priority.PRIORITY_BALANCED_POWER_ACCURACY, 8, TimeUnit.SECONDS);
         }
 
-        // STEP 3: Fallback to Last Known Location (Accepting a wider margin of error)
-        if (loc == null || !isValidAccuracy(loc, 150.0f)) {
+        //Fallback to Last Known Location
+        if (!isValidAccuracy(loc, STILL_RADIUS_THRESHOLD * 1.6f)) {
             String msg = String.format(TAG + ": Fresh locations failed. Attempting getLastLocation fallback.");
             Log.d(TAG, msg);
             Logger.saveLog(context, msg);
-            loc = tryLastLocationFallback();
         }
 
         return loc;
@@ -247,6 +254,9 @@ public class LocationProvider {
         CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
         try {
             if (ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                Intent PermIntent = new Intent("com.example.myapplication.LOCATION_PERMISSION_REVOKED").setPackage(context.getPackageName());;
+                context.sendBroadcast(PermIntent);
+
                 return null;
             }
             return Tasks.await(
@@ -258,7 +268,7 @@ public class LocationProvider {
             String msg = String.format(TAG + ": getCurrentLocation timed out for priority: " + priority);
             Log.w(TAG, msg);
             Logger.saveLog(context, msg);
-            cancellationTokenSource.cancel(); // Stop the sensor
+            cancellationTokenSource.cancel();
         } catch (Exception e) {
             String msg = String.format(TAG + ": Exception in getCurrentLocation", e);
             Log.e(TAG, msg);
@@ -268,30 +278,30 @@ public class LocationProvider {
         return null;
     }
 
-    @WorkerThread
-    private Location tryLastLocationFallback() {
-        try {
-            if (ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                return null;
-            }
-            Location lastLoc = Tasks.await(fusedLocationClient.getLastLocation(), 2, TimeUnit.SECONDS);
-
-            // Loosen up the restrictions. 150-200m is acceptable when the alternative is failure.
-            if (lastLoc != null && isValidAccuracy(lastLoc, 200.0f)) {
-
-                String msg = String.format(TAG + ": Using lastLoc. Accuracy: " + lastLoc.getAccuracy() + "m");
-                Log.d(TAG, msg);
-                Logger.saveLog(context, msg);
-                return lastLoc;
-            }
-        } catch (Exception e) {
-
-            String msg = String.format(TAG + ": Exception in getLastLocation", e);
-            Log.e(TAG, msg);
-            Logger.saveLog(context, msg);
-        }
-        return null;
-    }
+    //@WorkerThread
+    //private Location tryLastLocationFallback() {
+    //    try {
+    //        if (ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+    //            return null;
+    //        }
+    //        Location lastLoc = Tasks.await(fusedLocationClient.getLastLocation(), 2, TimeUnit.SECONDS);
+//
+    //        // Loosen up the restrictions. 150-200m is acceptable when the alternative is failure.
+    //        if (lastLoc != null && isValidAccuracy(lastLoc, 200.0f)) {
+//
+    //            String msg = String.format(TAG + ": Using lastLoc. Accuracy: " + lastLoc.getAccuracy() + "m");
+    //            Log.d(TAG, msg);
+    //            Logger.saveLog(context, msg);
+    //            return lastLoc;
+    //        }
+    //    } catch (Exception e) {
+//
+    //        String msg = String.format(TAG + ": Exception in getLastLocation", e);
+    //        Log.e(TAG, msg);
+    //        Logger.saveLog(context, msg);
+    //    }
+    //    return null;
+    //}
 
 
 

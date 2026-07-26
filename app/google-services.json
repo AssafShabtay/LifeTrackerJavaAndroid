@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "903292408942",
-    "project_id": "lifet-e34b8",
-    "storage_bucket": "lifet-e34b8.firebasestorage.app"
+    "project_number": "38815641718",
+    "project_id": "ace-charter-484814-d1",
+    "storage_bucket": "ace-charter-484814-d1.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:903292408942:android:6f8993ed74404e3eac027f",
+        "mobilesdk_app_id": "1:38815641718:android:4660458b3db06184a7ef57",
         "android_client_info": {
           "package_name": "com.example.myapplication"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyA15d7voXVHkcTVsGlCqoKd-gz4oIY_3YI"
+          "current_key": "AIzaSyCNzVw8HgNyXQPNoXPsm9u2gEkUEcEmOSc"
         }
       ],
       "services": {

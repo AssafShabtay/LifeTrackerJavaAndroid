@@ -17,7 +17,6 @@ import android.content.pm.ServiceInfo;
 import android.location.Location;
 import android.os.Build;
 import android.os.IBinder;
-import android.os.PowerManager;
 import android.util.Log;
 import android.app.ActivityManager;
 import android.app.AlarmManager;
@@ -38,7 +37,6 @@ import com.example.myapplication.database.RoutePoint;
 import com.example.myapplication.database.StillLocation;
 import com.example.myapplication.helpers.Logger;
 import com.example.myapplication.locationTracking.receiver.ActivityTransitionReceiver;
-import com.example.myapplication.locationTracking.receiver.GeofenceBroadcastReceiver;
 import com.example.myapplication.locationTracking.receiver.LocationServiceRestartReceiver;
 import com.google.android.gms.location.ActivityTransition;
 import com.google.android.gms.location.DetectedActivity;
@@ -184,24 +182,18 @@ public class LocationService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        Logger.saveLog(this, "sent");
 
-        try {
             startForeground();
-
             // Handles when intents are sent( activity is recognized or geofence is triggered)
             if (intent != null) {
                 String action = intent.getAction();
-                Logger.saveLog(this, "Action received: " + action);
                 if (ActivityTransitionReceiver.ACTION_ACTIVITY_UPDATE.equals(action)) { // checks if the intent came from activity recognition
                     // Extracts the activity data
                     int activityType = intent.getIntExtra(ActivityTransitionReceiver.EXTRA_ACTIVITY_TYPE, DetectedActivity.UNKNOWN);
                     int transitionType = intent.getIntExtra(ActivityTransitionReceiver.EXTRA_TRANSITION_TYPE, -1);
                     long timestampMs = intent.getLongExtra(ActivityTransitionReceiver.EXTRA_TIMESTAMP_MS, System.currentTimeMillis());
-                    Logger.saveLog(this, "ActivityType mapped: " + activityType);
                     // calling handleActivityUpdate in background
                     app.getDatabaseWriteExecutor().execute(() -> {
-                        Logger.saveLog(this, "Executor thread started for handleActivityUpdate!");
                         handleActivityUpdate(activityType, transitionType, timestampMs);;
                     });
 //TODO                } else if (GeofenceBroadcastReceiver.ACTION_GEOFENCE_UPDATE.equals(action)) { // checks if the intent came from geofence
@@ -213,10 +205,6 @@ public class LocationService extends Service {
 //TODO
                 }
             }
-        } catch (Exception e) {
-            Log.e(TAG, "Error in onStartCommand: " + e.getMessage(), e);
-            Logger.saveLog(this, "Error in onStartCommand: " + e.getMessage());
-        }
         return START_STICKY;
     }
 
@@ -650,11 +638,21 @@ public class LocationService extends Service {
             }
         }
     }
-    public void updateActivityTypeToStill(int activityType) {
+    public void updateCurrentActivityType(int activityType) {
         currentActivityType = activityType;
-        updateNotificationSafe(); //
+        updateNotificationSafe();
     }
     private void startForeground() {
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (androidx.core.content.ContextCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                Log.e(TAG, "Notification permission missing. Shutting down service.");
+                Intent permIntent = new Intent("com.example.myapplication.PERMISSION_REVOKED").setPackage(getPackageName());
+                sendBroadcast(permIntent);
+                stopSelf();
+                return;
+            }
+            }
         Notification notification = buildNotification();
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -664,6 +662,8 @@ public class LocationService extends Service {
             }
         } catch (SecurityException e) {
             Log.e(TAG, "Permissions revoked. Cannot start foreground service.", e);
+            Intent PermIntent = new Intent("com.example.myapplication.PERMISSION_REVOKED").setPackage(getPackageName());;
+            sendBroadcast(PermIntent);
             stopSelf();
         } catch (Throwable e) {
             Log.e(TAG, "Error starting foreground service: " + e.getMessage(), e);
@@ -699,9 +699,11 @@ public class LocationService extends Service {
         try {
             NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
             if (manager != null) manager.notify(NOTIFICATION_ID, buildNotification());
-        } catch (Throwable e) {
-            Log.e(TAG, "Error updating notification: " + e.getMessage(), e);
-            Logger.saveLog(this, "Error updating notification: " + e.getMessage());
+        } catch (SecurityException e) {
+            Intent PermIntent = new Intent("com.example.myapplication.PERMISSION_REVOKED").setPackage(getPackageName());;
+            sendBroadcast(PermIntent);
+            stopSelf();
+            Log.e(TAG, "Notification permission revoked: " + e.getMessage(), e);
         }
     }
 

@@ -70,7 +70,7 @@ public class GeofenceUtilsManager {
                             com.google.android.libraries.places.api.model.Place.Field.TYPES,
                             com.google.android.libraries.places.api.model.Place.Field.FORMATTED_ADDRESS);
 
-            // Define a 50-meter circular search area around the user\'s current location
+            // Define a 50-meter circular search area around the user's current location
             CircularBounds circle = CircularBounds.newInstance(
                     new LatLng(location.getLatitude(), location.getLongitude()),
                     50.0
