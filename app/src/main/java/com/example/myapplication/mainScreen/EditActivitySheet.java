@@ -6,6 +6,8 @@ import static com.example.myapplication.helpers.UiFormatters.category;
 import android.app.TimePickerDialog;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -65,7 +67,9 @@ public class EditActivitySheet extends BottomSheetDialogFragment {
     private Date editedStartTime, editedEndTime;
     private Integer selectedColor;
     private String selectedIcon;
+    private Place selectedPlace;
     private String selectedCategory;
+    private String selectedGeofenceId;
     private LifeTrackerApp app;
 
     public static EditActivitySheet newInstance(StillLocation still, OnVisitUpdatedListener listener) {
@@ -141,29 +145,38 @@ public class EditActivitySheet extends BottomSheetDialogFragment {
         updateTimeButtons();
 
         btnSave.setOnClickListener(v -> {
-            still.setPlaceName(actvName.getText().toString().trim());
+            still.setPlaceName(actvName.getText().toString().trim()); // Ensure this line is present
             still.setPlaceAddress(etAddress.getText().toString().trim());
             still.setStartTimeDate(editedStartTime);
             still.setEndTimeDate(editedEndTime);
             still.setIcon(selectedIcon);
             still.setColor(selectedColor);
+            still.setCategory(selectedCategory);
+            still.setGeofencePlaceId(selectedGeofenceId);
 
-            // Create and save new Place
-            Place newPlace = new Place();
-            newPlace.setName(actvName.getText().toString().trim());
-            newPlace.setAddress(etAddress.getText().toString().trim());
-            if (still.getLat() != null && still.getLng() != null) {
-                newPlace.setLat(still.getLat());
-                newPlace.setLng(still.getLng());
+            if(selectedPlace != null){
+                app.getDatabaseWriteExecutor().execute(() -> {
+                    still.setPlaceId(selectedPlace.getId());
+                });
+            }else{
+                // Create and save new Place
+                app.getDatabaseWriteExecutor().execute(() -> {
+                Place newPlace = new Place();
+                newPlace.setName(actvName.getText().toString().trim());
+                newPlace.setAddress(etAddress.getText().toString().trim());
+                if (still.getLat() != null && still.getLng() != null) {
+                    newPlace.setLat(still.getLat());
+                    newPlace.setLng(still.getLng());
+                }
+                newPlace.setIcon(selectedIcon);
+                newPlace.setColor(selectedColor);
+                newPlace.setCategory(selectedCategory);
+                newPlace.setGeofencePlaceId(selectedGeofenceId);
+                    long placeId = placeDao.insertPlace(newPlace);
+                    still.setPlaceId(placeId); // Set the generated placeId to StillLocation
+                });
             }
-            newPlace.setIcon(selectedIcon);
-            newPlace.setColor(selectedColor);
-            newPlace.setCategory(selectedCategory);
 
-            app.getDatabaseWriteExecutor().execute(() -> {
-                long placeId = placeDao.insertPlace(newPlace);
-                still.setPlaceId(placeId); // Set the generated placeId to StillLocation
-            });
             if (listener != null) {
                 listener.onUpdate(still);
             }
@@ -258,23 +271,42 @@ public class EditActivitySheet extends BottomSheetDialogFragment {
 
                         // listener to handle when the user taps a suggestion
                         actvName.setOnItemClickListener((parent, view, position, id) -> {
-                            com.google.android.libraries.places.api.model.Place selectedPlace = adapter.getItem(position);
-                            if (selectedPlace == null) return;
+                            com.google.android.libraries.places.api.model.Place selectedGeofencePlace = adapter.getItem(position);
+                            if (selectedGeofencePlace == null) return;
 
                             // Update Name
-                            actvName.setText(selectedPlace.getDisplayName());
+                            String displayText = selectedGeofencePlace.getDisplayName();
+                            if (selectedGeofencePlace.getPlaceTypes() != null && !selectedGeofencePlace.getPlaceTypes().isEmpty()) {
+                                String categoryText = category(selectedGeofencePlace.getPlaceTypes().get(0));
+                                displayText += " (" + categoryText + ")";
+                            }
+                            actvName.setText(displayText);
 
                             // Update Address
-                            if (selectedPlace.getFormattedAddress() != null) {
-                                etAddress.setText(selectedPlace.getFormattedAddress());
+                            if (selectedGeofencePlace.getFormattedAddress() != null) {
+                                etAddress.setText(selectedGeofencePlace.getFormattedAddress());
                             }
 
                             // Update Category
-                            if (selectedPlace.getPlaceTypes() != null && !selectedPlace.getPlaceTypes().isEmpty()) {
-                                selectedCategory = selectedPlace.getPlaceTypes().get(0);
+                            if (selectedGeofencePlace.getPlaceTypes() != null && !selectedGeofencePlace.getPlaceTypes().isEmpty()) {
+                                selectedCategory = selectedGeofencePlace.getPlaceTypes().get(0);
                             }
-                            // Refresh the UI to reflect the new icon and color
-                            updateIconAndColorUi();
+                            
+                            selectedGeofenceId = selectedGeofencePlace.getId();
+                            
+                            // Execute database operation on a background thread
+                            app.getDatabaseWriteExecutor().execute(() -> {
+                                selectedPlace = placeDao.getPlaceIdFromGeofenceId(selectedGeofenceId);
+                                if(selectedPlace != null){
+                                    // Update UI on the main thread
+                                    requireActivity().runOnUiThread(() -> {
+                                        selectedColor = selectedPlace.getColor();
+                                        selectedIcon = selectedPlace.getIcon();
+                                        // Refresh the UI to reflect the new icon and color
+                                        updateIconAndColorUi();
+                                    });
+                                }
+                            });
                         });
                     }
                 })

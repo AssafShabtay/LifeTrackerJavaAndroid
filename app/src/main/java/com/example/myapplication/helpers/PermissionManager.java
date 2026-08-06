@@ -36,7 +36,7 @@ public class PermissionManager {
         perms.add(Manifest.permission.ACCESS_COARSE_LOCATION);
         perms.add(Manifest.permission.ACCESS_FINE_LOCATION);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            perms.add(Manifest.permission.ACCESS_BACKGROUND_LOCATION);
+            //perms.add(Manifest.permission.ACCESS_BACKGROUND_LOCATION);
             perms.add(Manifest.permission.ACTIVITY_RECOGNITION);
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {

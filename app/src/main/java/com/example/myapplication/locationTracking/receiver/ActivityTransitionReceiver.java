@@ -1,5 +1,7 @@
 package com.example.myapplication.locationTracking.receiver;
 
+import static com.example.myapplication.locationTracking.ActivityTrackingUtils.getActivityName;
+
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -45,24 +47,14 @@ public class ActivityTransitionReceiver extends BroadcastReceiver {
     }
 
 
-    private String getActivityName(int activityType) {
-        switch (activityType) {
-            case DetectedActivity.IN_VEHICLE: return "Driving";
-            case DetectedActivity.ON_BICYCLE: return "Cycling";
-            case DetectedActivity.ON_FOOT: return "On Foot";
-            case DetectedActivity.RUNNING: return "Running";
-            case DetectedActivity.WALKING: return "Walking";
-            case DetectedActivity.STILL: return "Still";
-            default: return "Unknown (" + activityType + ")";
-        }
-    }
+
 
     private String getTransitionName(int transitionType) {
-        switch (transitionType) {
-            case ActivityTransition.ACTIVITY_TRANSITION_ENTER: return "ENTER";
-            case ActivityTransition.ACTIVITY_TRANSITION_EXIT: return "EXIT";
-            default: return "UNKNOWN (" + transitionType + ")";
-        }
+        return switch (transitionType) {
+            case ActivityTransition.ACTIVITY_TRANSITION_ENTER -> "ENTER";
+            case ActivityTransition.ACTIVITY_TRANSITION_EXIT -> "EXIT";
+            default -> "UNKNOWN (" + transitionType + ")";
+        };
     }
 
     private void notifyService(Context context, int activityType, int transitionType, long timestampMs) {

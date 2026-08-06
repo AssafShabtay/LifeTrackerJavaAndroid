@@ -109,7 +109,7 @@ public class LocationProvider {
                                     for (Integer activityType : activeMovementTypes) {
                                         locationService.endMovementTracking(activityType, endTime);
                                     }
-                                    locationService.startStillTracking(endTime, null);
+                                    locationService.startStillTracking(endTime);
                                     locationService.updateCurrentActivityType(DetectedActivity.STILL);
                                 });
 
@@ -154,6 +154,9 @@ public class LocationProvider {
         if (routeLocationCallback != null) {
             fusedLocationClient.removeLocationUpdates(routeLocationCallback);
             routeLocationCallback = null;
+            // Reset anchor location and time
+            anchorLocation = null;
+            anchorLocationTime = 0;
         }
     }
 
@@ -172,8 +175,7 @@ public class LocationProvider {
 
         stillLocationCallback = new LocationCallback() {
             @Override
-            public void onLocationResult(LocationResult locationResult) {
-                if (locationResult == null) return;
+            public void onLocationResult(@NonNull LocationResult locationResult) {
                 databaseWriteExecutor.execute(() -> {
                     for (Location location : locationResult.getLocations()) {
                         if (location.hasAccuracy() && location.getAccuracy() <= STILL_RADIUS_THRESHOLD) {
@@ -228,15 +230,15 @@ public class LocationProvider {
     Location getLocationOnceBlocking() {
         Location loc;
 
-        // Try  High Accuracy
-        loc = tryCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, 12, TimeUnit.SECONDS);
+        // Try High Accuracy
+        loc = tryCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, 12);
 
         //Try Balanced Accuracy
         if (!isValidAccuracy(loc, STILL_RADIUS_THRESHOLD)) {
             String msg = String.format(TAG + ": High accuracy failed or too inaccurate. Trying Balanced Power...");
             Log.d(TAG, msg);
             Logger.saveLog(context, msg);
-            loc = tryCurrentLocation(Priority.PRIORITY_BALANCED_POWER_ACCURACY, 8, TimeUnit.SECONDS);
+            loc = tryCurrentLocation(Priority.PRIORITY_BALANCED_POWER_ACCURACY, 8);
         }
 
         //Fallback to Last Known Location
@@ -250,7 +252,7 @@ public class LocationProvider {
     }
 
     @WorkerThread
-    private Location tryCurrentLocation(int priority, long timeout, TimeUnit unit) {
+    private Location tryCurrentLocation(int priority, long timeout) {
         CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
         try {
             if (ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
@@ -262,7 +264,7 @@ public class LocationProvider {
             return Tasks.await(
                     fusedLocationClient.getCurrentLocation(priority, cancellationTokenSource.getToken()),
                     timeout,
-                    unit
+                    TimeUnit.SECONDS
             );
         } catch (TimeoutException e) {
             String msg = String.format(TAG + ": getCurrentLocation timed out for priority: " + priority);
@@ -278,30 +280,7 @@ public class LocationProvider {
         return null;
     }
 
-    //@WorkerThread
-    //private Location tryLastLocationFallback() {
-    //    try {
-    //        if (ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-    //            return null;
-    //        }
-    //        Location lastLoc = Tasks.await(fusedLocationClient.getLastLocation(), 2, TimeUnit.SECONDS);
-//
-    //        // Loosen up the restrictions. 150-200m is acceptable when the alternative is failure.
-    //        if (lastLoc != null && isValidAccuracy(lastLoc, 200.0f)) {
-//
-    //            String msg = String.format(TAG + ": Using lastLoc. Accuracy: " + lastLoc.getAccuracy() + "m");
-    //            Log.d(TAG, msg);
-    //            Logger.saveLog(context, msg);
-    //            return lastLoc;
-    //        }
-    //    } catch (Exception e) {
-//
-    //        String msg = String.format(TAG + ": Exception in getLastLocation", e);
-    //        Log.e(TAG, msg);
-    //        Logger.saveLog(context, msg);
-    //    }
-    //    return null;
-    //}
+
 
 
 

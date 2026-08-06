@@ -13,6 +13,7 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
 
 import com.example.myapplication.R;
@@ -37,7 +38,6 @@ public class CalendarManager {
         void onDateSelected(Date date);
     }
 
-    private static final ExecutorService diskExecutor = Executors.newSingleThreadExecutor(); //todo change
 
     private final Context context;
     private final View dateCard;
@@ -58,13 +58,14 @@ public class CalendarManager {
     private int currentMonth;
     private int currentYear;
     private int measuredHeight = 0; // Field to store the measured height
-
+    private final ExecutorService databaseWriteExecutor;
     private final ActivityDao dao;
     private final Map<String, List<MiniPieChartView.Slice>> sliceCache = new HashMap<>();
 
-    public CalendarManager(View root, OnDateSelectedListener listener) {
+    public CalendarManager(View root, OnDateSelectedListener listener, ExecutorService databaseWriteExecutor) {
         this.context = root.getContext();
         this.listener = listener;
+        this.databaseWriteExecutor = databaseWriteExecutor;
 
         dateCard = root.findViewById(R.id.date_card);
         calendarContainer = root.findViewById(R.id.calendar_container);
@@ -165,20 +166,20 @@ public class CalendarManager {
         });
         heightAnimator.addListener(new Animator.AnimatorListener() {
             @Override
-            public void onAnimationStart(Animator animation) {}
+            public void onAnimationStart(@NonNull Animator animation) {}
 
             @Override
-            public void onAnimationEnd(Animator animation) {
+            public void onAnimationEnd(@NonNull Animator animation) {
                 if (!calendarExpanded) {
                     calendarContainer.setVisibility(View.GONE);
                 }
             }
 
             @Override
-            public void onAnimationCancel(Animator animation) {}
+            public void onAnimationCancel(@NonNull Animator animation) {}
 
             @Override
-            public void onAnimationRepeat(Animator animation) {}
+            public void onAnimationRepeat(@NonNull Animator animation) {}
         });
         heightAnimator.setDuration(300); // 300ms duration
         heightAnimator.start();
@@ -204,18 +205,18 @@ public class CalendarManager {
             });
             heightAnimator.addListener(new Animator.AnimatorListener() {
                 @Override
-                public void onAnimationStart(Animator animation) {}
+                public void onAnimationStart(@NonNull Animator animation) {}
 
                 @Override
-                public void onAnimationEnd(Animator animation) {
+                public void onAnimationEnd(@NonNull Animator animation) {
                     calendarContainer.setVisibility(View.GONE);
                 }
 
                 @Override
-                public void onAnimationCancel(Animator animation) {}
+                public void onAnimationCancel(@NonNull Animator animation) {}
 
                 @Override
-                public void onAnimationRepeat(Animator animation) {}
+                public void onAnimationRepeat(@NonNull Animator animation) {}
             });
             heightAnimator.setDuration(300);
             heightAnimator.start();
@@ -351,7 +352,7 @@ public class CalendarManager {
             if (sliceCache.containsKey(cacheKey)) {
                 pieChartView.setSlices(sliceCache.get(cacheKey));
             } else {
-                diskExecutor.execute(() -> {
+                databaseWriteExecutor.execute(() -> {
                     List<MiniPieChartView.Slice> slices = calculateSlicesForDate(cellDate);
                     sliceCache.put(cacheKey, slices);
                     root.post(() -> pieChartView.setSlices(slices));

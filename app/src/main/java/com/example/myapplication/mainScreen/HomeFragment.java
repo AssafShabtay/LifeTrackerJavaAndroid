@@ -119,7 +119,7 @@ public class HomeFragment extends Fragment {
         // ---------------- initialize calendar -----------------
         calendarManager = new CalendarManager(view, date -> {
             loadTimelineData(date);
-        });
+        }, app.getDatabaseWriteExecutor());
 
         // ----------------- initialize timeline --------------------
         timelineAdapter = new TimelineAdapter(item -> {

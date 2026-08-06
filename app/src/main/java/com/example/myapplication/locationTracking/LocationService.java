@@ -64,7 +64,7 @@ public class LocationService extends Service {
     static final Map<Integer, Long> currentMovementTrackingIds = new ConcurrentHashMap<>(); // is a list because of the possibly of that android thinks two activities are ongoing
     private static volatile boolean isInitializing = false;
 
-    private volatile boolean isRequestingStillLocationUpdates = false;
+    private volatile boolean isRequestingStillLocationUpdates = false; //TODO CHECK IF USED
 
     private ActivityDao dao;
     private PlaceDao placeDao;
@@ -147,7 +147,7 @@ public class LocationService extends Service {
                 currentActivityType = DetectedActivity.STILL;
                 isInitializing = true;
                 updateNotificationSafe();
-                startStillTracking(new Date(), null);
+                startStillTracking(new Date());
                 isInitializing = false;
             }
 
@@ -233,7 +233,7 @@ public class LocationService extends Service {
                         }
                         currentMovementTrackingIds.clear();
                         locationProvider.stopRouteUpdates();
-                        startStillTracking(now, null);
+                        startStillTracking(now);
                         updateActiveStillWithPlace(place);
 
                     }
@@ -288,25 +288,25 @@ public class LocationService extends Service {
             Date eventTime = new Date(timestampMs);
             Logger.saveLog(this, "1");
             if (transitionType == ActivityTransition.ACTIVITY_TRANSITION_ENTER) {
-                String previousActivityName = null;
-                if (activityType == DetectedActivity.STILL) {
-                    if (!currentMovementTrackingIds.isEmpty()) {
-                        // Transitioning from a movement activity to STILL
-                        int prevType = currentMovementTrackingIds.keySet().iterator().next();
-                        previousActivityName = getActivityName(prevType);
-                    }
-                }
-
-                // Ensure only one activity is active by ending any ongoing ones before starting the new one
-                // if the ongoing activity is the same as the new one, do nothing(later in the script they will be merged)
-                if (currentStillTrackingId != null && activityType != DetectedActivity.STILL) {
-                    endStillTracking(eventTime);
-                }
-                for (Integer type : new HashSet<>(currentMovementTrackingIds.keySet())) {
-                    if (type != activityType) {
-                        endMovementTracking(type, eventTime);
-                    }
-                }
+                //TODOString previousActivityName = null;
+                //TODOif (activityType == DetectedActivity.STILL) {
+                //TODO    if (!currentMovementTrackingIds.isEmpty()) {
+                //TODO        // Transitioning from a movement activity to STILL
+                //TODO        int prevType = currentMovementTrackingIds.keySet().iterator().next();
+                //TODO        previousActivityName = getActivityName(prevType);
+                //TODO    }
+                //TODO}
+//TODO
+                //TODO// Ensure only one activity is active by ending any ongoing ones before starting the new one
+                //TODO// if the ongoing activity is the same as the new one, do nothing(later in the script they will be merged)
+                //TODOif (currentStillTrackingId != null && activityType != DetectedActivity.STILL) {
+                //TODO    endStillTracking(eventTime);
+                //TODO}
+                //TODOfor (Integer type : new HashSet<>(currentMovementTrackingIds.keySet())) {
+                //TODO    if (type != activityType) {
+                //TODO        endMovementTracking(type, eventTime);
+                //TODO    }
+                //TODO}
 
                 currentActivityType = activityType;
 
@@ -315,7 +315,7 @@ public class LocationService extends Service {
 
                 // call functions to start activities according to activity type
                 if (activityType == DetectedActivity.STILL) {
-                    startStillTracking(eventTime, previousActivityName);
+                    startStillTracking(eventTime);
                 } else if (MOVEMENT_ACTIVITIES.contains(activityType)) {
                     startMovementTracking(activityType, eventTime);
                 }
@@ -351,7 +351,7 @@ public class LocationService extends Service {
         }
     }
 
-    void startStillTracking(Date startTime, String wasSupposedToBeActivity) {
+    void startStillTracking(Date startTime) {
         // If there's already an active still, prevent creating a duplicate
         if (currentStillTrackingId != null) {
             Log.w(TAG, "Attempted to start new still tracking while one is already active (ID: " + currentStillTrackingId + "). Aborting new still creation.");
@@ -378,7 +378,6 @@ public class LocationService extends Service {
         if (currentLocation != null) still.setLat(currentLocation.getLatitude()); else still.setLat(null);
         if (currentLocation != null) still.setLng(currentLocation.getLongitude()); else still.setLng(null);
         still.setStartTimeDate(startTime);
-        still.setWasSupposedToBeActivity(wasSupposedToBeActivity);
 
         if (currentLocation != null) {
             // Try to find geofence or place
@@ -390,7 +389,6 @@ public class LocationService extends Service {
 
         try {
             String msg = String.format("DB Update from startStillTracking: Inserting new still location %s %s",
-                    (wasSupposedToBeActivity != null ? "(Stop: " + wasSupposedToBeActivity + ")" : ""),
                     (currentLocation != null ? String.format(Locale.US, "at [%.6f, %.6f]", currentLocation.getLatitude(), currentLocation.getLongitude()) : "(no location)"));
             Log.d(TAG, msg);
             Logger.saveLog(this, msg);
@@ -548,7 +546,7 @@ public class LocationService extends Service {
 
                 if (resolved) {
 
-                    // 1. Check if we can merge with a previous still activity
+                    // Check if we can merge with a previous still activity
                     StillLocation lastStill = dao.getLastCompletedStillLocation();
                     if (lastStill != null && lastStill.getLat() != null && lastStill.getLng() != null) {
                         float dist = distanceInMeters(movement.getStartLat(), movement.getStartLng(), lastStill.getLat(), lastStill.getLng());
@@ -562,7 +560,7 @@ public class LocationService extends Service {
                         }
                     }
 
-                    // 2. Check if we can merge with a CURRENT active still activity
+                    // Check if we can merge with a CURRENT active still activity
                     StillLocation activeStill = dao.getActiveStillLocation();
                     if (activeStill != null && activeStill.getLat() != null && activeStill.getLng() != null) {
                         float dist = distanceInMeters(movement.getStartLat(), movement.getStartLng(), activeStill.getLat(), activeStill.getLng());

@@ -15,7 +15,7 @@ public class LifeTrackerApp extends Application {
         super.onCreate();
         // Set up the global error handler
         Thread.setDefaultUncaughtExceptionHandler((thread, throwable) -> {
-            Logger.saveLog(getApplicationContext(), "FATAL CRASH: " + throwable.getMessage());
+            Logger.saveLog(getApplicationContext(), "FATAL CRASH: " + throwable.getMessage() + throwable.fillInStackTrace()+ throwable.getCause());
 
             // Restart the app
             Intent intent = new Intent(getApplicationContext(), MainActivity.class);

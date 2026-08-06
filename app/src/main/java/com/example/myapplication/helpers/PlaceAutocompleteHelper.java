@@ -28,8 +28,8 @@ import java.util.List;
 public class PlaceAutocompleteHelper {
 
     private static final String TAG = "PlaceAutocompleteHelper";
-    private Context context;
-    private AutoCompleteTextView autoCompleteTextView;
+    private final Context context;
+    private final AutoCompleteTextView autoCompleteTextView;
     private PlacesClient placesClient;
     private AutocompleteSessionToken autocompleteSessionToken;
 
@@ -103,8 +103,8 @@ public class PlaceAutocompleteHelper {
     // Custom ArrayAdapter for autocomplete suggestions
     private static class AutocompleteAdapter extends ArrayAdapter<String> {
 
-        private Context context;
-        private List<String> suggestions;
+        private final Context context;
+        private final List<String> suggestions;
 
         public AutocompleteAdapter(@NonNull Context context, @NonNull List<String> objects) {
             super(context, 0, objects);

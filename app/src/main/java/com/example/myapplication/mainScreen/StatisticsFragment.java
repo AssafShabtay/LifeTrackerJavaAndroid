@@ -8,6 +8,7 @@ import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -45,7 +46,8 @@ import java.util.concurrent.CompletableFuture;
 
 public class StatisticsFragment extends Fragment implements HomeAddressPickerBottomSheet.OnHomeAddressSelectedListener, MainActivity.OnHomeAddressChangedListener {
 
-    private LinearLayout topPlacesContainer;
+    private static final String TAG = "StatisticsFragment";
+
     private TextView tvNoData;
 
     private View cabinFeverContent;
@@ -88,7 +90,6 @@ public class StatisticsFragment extends Fragment implements HomeAddressPickerBot
         if (getActivity() instanceof MainActivity) {
             ((MainActivity) getActivity()).setOnHomeAddressChangedListener(this);
         }
-        topPlacesContainer = view.findViewById(R.id.topPlacesContainer);
         tvNoData = view.findViewById(R.id.tvNoData);
         cabinFeverContent = view.findViewById(R.id.cabin_fever_content);
         cabinFeverPlaceholder = view.findViewById(R.id.cabin_fever_placeholder);
@@ -161,7 +162,6 @@ public class StatisticsFragment extends Fragment implements HomeAddressPickerBot
             mainHandler.post(() -> {
                 if (!isAdded()) return;
                 tvNoData.setVisibility(View.VISIBLE);
-                topPlacesContainer.removeAllViews();
                 placeDuration.clear();
             });
             return;
@@ -170,22 +170,7 @@ public class StatisticsFragment extends Fragment implements HomeAddressPickerBot
         Map<String, Long> placeDurations = new HashMap<>();
 
         for (StillLocation item : stills) {
-            Date startTime = item.getStartTimeDate();
-            Date endTime = item.getEndTimeDate();
-            if (endTime == null) endTime = new Date();
-
-            Calendar cal = Calendar.getInstance();
-            cal.set(Calendar.HOUR_OF_DAY, 0);
-            cal.set(Calendar.MINUTE, 0);
-            cal.set(Calendar.SECOND, 0);
-            Date todayStart = cal.getTime();
-
-            Date start;
-            if (startTime.before(todayStart)) start = todayStart;
-            else start = startTime;
-
-            long durationMs = endTime.getTime() - start.getTime();
-            long durationMins = durationMs / 60000;
+            long durationMins = getDurationMins(item);
             if (durationMins <= 0) continue;
             String place = null;
             if (item.getPlaceName() != null && !item.getPlaceName().isEmpty()) place = item.getPlaceName();
@@ -198,36 +183,30 @@ public class StatisticsFragment extends Fragment implements HomeAddressPickerBot
         mainHandler.post(() -> updateUi(placeDurations));
     }
 
+    private static long getDurationMins(StillLocation item) {
+        Date startTime = item.getStartTimeDate();
+        Date endTime = item.getEndTimeDate();
+        if (endTime == null) endTime = new Date();
+
+        Calendar cal = Calendar.getInstance();
+        cal.set(Calendar.HOUR_OF_DAY, 0);
+        cal.set(Calendar.MINUTE, 0);
+        cal.set(Calendar.SECOND, 0);
+        Date todayStart = cal.getTime();
+
+        Date start;
+        if (startTime.before(todayStart)) start = todayStart;
+        else start = startTime;
+
+        long durationMs = endTime.getTime() - start.getTime();
+        long durationMins = durationMs / 60000;
+        return durationMins;
+    }
+
     private void updateUi(Map<String, Long> placeDurations) {
         if (!isAdded()) return;
 
         tvNoData.setVisibility(placeDurations.isEmpty() ? View.VISIBLE : View.GONE);
-
-        topPlacesContainer.removeAllViews();
-        List<Map.Entry<String, Long>> sortedPlaces = new ArrayList<>(placeDurations.entrySet());
-        Collections.sort(sortedPlaces, (e1, e2) -> e2.getValue().compareTo(e1.getValue()));
-
-        int count = 0;
-        for (Map.Entry<String, Long> entry : sortedPlaces) {
-            if (count >= 5) break;
-            addPlaceItem(entry.getKey(), entry.getValue());
-            count++;
-        }
-    }
-
-    private void addPlaceItem(String name, long mins) {
-        if (!isAdded()) return;
-        View view = LayoutInflater.from(requireContext()).inflate(android.R.layout.simple_list_item_2, topPlacesContainer, false);
-        TextView text1 = view.findViewById(android.R.id.text1);
-        TextView text2 = view.findViewById(android.R.id.text2);
-
-        text1.setText(name);
-        text1.setTextSize(14);
-
-        text2.setText(mins / 60 + "h " + mins % 60 + "m");
-        text2.setTextSize(12);
-
-        topPlacesContainer.addView(view);
     }
 
     // ------------------------ Cabin fever statistics ----------------------------
@@ -283,6 +262,7 @@ public class StatisticsFragment extends Fragment implements HomeAddressPickerBot
                     }
                 }
             });
+
         });
     }
 
@@ -380,14 +360,41 @@ public class StatisticsFragment extends Fragment implements HomeAddressPickerBot
                 visitCounts.put(placeId, visitCounts.getOrDefault(placeId, 0) + 1);
             }
 
-            // Sort places by visit count (descending)
-            List<Map.Entry<String, Integer>> sortedPlaces = new ArrayList<>(visitCounts.entrySet());
-            sortedPlaces.sort((e1, e2) -> e2.getValue().compareTo(e1.getValue()));
+            // --- NEW FILTERING LOGIC ---
+            int MIN_VISITS = 3; // Must have visited at least 3 times in the timeframe
+            int MAX_STD_DEV_MINUTES = 60; // Standard deviation must be <= 60 minutes to be considered a "routine"
+
+            List<Map.Entry<String, Integer>> interestingPlaces = new ArrayList<>();
+
+            for (Map.Entry<String, Integer> entry : visitCounts.entrySet()) {
+                String placeId = entry.getKey();
+                int count = entry.getValue();
+
+                // 1. Check if frequent enough
+                if (count < MIN_VISITS) continue;
+
+                List<Integer> arrivals = tempArrivals.get(placeId);
+                List<Integer> departures = tempDepartures.get(placeId);
+
+                PrecisionResult arrStats = calculatePrecision(arrivals);
+                PrecisionResult depStats = calculatePrecision(departures);
+
+                boolean hasConsistentArrival = arrStats != null && arrStats.stdDev <= MAX_STD_DEV_MINUTES;
+                boolean hasConsistentDeparture = depStats != null && depStats.stdDev <= MAX_STD_DEV_MINUTES;
+
+                // 2. Check if the times are "close enough" (a tight routine on either arrival OR departure)
+                if (hasConsistentArrival || hasConsistentDeparture) {
+                    interestingPlaces.add(entry);
+                }
+            }
+
+            // Sort the *filtered* places by visit count (descending)
+            interestingPlaces.sort((e1, e2) -> e2.getValue().compareTo(e1.getValue()));
 
             // Save data to class-level variables to allow fast UI switching
             topPlaceIds.clear();
-            for (int i = 0; i < Math.min(5, sortedPlaces.size()); i++) {
-                topPlaceIds.add(sortedPlaces.get(i).getKey());
+            for (int i = 0; i < Math.min(5, interestingPlaces.size()); i++) {
+                topPlaceIds.add(interestingPlaces.get(i).getKey());
             }
 
             arrivalTimesMap = tempArrivals;
@@ -451,93 +458,6 @@ public class StatisticsFragment extends Fragment implements HomeAddressPickerBot
         }
     }
 
-    private void loadLlmInsights() {
-        mainHandler.post(() -> {
-            if (!isAdded()) return;
-            tvLlmLoadingError.setVisibility(View.VISIBLE);
-            tvLlmLoadingError.setText("Loading habits and anomalies...");
-            tvHabitText.setText("");
-            tvAnomalyText.setText("");
-        });
-
-        app.getDatabaseWriteExecutor().execute(() -> {
-            if (!isAdded()) return;
-            try {
-                long now = System.currentTimeMillis();
-                long fourteenDaysMs = 14L * 24 * 60 * 60 * 1000;
-                long fourteenDaysAgo = now - fourteenDaysMs;
-
-                ActivityDatabase db = ActivityDatabase.getDatabase(requireContext());
-                List<StillLocation> recentStills = db.activityDao().getStillsFromRange(new Date(fourteenDaysAgo), new Date(now));
-
-                // Sort by start time to create a chronological sequence
-                Collections.sort(recentStills, (s1, s2) -> s1.getStartTimeDate().compareTo(s2.getStartTimeDate()));
-
-                StringBuilder timelineSequenceBuilder = new StringBuilder();
-                SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault());
-
-                for (StillLocation still : recentStills) {
-                    String placeName = still.getPlaceName();
-                    Date startTime = still.getStartTimeDate();
-                    Date endTime = still.getEndTimeDate();
-
-                    if (placeName != null && !placeName.isEmpty() && startTime != null) {
-                        if (timelineSequenceBuilder.length() > 0) {
-                            timelineSequenceBuilder.append(" -> ");
-                        }
-                        timelineSequenceBuilder.append(placeName);
-                        timelineSequenceBuilder.append(" (").append(sdf.format(startTime));
-                        if (endTime != null) {
-                            timelineSequenceBuilder.append(" - ").append(sdf.format(endTime));
-                        }
-                        timelineSequenceBuilder.append(")");
-                    }
-                }
-
-                final String timelineSequence = timelineSequenceBuilder.toString();
-
-                if (timelineSequence.isEmpty()) {
-                    mainHandler.post(() -> {
-                        if (!isAdded()) return;
-                        tvLlmLoadingError.setVisibility(View.VISIBLE);
-                        tvLlmLoadingError.setText("No location data available for the last 14 days to analyze habits.");
-                        tvHabitText.setText("");
-                        tvAnomalyText.setText("");
-                    });
-                    return;
-                }
-
-                // Call the LLM (placeholder)
-
-                //CompletableFuture<LlmResponse> llmResponseFuture = LlmApiClient.getHabitAndAnomaly(timelineSequence);
-                //LlmResponse llmResponse = llmResponseFuture.get();
-                LlmResponse llmResponse = null;
-
-                mainHandler.post(() -> {
-                    if (!isAdded()) return;
-                    tvLlmLoadingError.setVisibility(View.GONE);
-                    if (llmResponse != null) {
-                        tvHabitText.setText("Habit: " + llmResponse.getHabit());
-                        tvAnomalyText.setText("Anomaly: " + llmResponse.getAnomaly());
-                    } else {
-                        tvLlmLoadingError.setVisibility(View.VISIBLE);
-                        tvLlmLoadingError.setText("Failed to load insights from LLM. Please try again later.");
-                    }
-                });
-
-            } catch (Exception e) {
-                // Log the exception for debugging
-                e.printStackTrace();
-                mainHandler.post(() -> {
-                    if (!isAdded()) return;
-                    tvLlmLoadingError.setVisibility(View.VISIBLE);
-                    tvLlmLoadingError.setText("Error loading LLM insights: " + e.getMessage());
-                    tvHabitText.setText("");
-                    tvAnomalyText.setText("");
-                });
-            }
-        });
-    }
 
     private void drawHistogram(List<Integer> times, int mean, int containerId, int startLabelId, int avgLabelId, int endLabelId, String colorDarkHex, String colorMedHex, String colorLightHex) {
         TextView tvLabelStart = requireView().findViewById(startLabelId);
@@ -639,6 +559,101 @@ public class StatisticsFragment extends Fragment implements HomeAddressPickerBot
         int stdDev = (int) Math.sqrt(varianceSum / minutesFromMidnight.size());
 
         return new PrecisionResult(mean, stdDev);
+    }
+
+    private void loadLlmInsights() {
+        mainHandler.post(() -> {
+            if (!isAdded()) return;
+            tvLlmLoadingError.setVisibility(View.VISIBLE);
+            tvLlmLoadingError.setText("Loading habits and anomalies...");
+            tvHabitText.setText("");
+            tvAnomalyText.setText("");
+        });
+
+        app.getDatabaseWriteExecutor().execute(() -> {
+            if (!isAdded()) return;
+            try {
+                long now = System.currentTimeMillis();
+                long fourteenDaysMs = 14L * 24 * 60 * 60 * 1000;
+                long fourteenDaysAgo = now - fourteenDaysMs;
+
+                ActivityDatabase db = ActivityDatabase.getDatabase(requireContext());
+                List<StillLocation> recentStills = db.activityDao().getStillsFromRange(new Date(fourteenDaysAgo), new Date(now));
+
+                // Sort by start time to create a chronological sequence
+                recentStills.sort((s1, s2) -> s1.getStartTimeDate().compareTo(s2.getStartTimeDate()));
+
+                final String timelineSequence = getTimelineSequenceString(recentStills);
+
+                if (timelineSequence.isEmpty()) {
+                    mainHandler.post(() -> {
+                        if (!isAdded()) return;
+                        tvLlmLoadingError.setVisibility(View.VISIBLE);
+                        tvLlmLoadingError.setText("No location data available for the last 14 days to analyze habits.");
+                        tvHabitText.setText("");
+                        tvAnomalyText.setText("");
+                    });
+                    return;
+                }
+
+                // Call the LLM (placeholder)
+                LlmResponse llmResponse = null;
+                CompletableFuture<LlmResponse> llmResponseFuture = LlmApiClient.getHabitAndAnomaly(timelineSequence);
+                llmResponse = llmResponseFuture.get();
+
+
+                LlmResponse finalLlmResponse = llmResponse;
+                mainHandler.post(() -> {
+                    if (!isAdded()) return;
+                    tvLlmLoadingError.setVisibility(View.GONE);
+                    if (finalLlmResponse != null) {
+                        tvHabitText.setText("Habit: " + finalLlmResponse.getHabit());
+                        tvAnomalyText.setText("Anomaly: " + finalLlmResponse.getAnomaly());
+                    } else {
+                        tvLlmLoadingError.setVisibility(View.VISIBLE);
+                        tvLlmLoadingError.setText("Failed to load insights from LLM. Please try again later.");
+                    }
+                });
+
+            } catch (Exception e) {
+                // Log the exception for debugging
+                Log.e(TAG, "Error loading LLM insights", e);
+                mainHandler.post(() -> {
+                    if (!isAdded()) return;
+                    tvLlmLoadingError.setVisibility(View.VISIBLE);
+                    tvLlmLoadingError.setText("Error loading LLM insights: " + e.getMessage());
+                    tvHabitText.setText("");
+                    tvAnomalyText.setText("");
+                });
+            }
+        });
+    }
+
+    @NonNull
+    private static String getTimelineSequenceString(List<StillLocation> recentStills) {
+        StringBuilder timelineSequenceBuilder = new StringBuilder();
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault());
+
+        for (StillLocation still : recentStills) {
+            String placeName = still.getPlaceName();
+            Date startTime = still.getStartTimeDate();
+            Date endTime = still.getEndTimeDate();
+
+            if (placeName != null && !placeName.isEmpty() && startTime != null) {
+                if (timelineSequenceBuilder.length() > 0) {
+                    timelineSequenceBuilder.append(" -> ");
+                }
+                timelineSequenceBuilder.append(placeName);
+                timelineSequenceBuilder.append(" (").append(sdf.format(startTime));
+                if (endTime != null) {
+                    timelineSequenceBuilder.append(" - ").append(sdf.format(endTime));
+                }
+                timelineSequenceBuilder.append(")");
+            }
+        }
+
+        final String timelineSequence = timelineSequenceBuilder.toString();
+        return timelineSequence;
     }
 
     private String formatMinutesToTime(int totalMinutes) {

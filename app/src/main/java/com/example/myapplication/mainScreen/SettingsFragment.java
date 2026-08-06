@@ -9,14 +9,13 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.app.AlertDialog;
-import android.content.DialogInterface;
-import java.util.concurrent.Executors;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.fragment.app.Fragment;
 
+import com.example.myapplication.LifeTrackerApp;
 import com.example.myapplication.R;
 import com.example.myapplication.database.ActivityDatabase;
 import com.example.myapplication.database.PlaceDao;
@@ -25,6 +24,7 @@ import com.google.android.material.button.MaterialButtonToggleGroup;
 public class SettingsFragment extends Fragment {
 
     private static final String PREFS_NAME = "MyPrefs";
+    private LifeTrackerApp app;
 
     @Nullable
     @Override
@@ -39,6 +39,8 @@ public class SettingsFragment extends Fragment {
         MaterialButtonToggleGroup themeToggleGroup = view.findViewById(R.id.themeToggleGroup);
         TextView btnExportData = view.findViewById(R.id.btn_export_data);
         TextView btnDeleteHistory = view.findViewById(R.id.btn_delete_history);
+
+        app = (LifeTrackerApp) requireActivity().getApplication();
 
         setupThemePreferences(themeToggleGroup);
         setupDataPrivacyListeners(btnExportData, btnDeleteHistory);
@@ -87,12 +89,11 @@ public class SettingsFragment extends Fragment {
     }
 
     private void handleDeleteHistory() {
-        // TODO: Implement database deletion logic (Recommend showing a confirmation dialog first)
         new AlertDialog.Builder(requireContext())
                 .setTitle("Delete Location History")
                 .setMessage("Are you sure you want to delete all your location history? This action cannot be undone.")
                 .setPositiveButton("Delete", (dialog, which) -> {
-                    Executors.newSingleThreadExecutor().execute(() -> {
+                    app.getDatabaseWriteExecutor().execute(() -> {
                         ActivityDatabase db = ActivityDatabase.getDatabase(requireContext());
                         PlaceDao placeDao = db.placeDao();
                         db.activityDao().deleteAllActivities();

@@ -1,35 +1,53 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Modern Dark Palette -->
-    <color name="primary">#4A4457</color> <!-- Lighter Blue for Dark Mode -->
-    <color name="on_primary">#042B5E</color>
-    <color name="primary_container">#174EA6</color>
-    <color name="on_primary_container">#D2E3FC</color>
 
-    <color name="secondary">#9AA0A6</color>
-    <color name="on_secondary">#202124</color>
-    <color name="secondary_container">#4A4458</color>
-    <color name="on_secondary_container">#E8DEF8</color>
+    <color name="green">#24b265</color>
+    <color name="blue">#56A8CE</color>
+    <color name="orange">#DE9031</color>
+    <color name="yellow">#E7E04E</color>
+    <color name="red">#ee4444</color>
+    <color name="mint">#4ADDAA</color>
+    <color name="pink">#ed698f</color>
+    <color name="purple">#5955eb</color>
 
+
+
+    <color name="gym">#B22222</color>
+    <!-- Modern Neutral & Soft Palette -->
+    <color name="primary">#edf0da</color>
+    <color name="on_primary">#edf0da</color>
+    <color name="primary_container">#edf0da</color>
+    <color name="on_primary_container">#174EA6</color>
+
+    <color name="secondary">#FF0000FF</color>
+    <color name="on_secondary">#245433</color>
+    <color name="secondary_container">#2b352c</color>
+    <color name="on_secondary_container">#edf0da</color>
 
     <color name="green_dark">#25351C</color>
-    <color name="green_light">#59684E</color>
+    <color name="green_light">#a8d1a9</color>
     <color name="green_extra_light">#C2C9B9</color>
 
-    <color name="background">#0E0E0E</color> <!-- Dark Gray -->
-    <color name="surface">#181818</color> <!-- Slightly lighter dark gray -->
-    <color name="on_surface">#E3E3E3</color>
-    <color name="on_surface_variant">#C4C7C5</color>
-    <color name="outline">#8E918F</color>
-    <color name="outline_variant">#444746</color>
+    <color name="background">#0e1510</color>
+    <color name="surface">#1b231c</color>
+    <color name="on_surface">#edf0da</color>
+    <color name="on_surface_variant">#899089</color>
+    <color name="outline">#414D41</color>
+    <color name="outline_variant">#2f382f</color>
 
-    <!-- Activity Colors for Dark Mode (Slightly desaturated) -->
-    <color name="activity_still">#81C995</color>
-    <color name="activity_stop">#F28B82</color>
-    <color name="activity_walking">#8AB4F8</color>
-    <color name="activity_vehicle">#D7AEFB</color>
-    <color name="activity_running">#F28B82</color>
-    <color name="activity_cycling">#FDE293</color>
+    <color name="md_theme_light_primary">#59684E</color> <!-- Using the light theme primary color as a fallback for consistency if it's referenced directly -->
+    <color name="md_theme_dark_primary">#edf0da</color>
 
-    <color name="timeline_line">#435338</color>
+    <!-- Activity Specific - Material Colors -->
+    <color name="activity_still">#34A853</color> <!-- Google Green -->
+    <color name="activity_stop">#7B0F0F</color> <!-- Google Red -->
+    <color name="activity_walking">#4285F4</color> <!-- Google Blue -->
+    <color name="activity_vehicle">#9334E6</color> <!-- Soft Purple -->
+    <color name="activity_running">#EA4335</color> <!-- Google Red -->
+    <color name="activity_cycling">#FBBC04</color> <!-- Google Yellow -->
+
+    <color name="timeline_line">#363f36</color>
+
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
 </resources>

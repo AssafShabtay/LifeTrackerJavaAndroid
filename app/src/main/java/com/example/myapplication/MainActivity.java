@@ -8,11 +8,14 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.VideoView;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
@@ -34,11 +37,14 @@ import com.google.android.gms.location.ActivityTransition;
 import com.google.android.gms.location.ActivityTransitionRequest;
 import com.google.android.gms.location.DetectedActivity;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.google.android.material.card.MaterialCardView;
+import com.google.android.material.progressindicator.LinearProgressIndicator;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.appcheck.FirebaseAppCheck;
 import com.google.firebase.appcheck.debug.DebugAppCheckProviderFactory;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -59,7 +65,11 @@ public class MainActivity extends AppCompatActivity {
     private StatisticsFragment statisticsFragment = new StatisticsFragment();
     private SettingsFragment settingsFragment = new SettingsFragment();
     private Fragment activeFragment = homeFragment;
-
+    private LinearProgressIndicator permissionProgressBar;
+    private TextView permissionStepText, permissionTitle;
+    private MaterialCardView permissionIconCard, permissionVideoCard;
+    private ImageView permissionIcon;
+    private VideoView permissionVideo;
     private static final String PREFS_NAME = "MyPrefs";
     private static final String THEME_KEY = "theme_preference";
 
@@ -77,9 +87,7 @@ public class MainActivity extends AppCompatActivity {
                     }
                 }
 
-                if (isAllPermissionsGranted) {
-                    checkAndRequestBackgroundLocation();
-                } else {
+                if (!isAllPermissionsGranted) {
                     // avoid re opening the dialog
                     if (!isShowingRationaleDialog) {
                         handlePermissionDenied();
@@ -90,7 +98,6 @@ public class MainActivity extends AppCompatActivity {
 
     private final ActivityResultLauncher<String> backgroundPermissionLauncher =
             registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
-                permissionManager.markPermissionRequested(Manifest.permission.ACCESS_BACKGROUND_LOCATION); // TODO FIX API LEVEL
                 if (isGranted) {
                     Logger.saveLog(this, TAG + ": Background location granted. Requesting transitions and starting service.");
                     requestTransitions();
@@ -131,52 +138,10 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
-        if (hasForeground) {
-            Logger.saveLog(this, TAG + ": All foreground permissions granted. Checking background location.");
-            // request background location if all foreground perms are granted
-            checkAndRequestBackgroundLocation();
-        } else {
+        if (!hasForeground) {
             Logger.saveLog(this, TAG + ": Not all foreground permissions granted. Requesting foreground permissions.");
             // if not all foreground permission are granted, request them
             foregroundPermissionLauncher.launch(foregroundPermissions);
-        }
-    }
-
-    private void checkAndRequestBackgroundLocation() {
-        Logger.saveLog(this, TAG + ": checkAndRequestBackgroundLocation called.");
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            if (permissionManager.hasPermission(Manifest.permission.ACCESS_BACKGROUND_LOCATION)) {
-                Logger.saveLog(this, TAG + ": Background location permission already granted. Requesting transitions and starting service.");
-                // if all permissions are granted start tracking
-                requestTransitions();
-                startTrackingService();
-            } else {
-                Logger.saveLog(this, TAG + ": Background location permission not granted. Showing rationale dialog.");
-                // Show a custom dialog explaining why background location is needed before showing the system/settings prompt
-                new AlertDialog.Builder(this) //TODO CHANGE TEXT AND IMAGE EXPLANATION
-                        .setTitle("Background Location Access")
-                        .setMessage("This app collects location data to enable timeline visits and geofencing even when the app is closed or not in use. Please select \'Allow all the time\' in the next screen.")
-                        .setPositiveButton("Grant", (dialog, which) -> {
-                            backgroundPermissionLauncher.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION);
-                        })
-                        .setNegativeButton("No thanks", (dialog, which) -> {
-                            Logger.saveLog(this, TAG + ": Background location rationale declined.");
-                            // If the user declines, check if the permission is permanently denied
-                            // and offer to open settings.\n
-                            if (permissionManager.isPermanentlyDenied(Manifest.permission.ACCESS_BACKGROUND_LOCATION)) {
-                                permissionManager.showGoToSettingsDialog(permissionManager::openAppSettings, () -> Logger.saveLog(this, TAG + ": Settings dialog cancelled after background rationale decline"));
-                            }
-                            // Otherwise, if not permanently denied, just continue without background access.
-                            // The UI in HomeFragment should reflect the missing permission.
-                            refreshPermissionUi(false);
-                        })
-                        .setCancelable(false)
-                        .show();
-            }
-        } else {
-            Logger.saveLog(this, TAG + ": Android version < Q. Requesting transitions and starting service directly.");
-            requestTransitions();
-            startTrackingService();
         }
     }
 
@@ -184,7 +149,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         // applies themes before super
         SharedPreferences preferences = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-        int currentMode = preferences.getInt("theme_mode", AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
+        int currentMode = preferences.getInt("theme_mode", AppCompatDelegate.MODE_NIGHT_NO);
         AppCompatDelegate.setDefaultNightMode(currentMode);
         super.onCreate(savedInstanceState);
 
@@ -198,17 +163,19 @@ public class MainActivity extends AppCompatActivity {
         permissionBlocker = findViewById(R.id.permission_blocker);
         permissionAction = findViewById(R.id.permission_action);
         permissionSubtitle = findViewById(R.id.permission_subtitle);
+        // Initialize the new views
+        permissionProgressBar = findViewById(R.id.permission_progress_bar);
+        permissionStepText = findViewById(R.id.permission_step_text);
+        permissionTitle = findViewById(R.id.permission_title);
+        permissionIconCard = findViewById(R.id.permission_icon_card);
+        permissionVideoCard = findViewById(R.id.permission_video_card);
+        permissionIcon = findViewById(R.id.permission_icon);
+        permissionVideo = findViewById(R.id.permission_video);
 
         permissionManager = new PermissionManager(this);
 
-        // Filter out background location from the permission list
-        List<String> foregroudnPermList = new ArrayList<>();
-        for (String perm : permissionManager.getRequiredPermissions()) {
-            if (!perm.equals(Manifest.permission.ACCESS_BACKGROUND_LOCATION)) {
-                foregroudnPermList.add(perm);
-            }
-        }
-        foregroundPermissions = foregroudnPermList.toArray(new String[0]);
+        foregroundPermissions = permissionManager.getRequiredPermissions();
+
 
         BottomNavigationView bottomNav = findViewById(R.id.bottom_navigation);
         bottomNav.setOnItemSelectedListener(navListener);
@@ -307,23 +274,66 @@ public class MainActivity extends AppCompatActivity {
         if (hasPerms) {
             permissionBlocker.setVisibility(View.GONE);
             getSupportFragmentManager().beginTransaction().show(activeFragment).commit();
+            if (permissionVideo.isPlaying()) permissionVideo.stopPlayback();
         } else {
             permissionBlocker.setVisibility(View.VISIBLE);
             getSupportFragmentManager().beginTransaction().hide(activeFragment).commit();
 
             boolean permanent = permissionManager.isAnyPermissionPermanentlyDenied();
-            permissionSubtitle.setText(permanent
-                    ? "Permissions were denied. Please enable them in Settings to continue"
-                    : "Please grant permissions to continue.");
-            permissionAction.setText(permanent ? "Open Settings" : "Grant");
-            permissionAction.setOnClickListener(v -> {
-                if (permanent) {
-                    permissionManager.openAppSettings();
-                } else {
-                    requestPermissions();
-                }
-            });
+            if (permanent) {
+                // Handle permanently denied state
+                permissionVideoCard.setVisibility(View.GONE);
+                permissionIconCard.setVisibility(View.VISIBLE);
+                permissionIcon.setImageResource(android.R.drawable.ic_dialog_alert);
+
+                permissionTitle.setText("Permissions Denied");
+                permissionSubtitle.setText("Permissions were denied permanently. Please enable them in Settings to continue.");
+                permissionAction.setText("Open Settings");
+                permissionAction.setOnClickListener(v -> permissionManager.openAppSettings());
+            } else {
+                // Update the dynamic steps
+                updatePermissionStepUI();
+            }
         }
+    }
+    private void updatePermissionStepUI() {
+        int totalSteps = 3;
+        permissionProgressBar.setMax(totalSteps);
+
+        // Stop video if it was playing
+        if (permissionVideo.isPlaying()) {
+            permissionVideo.pause();
+        }
+
+        // Step 1: Notifications & Activity Recognition
+// Step 1: Notifications & Activity Recognition
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !permissionManager.hasPermission(Manifest.permission.POST_NOTIFICATIONS)) {
+            setupStep(1, totalSteps, "Notifications",
+                    "We need notifications to keep you updated on your timeline status.",
+                    android.R.drawable.ic_dialog_info); // Changed this line to use a default built-in icon
+        }
+        // Step 2: Foreground Location
+        else if (!permissionManager.hasPermission(Manifest.permission.ACCESS_FINE_LOCATION)) {
+            setupStep(2, totalSteps, "Location Access",
+                    "Timeline needs location to track your visits while the app is open.",
+                    android.R.drawable.ic_menu_mylocation);
+        }
+    }
+
+    private void setupStep(int currentStep, int totalSteps, String title, String subtitle, int iconRes) {
+        permissionProgressBar.setProgress(currentStep, true);
+        permissionStepText.setText("Step " + currentStep + " of " + totalSteps);
+
+        permissionTitle.setText(title);
+        permissionSubtitle.setText(subtitle);
+
+        // Show Icon, Hide Video
+        permissionVideoCard.setVisibility(View.GONE);
+        permissionIconCard.setVisibility(View.VISIBLE);
+        permissionIcon.setImageResource(iconRes);
+
+        permissionAction.setText("Grant Access");
+        permissionAction.setOnClickListener(v -> requestPermissions());
     }
 
     private void requestTransitions() {

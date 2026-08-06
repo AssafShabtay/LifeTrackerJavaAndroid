@@ -146,6 +146,13 @@ public class IconPickerDialog extends DialogFragment {
         allIcons = getIconList();
         iconAdapter = new IconAdapter(icon -> { // implements onIconClick
             selectedIcon = icon.getName();
+
+            // Set the result before dismissing
+            Bundle result = new Bundle();
+            result.putString("selectedIcon", selectedIcon);
+            result.putInt("selectedColor", selectedColor);
+            getParentFragmentManager().setFragmentResult("icon_picker_request", result);
+
             dismiss();
         });
         recyclerIcons.setAdapter(iconAdapter);
@@ -164,8 +171,8 @@ public class IconPickerDialog extends DialogFragment {
         recyclerColors.setLayoutManager(new LinearLayoutManager(getContext(), LinearLayoutManager.HORIZONTAL, false));
         recyclerColors.setAdapter(new ColorAdapter(getColorArray(), color -> { //  implements onColorSelected
             selectedColor = color;
-            if (recyclerIcons.getAdapter() != null) {
-                recyclerIcons.getAdapter().notifyItemRangeInserted(0, recyclerIcons.getAdapter().getItemCount());
+            if (iconAdapter != null) {
+                iconAdapter.notifyItemRangeChanged(0, iconAdapter.getItemCount());
             }
         }));
     }
@@ -254,7 +261,7 @@ public class IconPickerDialog extends DialogFragment {
             return colors.length;
         }
 
-        class ViewHolder extends RecyclerView.ViewHolder {
+        static class ViewHolder extends RecyclerView.ViewHolder {
             View view;
             ViewHolder(View v) {
                 super(v);
@@ -308,7 +315,7 @@ public class IconPickerDialog extends DialogFragment {
             holder.itemView.setOnClickListener(v -> iconListener.onIconClick(item));
         }
 
-        class ViewHolder extends RecyclerView.ViewHolder {
+        static class ViewHolder extends RecyclerView.ViewHolder {
             ImageView iconView;
             View background;
             ViewHolder(View v) {

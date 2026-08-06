@@ -26,27 +26,17 @@ public class MovementActivity implements TimelineItem {
     @Ignore
     private List<StillLocation> stops = new ArrayList<>();
 
-
     @Override
-    public boolean equals(Object object) {
-        if (this == object) return true;
-        if (object == null || getClass() != object.getClass()) return false;
-        MovementActivity other = (MovementActivity) object;
-        return id == other.id &&
-                Objects.equals(activityTypeName, other.activityTypeName) &&
-                Objects.equals(startLat, other.startLat) &&
-                Objects.equals(startLng, other.startLng) &&
-                Objects.equals(endLat, other.endLat) &&
-                Objects.equals(endLng, other.endLng) &&
-                Objects.equals(startTimeDate, other.startTimeDate) &&
-                Objects.equals(endTimeDate, other.endTimeDate) &&
-                Objects.equals(stops, other.stops);
+    public boolean equals(Object o) {
+        if (o == null || getClass() != o.getClass()) return false;
+        MovementActivity that = (MovementActivity) o;
+        return id == that.id && Objects.equals(activityTypeName, that.activityTypeName) && Objects.equals(startLat, that.startLat) && Objects.equals(startLng, that.startLng) && Objects.equals(endLat, that.endLat) && Objects.equals(endLng, that.endLng) && Objects.equals(startTimeDate, that.startTimeDate) && Objects.equals(endTimeDate, that.endTimeDate) && Objects.equals(stops, that.stops);
     }
+
     @Override
     public int hashCode() {
         return Objects.hash(id, activityTypeName, startLat, startLng, endLat, endLng, startTimeDate, endTimeDate, stops);
     }
-
 
     public long getId() {
         return id;

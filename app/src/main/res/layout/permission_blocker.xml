@@ -38,7 +38,7 @@
         android:textSize="24sp"
         android:fontFamily="sans-serif-medium"
         android:textColor="?attr/colorOnSurface"
-        android:layout_marginBottom="12dp"/>
+        android:layout_marginBottom="20dp"/>
 
     <TextView
         android:id="@+id/permission_subtitle"
@@ -49,7 +49,7 @@
         android:gravity="center"
         android:textColor="?attr/colorOnSurfaceVariant"
         android:lineSpacingExtra="4dp"
-        android:layout_marginBottom="40dp"/>
+        android:layout_marginBottom="48dp"/>
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/permission_action"

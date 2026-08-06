@@ -34,7 +34,9 @@
     <color name="on_surface_variant">#5F6368</color>
     <color name="outline">#DADCE0</color>
     <color name="outline_variant">#F1F3F4</color>
-    
+
+    <color name="md_theme_light_primary">#59684E</color>
+
     <!-- Activity Specific - Material Colors -->
     <color name="activity_still">#34A853</color> <!-- Google Green -->
     <color name="activity_stop">#7B0F0F</color> <!-- Google Red -->

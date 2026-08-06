@@ -65,7 +65,7 @@ public class ActivityTrackingUtils {
 
     }
     public static String checkIfStillIsMovement(double startLat, double startLng, Date startTime, Date endTime, double endLat, double endLng, Context context) {
-        // 1. Prevent NullPointerExceptions if dates are missing
+
         if (startTime == null || endTime == null) {
             return "Still";
         }
@@ -80,8 +80,6 @@ public class ActivityTrackingUtils {
         float speed = distance / durationSec;
 
         // --- REAL WORLD CONSTANTS ---
-        // GPS wander is typically 10-20 meters. 25 meters safely filters stationary device drift.
-        final float GPS_NOISE_RADIUS = 25f;
         // 2.2 m/s = ~7.9 km/h (Brisk human walking caps around here)
         final float MAX_WALK_SPEED = 2.2f;
         // 7.5 m/s = ~27.0 km/h (Covers sprinting and average cycling)
@@ -103,7 +101,7 @@ public class ActivityTrackingUtils {
 
         // 4. Drift Filter: If the distance is inside standard GPS error margins,
         // OR if the distance is slightly larger but the speed is a crawl (< 0.5 m/s or 1.8 km/h).
-        if (distance < GPS_NOISE_RADIUS || (distance < 75f && speed < 0.5f)) {
+        if (distance < 75f || speed < 0.5f) {
             return "Still";
         }
 
@@ -148,27 +146,26 @@ public class ActivityTrackingUtils {
         return new double[]{minLat, maxLat, minLng, maxLng};
     }
     public static String getActivityName(int activityType) {
-        switch (activityType) {
-            case DetectedActivity.IN_VEHICLE: return "Driving";
-            case DetectedActivity.ON_BICYCLE: return "Cycling";
-            case DetectedActivity.ON_FOOT: return "Walking";
-            case DetectedActivity.RUNNING: return "Running";
-            case DetectedActivity.WALKING: return "Walking";
-            case DetectedActivity.STILL: return "Still";
-            default: return "Unknown";
-        }
+        return switch (activityType) {
+            case DetectedActivity.IN_VEHICLE -> "Driving";
+            case DetectedActivity.ON_BICYCLE -> "Cycling";
+            case DetectedActivity.ON_FOOT, DetectedActivity.WALKING -> "Walking";
+            case DetectedActivity.RUNNING -> "Running";
+            case DetectedActivity.STILL -> "Still";
+            default -> "Unknown";
+        };
     }
     public static int getActivityTypeFromName(String name) {
         if (name == null) return DetectedActivity.UNKNOWN;
-        switch (name) {
-            case "Driving": return DetectedActivity.IN_VEHICLE;
-            case "Cycling": return DetectedActivity.ON_BICYCLE;
-            case "Running": return DetectedActivity.RUNNING;
-            case "Walking": return DetectedActivity.WALKING;
-            case "On Foot": return DetectedActivity.ON_FOOT;
-            case "Still": return DetectedActivity.STILL;
-            default: return DetectedActivity.UNKNOWN;
-        }
+        return switch (name) {
+            case "Driving" -> DetectedActivity.IN_VEHICLE;
+            case "Cycling" -> DetectedActivity.ON_BICYCLE;
+            case "Running" -> DetectedActivity.RUNNING;
+            case "Walking" -> DetectedActivity.WALKING;
+            case "On Foot" -> DetectedActivity.ON_FOOT;
+            case "Still" -> DetectedActivity.STILL;
+            default -> DetectedActivity.UNKNOWN;
+        };
     }
 
 }

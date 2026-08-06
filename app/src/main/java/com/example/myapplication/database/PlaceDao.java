@@ -32,6 +32,9 @@ public interface PlaceDao {
     @Query("SELECT * FROM places WHERE id = :id")
     Place getPlaceById(long id);
 
+    @Query("SELECT * FROM places WHERE geofencePlaceId = :geofenceId LIMIT 1")
+    Place getPlaceIdFromGeofenceId(String geofenceId);
+
     @Query("SELECT * FROM places WHERE category = 'Home' LIMIT 1")
     Place getHomePlace();
 }

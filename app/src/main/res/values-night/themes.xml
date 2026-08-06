@@ -9,6 +9,8 @@
         <!-- Secondary Colors -->
         <item name="colorSecondary">@color/secondary</item>
         <item name="colorOnSecondary">@color/on_secondary</item>
+        <item name="colorSecondaryContainer">@color/secondary_container</item>
+        <item name="colorOnSecondaryContainer">@color/on_secondary_container</item>
 
         <!-- Background and Surface -->
         <item name="android:windowBackground">@color/background</item>
@@ -18,13 +20,11 @@
         <item name="colorOutline">@color/outline</item>
         <item name="colorOutlineVariant">@color/outline_variant</item>
 
-        <item name="colorSecondaryContainer">@color/green_dark</item>
-        <item name="colorOnSecondaryContainer">@color/green_extra_light</item>
         <!-- Status Bar & Navigation -->
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">?attr/colorSurface</item>
-        <item name="android:windowLightStatusBar">false</item>
-        <item name="android:windowLightNavigationBar" tools:targetApi="27">false</item>
+        <item name="android:windowLightStatusBar" >true</item>
+        <item name="android:windowLightNavigationBar" tools:targetApi="o_mr1">true</item>
 
         <!-- Default style for MaterialButton to have white text -->
         <item name="materialButtonStyle">@style/Widget.App.Button.WhiteText</item>
@@ -33,5 +33,18 @@
 
     <style name="Widget.App.Button.WhiteText" parent="Widget.Material3.Button">
         <item name="android:textColor">@android:color/white</item>
+    </style>
+
+
+    <style name="App.Custom.Indicator" parent="Widget.Material3.BottomNavigationView.ActiveIndicator">
+        <item name="android:color">@color/secondary_container</item>
+        <item name="marginHorizontal">16dp</item>
+        <item name="shapeAppearanceOverlay">@style/ShapeAppearance.App.BottomNavIndicator</item>
+        <item name="android:height">32dp</item>
+    </style>
+
+    <style name="ShapeAppearance.App.BottomNavIndicator" parent="ShapeAppearance.Material3.SmallComponent">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">50%</item>
     </style>
 </resources>
