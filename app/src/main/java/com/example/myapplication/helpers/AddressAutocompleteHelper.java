@@ -25,15 +25,15 @@ import com.google.android.libraries.places.api.net.PlacesClient;
 import java.util.ArrayList;
 import java.util.List;
 
-public class PlaceAutocompleteHelper {
+public class AddressAutocompleteHelper {
 
-    private static final String TAG = "PlaceAutocompleteHelper";
+    private static final String TAG = "AddressAutocompleteHelper";
     private final Context context;
     private final AutoCompleteTextView autoCompleteTextView;
     private PlacesClient placesClient;
     private AutocompleteSessionToken autocompleteSessionToken;
 
-    public PlaceAutocompleteHelper(Context context, AutoCompleteTextView autoCompleteTextView) {
+    public AddressAutocompleteHelper(Context context, AutoCompleteTextView autoCompleteTextView) {
         this.context = context;
         this.autoCompleteTextView = autoCompleteTextView;
         initPlacesClient();
@@ -82,9 +82,9 @@ public class PlaceAutocompleteHelper {
                 .build();
 
         placesClient.findAutocompletePredictions(request).addOnSuccessListener(response -> {
-            List<String> addressSuggestions = new ArrayList<>();
+            List<AutocompleteItem> addressSuggestions = new ArrayList<>();
             for (AutocompletePrediction prediction : response.getAutocompletePredictions()) {
-                addressSuggestions.add(prediction.getFullText(null).toString());
+                addressSuggestions.add(new AutocompleteItem(prediction));
             }
 
             // Use custom adapter with custom layout
@@ -100,13 +100,26 @@ public class PlaceAutocompleteHelper {
         });
     }
 
+    public static class AutocompleteItem {
+        public final AutocompletePrediction prediction;
+
+        public AutocompleteItem(AutocompletePrediction prediction) {
+            this.prediction = prediction;
+        }
+
+        @Override
+        public String toString() {
+            return prediction.getFullText(null).toString();
+        }
+    }
+
     // Custom ArrayAdapter for autocomplete suggestions
-    private static class AutocompleteAdapter extends ArrayAdapter<String> {
+    private static class AutocompleteAdapter extends ArrayAdapter<AutocompleteItem> {
 
         private final Context context;
-        private final List<String> suggestions;
+        private final List<AutocompleteItem> suggestions;
 
-        public AutocompleteAdapter(@NonNull Context context, @NonNull List<String> objects) {
+        public AutocompleteAdapter(@NonNull Context context, @NonNull List<AutocompleteItem> objects) {
             super(context, 0, objects);
             this.context = context;
             this.suggestions = objects;
@@ -119,9 +132,22 @@ public class PlaceAutocompleteHelper {
                 convertView = LayoutInflater.from(context).inflate(R.layout.item_autocomplete_suggestion, parent, false);
             }
 
-            TextView autocompleteTextView = convertView.findViewById(R.id.autocomplete_text);
-            if (autocompleteTextView != null) {
-                autocompleteTextView.setText(suggestions.get(position));
+            AutocompleteItem item = suggestions.get(position);
+            
+            TextView primaryTextView = convertView.findViewById(R.id.autocomplete_primary_text);
+            TextView secondaryTextView = convertView.findViewById(R.id.autocomplete_secondary_text);
+            
+            if (primaryTextView != null) {
+                primaryTextView.setText(item.prediction.getPrimaryText(null));
+            }
+            if (secondaryTextView != null) {
+                CharSequence secondaryText = item.prediction.getSecondaryText(null);
+                if (secondaryText != null && secondaryText.length() > 0) {
+                    secondaryTextView.setText(secondaryText);
+                    secondaryTextView.setVisibility(View.VISIBLE);
+                } else {
+                    secondaryTextView.setVisibility(View.GONE);
+                }
             }
 
             return convertView;
@@ -134,7 +160,7 @@ public class PlaceAutocompleteHelper {
 
         @Nullable
         @Override
-        public String getItem(int position) {
+        public AutocompleteItem getItem(int position) {
             return suggestions.get(position);
         }
     }

@@ -81,13 +81,13 @@ public class ColorAndIcons {
         int iconRes = R.drawable.ic_walk;
 
 
-        if (type.contains("driving") || type.contains("vehicle")) {
+        if (type.contains("driving")) {
             colorRes = R.color.activity_vehicle;
             iconRes = R.drawable.ic_car;
         } else if (type.contains("running")) {
             colorRes = R.color.activity_running;
             iconRes = R.drawable.sprint_24px;
-        } else if (type.contains("cycling") || type.contains("bicycle")) {
+        } else if (type.contains("cycling")) {
             colorRes = R.color.activity_cycling;
             iconRes = R.drawable.ic_bike;
         } else if (type.contains("walking") || type.contains("foot")) {

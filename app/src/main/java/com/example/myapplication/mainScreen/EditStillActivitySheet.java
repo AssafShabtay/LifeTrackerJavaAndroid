@@ -6,8 +6,6 @@ import static com.example.myapplication.helpers.UiFormatters.category;
 import android.app.TimePickerDialog;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
-import android.text.Editable;
-import android.text.TextWatcher;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -20,13 +18,14 @@ import android.widget.ImageView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder; // Import MaterialAlertDialogBuilder
 
 import com.example.myapplication.BuildConfig;
 import com.example.myapplication.LifeTrackerApp;
 import com.example.myapplication.R;
 import com.example.myapplication.database.StillLocation;
+import com.example.myapplication.helpers.AddressAutocompleteHelper;
 import com.example.myapplication.helpers.UiFormatters;
-import com.example.myapplication.helpers.PlaceAutocompleteHelper; // Import the new helper
 import com.example.myapplication.helpers.ColorAndIcons; // Import ColorAndIcons
 import com.example.myapplication.database.Place; // Added import for Place
 import com.example.myapplication.database.PlaceDao; // Added import for PlaceDao
@@ -38,6 +37,7 @@ import com.google.android.libraries.places.api.model.CircularBounds;
 import com.google.android.libraries.places.api.net.PlacesClient;
 import com.google.android.libraries.places.api.net.SearchNearbyRequest;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
+import com.google.android.material.button.MaterialButton; // Added import for MaterialButton
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -45,21 +45,23 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 
-public class EditActivitySheet extends BottomSheetDialogFragment {
+public class EditStillActivitySheet extends BottomSheetDialogFragment {
 
-    public interface OnVisitUpdatedListener {
+    public interface OnVisitInteractionListener {
         void onUpdate(StillLocation still);
+        void onDelete(StillLocation still);
     }
 
     private StillLocation still;
-    private OnVisitUpdatedListener listener;
+    private OnVisitInteractionListener listener;
     private PlacesClient placesClient;
-    private PlaceDao placeDao; // Added PlaceDao member variable
-    private PlaceAutocompleteHelper placeAutocompleteHelper; // Declare PlaceAutocompleteHelper
+    private PlaceDao placeDao;
+    private AddressAutocompleteHelper addressAutocompleteHelper;
 
     private AutoCompleteTextView actvName;
     private AutoCompleteTextView etAddress;
     private Button btnStartTime, btnEndTime;
+    private MaterialButton btnDelete;
 
     private View layoutIconPicker;
     private View viewSelectedColor;
@@ -72,8 +74,8 @@ public class EditActivitySheet extends BottomSheetDialogFragment {
     private String selectedGeofenceId;
     private LifeTrackerApp app;
 
-    public static EditActivitySheet newInstance(StillLocation still, OnVisitUpdatedListener listener) {
-        EditActivitySheet fragment = new EditActivitySheet();
+    public static EditStillActivitySheet newInstance(StillLocation still, OnVisitInteractionListener listener) {
+        EditStillActivitySheet fragment = new EditStillActivitySheet();
         fragment.still = still;
         fragment.listener = listener;
         return fragment;
@@ -82,13 +84,13 @@ public class EditActivitySheet extends BottomSheetDialogFragment {
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        return inflater.inflate(R.layout.edit_activity_sheet, container, false);
+        return inflater.inflate(R.layout.edit_still_activity_sheet, container, false);
     }
 
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-        Log.d("EditActivitySheet", "onViewCreated called.");
+        Log.d("EditStillActivitySheet", "onViewCreated called.");
 
         if (!Places.isInitialized()) {
             Places.initializeWithNewPlacesApiEnabled(requireContext(), BuildConfig.GOOGLE_API_KEY);
@@ -102,6 +104,7 @@ public class EditActivitySheet extends BottomSheetDialogFragment {
         etAddress = view.findViewById(R.id.etAddress);
         btnStartTime = view.findViewById(R.id.btnStartTime);
         btnEndTime = view.findViewById(R.id.btnEndTime);
+        btnDelete = view.findViewById(R.id.btnDelete);
 
         layoutIconPicker = view.findViewById(R.id.layoutIconPicker);
         viewSelectedColor = view.findViewById(R.id.viewSelectedColor);
@@ -132,7 +135,7 @@ public class EditActivitySheet extends BottomSheetDialogFragment {
 
         updateIconAndColorUi();
         fetchNearbyPlaceSuggestions();
-        placeAutocompleteHelper = new PlaceAutocompleteHelper(requireContext(), etAddress); // Initialize the member variable
+        addressAutocompleteHelper = new AddressAutocompleteHelper(requireContext(), etAddress); // Initialize the member variable
 
         // Set up icon picker
         if (layoutIconPicker != null) {
@@ -182,6 +185,20 @@ public class EditActivitySheet extends BottomSheetDialogFragment {
             }
             dismiss();
         });
+
+        btnDelete.setOnClickListener(v -> {
+            new MaterialAlertDialogBuilder(requireContext())
+                .setTitle("Delete Activity?")
+                .setMessage("Are you sure you want to delete this activity? This action cannot be undone.")
+                .setNegativeButton("Cancel", (dialog, which) -> dialog.dismiss())
+                .setPositiveButton("Delete", (dialog, which) -> {
+                    if (listener != null) {
+                        listener.onDelete(still);
+                    }
+                    dismiss();
+                })
+                .show();
+        });
     }
 
     // Add this method to handle keyboard behavior
@@ -194,13 +211,13 @@ public class EditActivitySheet extends BottomSheetDialogFragment {
     }
 
     private void showIconPickerDialog() {
-        Log.d("EditActivitySheet", "showIconPickerDialog called.");
+        Log.d("EditStillActivitySheet", "showIconPickerDialog called.");
         IconPickerDialog dialog = IconPickerDialog.newInstance(selectedIcon, selectedColor);
         dialog.show(getChildFragmentManager(), "icon_picker");
     }
 
     private void updateIconAndColorUi() {
-        Log.d("EditActivitySheet", "updateIconAndColorUi called. Selected Icon: " + selectedIcon + ", Selected Color: " + String.format("#%06X", (0xFFFFFF & selectedColor)));
+        Log.d("EditStillActivitySheet", "updateIconAndColorUi called. Selected Icon: " + selectedIcon + ", Selected Color: " + String.format("#%06X", (0xFFFFFF & selectedColor)));
 
         // Update color preview
         if (viewSelectedColor != null) {
@@ -208,7 +225,7 @@ public class EditActivitySheet extends BottomSheetDialogFragment {
             gd.setShape(GradientDrawable.OVAL);
             gd.setColor(selectedColor & 0x20FFFFFF);
             viewSelectedColor.setBackground(gd);
-            Log.d("EditActivitySheet", "Color preview updated.");
+            Log.d("EditStillActivitySheet", "Color preview updated.");
         }
 
         // Update icon preview
@@ -220,7 +237,7 @@ public class EditActivitySheet extends BottomSheetDialogFragment {
 
             ivSelectedIcon.setImageResource(iconRes);
             ivSelectedIcon.setColorFilter(selectedColor); // Set color filter to apply the selected color
-            Log.d("EditActivitySheet", "Icon preview updated with resource: " + iconRes + " and color: " + String.format("#%06X", (0xFFFFFF & selectedColor)));
+            Log.d("EditStillActivitySheet", "Icon preview updated with resource: " + iconRes + " and color: " + String.format("#%06X", (0xFFFFFF & selectedColor)));
         }
     }
 
@@ -291,9 +308,9 @@ public class EditActivitySheet extends BottomSheetDialogFragment {
                             if (selectedGeofencePlace.getPlaceTypes() != null && !selectedGeofencePlace.getPlaceTypes().isEmpty()) {
                                 selectedCategory = selectedGeofencePlace.getPlaceTypes().get(0);
                             }
-                            
+
                             selectedGeofenceId = selectedGeofencePlace.getId();
-                            
+
                             // Execute database operation on a background thread
                             app.getDatabaseWriteExecutor().execute(() -> {
                                 selectedPlace = placeDao.getPlaceIdFromGeofenceId(selectedGeofenceId);
@@ -311,7 +328,7 @@ public class EditActivitySheet extends BottomSheetDialogFragment {
                     }
                 })
                 .addOnFailureListener(e -> {
-                    Log.e("EditActivitySheet", "Failed to fetch nearby places", e);
+                    Log.e("EditStillActivitySheet", "Failed to fetch nearby places", e);
                 });
     }
 
@@ -355,9 +372,9 @@ public class EditActivitySheet extends BottomSheetDialogFragment {
         if (placesClient != null) {
             placesClient = null;
         }
-        if (placeAutocompleteHelper != null) {
-            placeAutocompleteHelper.release(); // Call release on the helper
-            placeAutocompleteHelper = null;
+        if (addressAutocompleteHelper != null) {
+            addressAutocompleteHelper.release(); // Call release on the helper
+            addressAutocompleteHelper = null;
          }
     }
 }

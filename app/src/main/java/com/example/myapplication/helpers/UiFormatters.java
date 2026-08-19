@@ -16,7 +16,7 @@ public class UiFormatters {
     }
 
     public static String category(String category) {
-        return Arrays.stream(category.replace("_", " ").toLowerCase().trim().split("\\s+"))
+        return Arrays.stream(category.replace("_", " ").toLowerCase().trim().split(" +"))
                 .map(word -> word.substring(0, 1).toUpperCase() + word.substring(1))
                 .collect(Collectors.joining(" "));
     }

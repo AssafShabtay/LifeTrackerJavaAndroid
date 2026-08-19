@@ -187,17 +187,32 @@
                     </FrameLayout>
                 </com.google.android.material.card.MaterialCardView>
 
-                <!-- Label moved inside parallax container -->
-                <TextView
-                    android:layout_width="wrap_content"
+                <RelativeLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Timeline"
-                    android:textSize="16sp"
-                    android:fontFamily="sans-serif-medium"
-                    android:textColor="?attr/colorOnSurface"
-                    android:layout_marginStart="24dp"
                     android:layout_marginTop="16dp"
-                    android:layout_marginBottom="8dp" />
+                    android:layout_marginBottom="8dp"
+                    android:layout_marginHorizontal="24dp">
+                    
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Timeline"
+                        android:textSize="16sp"
+                        android:fontFamily="sans-serif-medium"
+                        android:textColor="?attr/colorOnSurface"
+                        android:layout_centerVertical="true"/>
+
+                    <ImageView
+                        android:id="@+id/btnAddCustomActivity"
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:layout_alignParentEnd="true"
+                        android:layout_centerVertical="true"
+                        android:src="@drawable/ic_add"
+                        app:tint="?attr/colorPrimary"
+                        android:background="?attr/selectableItemBackgroundBorderless"/>
+                </RelativeLayout>
 
             </LinearLayout>
 

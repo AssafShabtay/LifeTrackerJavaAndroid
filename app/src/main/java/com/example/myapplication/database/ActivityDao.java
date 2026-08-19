@@ -19,6 +19,10 @@ public interface ActivityDao {
     @Update
     void updateStillLocation(StillLocation stillLocation);
 
+    @Update
+    void updateMovementActivity(MovementActivity movement);
+
+
     @Query("DELETE FROM still_locations WHERE id = :id")
     void deleteStillLocation(long id);
 

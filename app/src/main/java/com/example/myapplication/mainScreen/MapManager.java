@@ -11,6 +11,8 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
+import android.location.Address;
+import android.location.Geocoder;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
@@ -38,6 +40,8 @@ import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.PolylineOptions;
 
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -117,7 +121,19 @@ public class MapManager implements OnMapReadyCallback {
         if (item instanceof StillLocation) {
             addStillToMap((StillLocation) item, 1, true);
             StillLocation still = (StillLocation) item;
-            if (still.getLat() != null && still.getLng() != null) {
+            if(still.getPlaceAddress() != null){
+                Geocoder coder = new Geocoder(fragment.requireContext());
+                try {
+                    ArrayList<Address> adresses = (ArrayList<Address>) coder.getFromLocationName("Your Address", 50);
+                    for(Address add : adresses){
+                            double longitude = add.getLongitude();
+                            double latitude = add.getLatitude();
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+            else if (still.getLat() != null && still.getLng() != null) {
                 mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(still.getLat(), still.getLng()), 15f));
             }
         } else if (item instanceof MovementActivity) {

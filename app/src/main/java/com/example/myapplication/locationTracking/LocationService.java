@@ -64,8 +64,6 @@ public class LocationService extends Service {
     static final Map<Integer, Long> currentMovementTrackingIds = new ConcurrentHashMap<>(); // is a list because of the possibly of that android thinks two activities are ongoing
     private static volatile boolean isInitializing = false;
 
-    private volatile boolean isRequestingStillLocationUpdates = false; //TODO CHECK IF USED
-
     private ActivityDao dao;
     private PlaceDao placeDao;
     private GeofenceManager geofenceManager;
@@ -220,11 +218,6 @@ public class LocationService extends Service {
                 if (place != null) {
                     if (currentStillTrackingId != null) {
                         updateActiveStillWithPlace(place);
-                        // If we got a location from geofence, stop frequent still location updates
-                        if (isRequestingStillLocationUpdates) {
-                            locationProvider.stopFrequentStillLocationUpdates();
-
-                        }
                         return;
                     }
                     if (!currentMovementTrackingIds.isEmpty()){
@@ -339,7 +332,7 @@ public class LocationService extends Service {
         }
     }
 
-    private void updateCurrentActivityAfterExit(int exitedActivityType) { // TODO TRY TO UNDERSTAND
+    private void updateCurrentActivityAfterExit(int exitedActivityType) {
         if (currentActivityType != exitedActivityType) return;
 
         if (!currentMovementTrackingIds.isEmpty()) {
@@ -569,7 +562,7 @@ public class LocationService extends Service {
                             Log.d(TAG, msg);
                             Logger.saveLog(this, msg);
 
-                            // If the active still was previously marked as a \'stop\' (wasSupposedToBeActivity != null),\n                            // and the movement activity is ending and being re-classified as still,\n                            // then this \'still\' should revert to a normal still.\n                            if (activeStill.getWasSupposedToBeActivity() != null) {
+
                             if (activeStill.getWasSupposedToBeActivity() != null) {
                                 String msg2 = "DB Update: Reverting active still " + activeStill.getId() + " from \'stop\' to \'normal still\' as movement " + id + " ended.";
                                 Log.d(TAG, msg2);

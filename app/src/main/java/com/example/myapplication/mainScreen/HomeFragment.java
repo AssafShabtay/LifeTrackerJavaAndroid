@@ -4,10 +4,13 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.LayoutInflater;
+import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.ImageView;
+import android.widget.PopupMenu;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -17,7 +20,6 @@ import androidx.recyclerview.widget.RecyclerView;
 
 // Removed import com.example.myapplication.locationTracking.GeofenceManager;
 import com.example.myapplication.LifeTrackerApp;
-import com.example.myapplication.MainActivity;
 import com.example.myapplication.database.ActivityDao;
 import com.example.myapplication.database.ActivityDatabase;
 import com.example.myapplication.database.MovementActivity;
@@ -27,7 +29,6 @@ import com.example.myapplication.R;
 
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
@@ -66,9 +67,38 @@ public class HomeFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
         Button btnShowFullDay = view.findViewById(R.id.btn_show_full_day);
         RecyclerView rvTimeline = view.findViewById(R.id.rvTimeline);
+        ImageView btnAddCustomActivity = view.findViewById(R.id.btnAddCustomActivity);
         ActivityDatabase db = ActivityDatabase.getDatabase(requireContext());
         dao = db.activityDao();
         app = (LifeTrackerApp) requireActivity().getApplication();
+
+        if (btnAddCustomActivity != null) {
+            btnAddCustomActivity.setOnClickListener(v -> {
+                PopupMenu popup = new PopupMenu(requireContext(), btnAddCustomActivity);
+                popup.getMenu().add(0, 1, 0, "Add Visit");
+                popup.getMenu().add(0, 2, 0, "Add Movement");
+                
+                popup.setOnMenuItemClickListener(item -> {
+                    Date date = calendarManager != null ? calendarManager.getSelectedDate() : new Date();
+                    
+                    if (item.getItemId() == 1) {
+                        AddCustomActivitySheet sheet = AddCustomActivitySheet.newInstance(date, () -> {
+                            loadTimelineData(calendarManager.getSelectedDate());
+                        });
+                        sheet.show(getChildFragmentManager(), "AddCustomActivitySheet");
+                        return true;
+                    } else if (item.getItemId() == 2) {
+                        AddCustomMovementActivitySheet sheet = AddCustomMovementActivitySheet.newInstance(date, () -> {
+                            loadTimelineData(calendarManager.getSelectedDate());
+                        });
+                        sheet.show(getChildFragmentManager(), "AddCustomMovementActivitySheet");
+                        return true;
+                    }
+                    return false;
+                });
+                popup.show();
+            });
+        }
 
         // --------------- initialize map ---------------
         if (btnShowFullDay != null) {
@@ -127,21 +157,76 @@ public class HomeFragment extends Fragment {
                 mapManager.focusOnItem(item);
             }
         },
-                still -> this.showEditSheet(still));
+                new TimelineAdapter.OnEditButtonClickListener() {
+                    @Override
+                    public void onStillEditButtonClick(StillLocation still) {
+                        showStillEditSheet(still);
+                    }
+
+                    @Override
+                    public void onMovementEditButtonClick(MovementActivity movement) {
+                        showMovementEditSheet(movement);
+                    }
+                });
         rvTimeline.setLayoutManager(new LinearLayoutManager(requireContext()));
         rvTimeline.setAdapter(timelineAdapter);
 
     }
 
-    private void showEditSheet(StillLocation still) {
-        EditActivitySheet sheet = EditActivitySheet.newInstance(still, updatedStill -> {
-            app.getDatabaseWriteExecutor().execute(() -> {
-                dao.updateStillLocation(updatedStill);
-                if (isAdded()) {
-                requireActivity().runOnUiThread(() -> {
-                    loadTimelineData(calendarManager.getSelectedDate());
-                });
-            }});
+    private void showStillEditSheet(StillLocation still) {
+        EditStillActivitySheet sheet = EditStillActivitySheet.newInstance(still, new EditStillActivitySheet.OnVisitInteractionListener() {
+            @Override
+            public void onUpdate(StillLocation updatedStill) {
+                app.getDatabaseWriteExecutor().execute(() -> {
+                    dao.updateStillLocation(updatedStill);
+                    if (isAdded()) {
+                        requireActivity().runOnUiThread(() -> {
+                            loadTimelineData(calendarManager.getSelectedDate());
+                        });
+                    }}
+                );
+            }
+
+            @Override
+            public void onDelete(StillLocation stillToDelete) {
+                app.getDatabaseWriteExecutor().execute(() -> {
+                    dao.deleteStillLocation(stillToDelete.getId());
+                    if (isAdded()) {
+                        requireActivity().runOnUiThread(() -> {
+                            loadTimelineData(calendarManager.getSelectedDate());
+                        });
+                    }}
+                );
+            }
+        });
+        sheet.show(getChildFragmentManager(), "PlaceLabelSheet");
+    }
+
+    private void showMovementEditSheet(MovementActivity movement) {
+        EditMovementActivitySheet sheet = EditMovementActivitySheet.newInstance(movement, new EditMovementActivitySheet.OnVisitInteractionListener() {
+            @Override
+            public void onUpdate(MovementActivity movement) {
+                app.getDatabaseWriteExecutor().execute(() -> {
+                    dao.updateMovementActivity(movement);
+                    if (isAdded()) {
+                        requireActivity().runOnUiThread(() -> {
+                            loadTimelineData(calendarManager.getSelectedDate());
+                        });
+                    }}
+                );
+            }
+
+            @Override
+            public void onDelete(MovementActivity movement) {
+                app.getDatabaseWriteExecutor().execute(() -> {
+                    dao.deleteMovementActivity(movement.getId());
+                    if (isAdded()) {
+                        requireActivity().runOnUiThread(() -> {
+                            loadTimelineData(calendarManager.getSelectedDate());
+                        });
+                    }}
+                );
+            }
         });
         sheet.show(getChildFragmentManager(), "PlaceLabelSheet");
     }

@@ -37,4 +37,8 @@ public interface PlaceDao {
 
     @Query("SELECT * FROM places WHERE category = 'Home' LIMIT 1")
     Place getHomePlace();
+
+    // New: Query to get the Work place
+    @Query("SELECT * FROM places WHERE category = 'Work' LIMIT 1")
+    Place getWorkPlace();
 }

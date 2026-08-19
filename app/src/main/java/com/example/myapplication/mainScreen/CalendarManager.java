@@ -338,26 +338,38 @@ public class CalendarManager {
         } else {
             tvDay.setTextColor(ContextCompat.getColor(context, R.color.on_surface));
         }
-
-        MiniPieChartView pieChartView = new MiniPieChartView(context);
-        LinearLayout.LayoutParams circleParams = new LinearLayout.LayoutParams(dp(20), dp(20));
-        circleParams.topMargin = dp(6);
-        pieChartView.setLayoutParams(circleParams);
-
-        pieChartView.setSelected(isSelected);
-        pieChartView.setFuture(isFuture);
+        root.addView(tvDay); // Add tvDay first
 
         if (!isFuture) {
             String cacheKey = getCacheKey(cellDate);
-            if (sliceCache.containsKey(cacheKey)) {
-                pieChartView.setSlices(sliceCache.get(cacheKey));
-            } else {
-                databaseWriteExecutor.execute(() -> {
-                    List<MiniPieChartView.Slice> slices = calculateSlicesForDate(cellDate);
-                    sliceCache.put(cacheKey, slices);
-                    root.post(() -> pieChartView.setSlices(slices));
+            databaseWriteExecutor.execute(() -> {
+                List<MiniPieChartView.Slice> slices = calculateSlicesForDate(cellDate);
+                sliceCache.put(cacheKey, slices);
+                root.post(() -> {
+                    // Check if the day is "full in data"
+                    if (isDayFull(slices)) {
+                        // Create a solid circle or checkmark icon
+                        ImageView fullDayIndicator = new ImageView(context);
+                        LinearLayout.LayoutParams indicatorParams = new LinearLayout.LayoutParams(dp(20), dp(20));
+                        indicatorParams.topMargin = dp(6);
+                        fullDayIndicator.setLayoutParams(indicatorParams);
+                        fullDayIndicator.setImageResource(R.drawable.ic_check_circle); // Assuming you have a checkmark icon
+                        fullDayIndicator.setColorFilter(ContextCompat.getColor(context, R.color.primary)); // Tint with primary color
+                        root.addView(fullDayIndicator);
+                    } else {
+                        MiniPieChartView pieChartView = new MiniPieChartView(context);
+                        LinearLayout.LayoutParams circleParams = new LinearLayout.LayoutParams(dp(20), dp(20));
+                        circleParams.topMargin = dp(6);
+                        pieChartView.setLayoutParams(circleParams);
+
+                        pieChartView.setSelected(isSelected);
+                        pieChartView.setFuture(isFuture);
+                        pieChartView.setSlices(slices);
+                        root.addView(pieChartView);
+                    }
                 });
-            }
+            });
+
 
             root.setOnClickListener(v -> {
                 selectedDate = cellDate;
@@ -371,9 +383,16 @@ public class CalendarManager {
             });
         }
 
-        root.addView(tvDay);
-        root.addView(pieChartView);
         return root;
+    }
+
+    private boolean isDayFull(List<MiniPieChartView.Slice> slices) {
+        float totalDurationMinutes = 0;
+        for (MiniPieChartView.Slice slice : slices) {
+            totalDurationMinutes += slice.value;
+        }
+        // A day has 1440 minutes. Consider "full" if covered for at least 23.5 hours (1410 minutes)
+        return totalDurationMinutes >= 1410;
     }
 
     private String getCacheKey(Date date) {

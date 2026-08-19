@@ -34,20 +34,22 @@ public class TimelineAdapter extends ListAdapter<TimelineItem, RecyclerView.View
     }
 
     public interface OnEditButtonClickListener {
-        void onLabelClick(StillLocation still);
+        void onStillEditButtonClick(StillLocation still);
+
+        void onMovementEditButtonClick(MovementActivity movement);
     }
 
-    public TimelineAdapter(OnItemClickListener clickListener, OnEditButtonClickListener labelClickListener) {
+    public TimelineAdapter(OnItemClickListener clickListener, OnEditButtonClickListener editButtonClickListener) {
         super(new TimelineDiffCallback());
         this.clickListener = clickListener;
-        this.labelClickListener = labelClickListener;
+        this.editButtonClickListener = editButtonClickListener;
     }
 
     private static final int TYPE_STILL = 0;
     private static final int TYPE_MOVEMENT = 1;
 
     private final OnItemClickListener clickListener;
-    private final OnEditButtonClickListener labelClickListener;
+    private final OnEditButtonClickListener editButtonClickListener;
 
 
     static class TimelineDiffCallback extends DiffUtil.ItemCallback<TimelineItem> {
@@ -147,8 +149,8 @@ public class TimelineAdapter extends ListAdapter<TimelineItem, RecyclerView.View
             }
 
             // Click listener
-            stillHolder.btnLabel.setOnClickListener(v -> {
-                if (labelClickListener != null) labelClickListener.onLabelClick(still);
+            stillHolder.editBtn.setOnClickListener(v -> {
+                if (editButtonClickListener != null) editButtonClickListener.onStillEditButtonClick(still);
             });
 
         } else {
@@ -164,7 +166,7 @@ public class TimelineAdapter extends ListAdapter<TimelineItem, RecyclerView.View
 
             // Time range and duration
             movementHolder.itemTimeRange.setText(UiFormatters.timeOnly(movement.getStartTimeDate()) + " — " +
-                      UiFormatters.timeOnly(movement.getEndTimeDate()));
+                    UiFormatters.timeOnly(movement.getEndTimeDate()));
 
             movementHolder.itemDuration.setText(UiFormatters.duration(movement.getStartTimeDate(), movement.getEndTimeDate()));
 
@@ -172,7 +174,7 @@ public class TimelineAdapter extends ListAdapter<TimelineItem, RecyclerView.View
             int[] colorAndIcon = getMovementColorAndIcon(type.toLowerCase());
             int colorRes = colorAndIcon[0];
             int iconRes = colorAndIcon[1];
-            
+
             // Color and icon
             int movementColor = ContextCompat.getColor(movementHolder.itemView.getContext(), colorRes);
             if (movementHolder.lineDot.getBackground() != null) {
@@ -181,7 +183,10 @@ public class TimelineAdapter extends ListAdapter<TimelineItem, RecyclerView.View
             movementHolder.itemIcon.setImageResource(iconRes);
             movementHolder.itemIcon.setColorFilter(movementColor);
             movementHolder.iconContainer.setCardBackgroundColor(movementColor & 0x20FFFFFF);
-            
+
+            movementHolder.editBtn.setOnClickListener(v -> {
+                if (editButtonClickListener != null) editButtonClickListener.onMovementEditButtonClick(movement);
+            });
             // Handle nested stops
             movementHolder.stopsContainer.removeAllViews();
             if (movement.getStops() != null && !movement.getStops().isEmpty()) {
@@ -241,7 +246,7 @@ public class TimelineAdapter extends ListAdapter<TimelineItem, RecyclerView.View
                     });
 
                     btnLabelStop.setOnClickListener(v -> {
-                        if (labelClickListener != null) labelClickListener.onLabelClick(stop);
+                        if (editButtonClickListener != null) editButtonClickListener.onStillEditButtonClick(stop);
                     });
 
                     movementHolder.stopsContainer.addView(stopView);
@@ -256,7 +261,7 @@ public class TimelineAdapter extends ListAdapter<TimelineItem, RecyclerView.View
         TextView itemTitle, itemTimeRange, itemDuration, itemAddress, itemCategory;
         View lineDot;
         android.widget.ImageView itemIcon;
-        Button btnLabel;
+        Button editBtn;
         CardView iconContainer;
 
         StillViewHolder(@NonNull View itemView) {
@@ -266,7 +271,7 @@ public class TimelineAdapter extends ListAdapter<TimelineItem, RecyclerView.View
             itemDuration = itemView.findViewById(R.id.itemDuration);
             lineDot = itemView.findViewById(R.id.lineDot);
             itemIcon = itemView.findViewById(R.id.itemIcon);
-            btnLabel = itemView.findViewById(R.id.btnLabel);
+            editBtn = itemView.findViewById(R.id.editBtn);
             itemAddress = itemView.findViewById(R.id.itemAddress);
             itemCategory = itemView.findViewById(R.id.itemCategory);
             iconContainer = itemView.findViewById(R.id.iconContainer);
@@ -278,6 +283,7 @@ public class TimelineAdapter extends ListAdapter<TimelineItem, RecyclerView.View
         TextView itemTimeRange;
         TextView itemDuration;
         View lineDot;
+        Button editBtn;
         android.widget.ImageView itemIcon;
         LinearLayout stopsContainer;
         CardView iconContainer;
@@ -288,6 +294,7 @@ public class TimelineAdapter extends ListAdapter<TimelineItem, RecyclerView.View
             itemTimeRange = itemView.findViewById(R.id.itemTimeRange);
             itemDuration = itemView.findViewById(R.id.itemDuration);
             lineDot = itemView.findViewById(R.id.lineDot);
+            editBtn = itemView.findViewById(R.id.editBtn);
             itemIcon = itemView.findViewById(R.id.itemIcon);
             stopsContainer = itemView.findViewById(R.id.stopsContainer);
             iconContainer = itemView.findViewById(R.id.iconContainer);
