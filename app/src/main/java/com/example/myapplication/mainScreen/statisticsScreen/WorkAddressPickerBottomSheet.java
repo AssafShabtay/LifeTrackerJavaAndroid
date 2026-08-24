@@ -1,4 +1,4 @@
-package com.example.myapplication.mainScreen;
+package com.example.myapplication.mainScreen.statisticsScreen;
 
 import android.os.Bundle;
 import android.view.LayoutInflater;

@@ -1,13 +1,16 @@
-package com.example.myapplication.mainScreen;
-
-import static com.example.myapplication.helpers.ColorAndIcons.getStillColor;
-import static com.example.myapplication.helpers.UiFormatters.category;
+package com.example.myapplication.mainScreen.homeScreen;
 
 import android.app.TimePickerDialog;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
+import android.location.Address;
+import android.location.Geocoder;
+import android.location.Location;
 import android.os.Bundle;
-import android.util.Log;
+import android.os.Handler;
+import android.os.Looper;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -16,10 +19,11 @@ import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
 import android.widget.Button;
 import android.widget.ImageView;
-import android.widget.Toast;
+import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.text.HtmlCompat;
 
 import com.example.myapplication.BuildConfig;
 import com.example.myapplication.LifeTrackerApp;
@@ -31,16 +35,12 @@ import com.example.myapplication.helpers.ColorAndIcons;
 import com.example.myapplication.database.Place;
 import com.example.myapplication.database.PlaceDao;
 import com.example.myapplication.database.ActivityDatabase;
-import com.google.android.gms.maps.model.LatLng;
 import com.google.android.libraries.places.api.Places;
-import com.google.android.libraries.places.api.model.CircularBounds;
 import com.google.android.libraries.places.api.net.PlacesClient;
-import com.google.android.libraries.places.api.net.SearchNearbyRequest;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
-import com.google.android.material.button.MaterialButton;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
@@ -58,6 +58,7 @@ public class AddCustomActivitySheet extends BottomSheetDialogFragment {
 
     private AutoCompleteTextView actvName;
     private AutoCompleteTextView etAddress;
+    private TextView tvAddressStatus;
     private Button btnStartTime, btnEndTime;
 
     private View layoutIconPicker;
@@ -99,6 +100,7 @@ public class AddCustomActivitySheet extends BottomSheetDialogFragment {
 
         actvName = view.findViewById(R.id.actvName);
         etAddress = view.findViewById(R.id.etAddress);
+        tvAddressStatus = view.findViewById(R.id.tvAddressStatus);
         btnStartTime = view.findViewById(R.id.btnStartTime);
         btnEndTime = view.findViewById(R.id.btnEndTime);
 
@@ -122,7 +124,6 @@ public class AddCustomActivitySheet extends BottomSheetDialogFragment {
         editedEndTime = cal.getTime();
 
         selectedColor = Color.parseColor("#4CAF50");
-        selectedCategory = null;
         selectedIcon = "Still";
 
         getChildFragmentManager().setFragmentResultListener("icon_picker_request", this, (requestKey, bundle) -> {
@@ -143,6 +144,153 @@ public class AddCustomActivitySheet extends BottomSheetDialogFragment {
 
         updateTimeButtons();
 
+        // Validate address
+        btnSave.setEnabled(false);
+        Handler validationHandler = new Handler(Looper.getMainLooper());
+        Runnable validationRunnable = new Runnable() {
+            @Override
+            public void run() {
+                String address = etAddress.getText().toString().trim();
+                if (address.isEmpty()) {
+                    tvAddressStatus.setVisibility(View.INVISIBLE);
+                    tvAddressStatus.setText(null);
+                    btnSave.setEnabled(true); // Allow saving without an address (it's optional)
+                    return;
+                }
+
+                app.getDatabaseWriteExecutor().execute(() -> {
+                    if (getContext() == null) return;
+                    Geocoder geocoder = new Geocoder(requireContext());
+                    try {
+                        List<Address> addresses = geocoder.getFromLocationName(address, 1);
+                        boolean isValid = addresses != null && !addresses.isEmpty();
+
+                        List<Place> nearbyPlaces = new ArrayList<>();
+                        if (isValid) {
+                            Address add = addresses.get(0);
+                            double lat = add.getLatitude();
+                            double lng = add.getLongitude();
+
+                            List<Place> allPlaces = placeDao.getAllPlaces();
+                            for (Place p : allPlaces) {
+                                float[] results = new float[1];
+                                Location.distanceBetween(lat, lng, p.getLat(), p.getLng(), results);
+                                if (results[0] <= 75) {
+                                    nearbyPlaces.add(p);
+                                }
+                            }
+                        }
+
+                        if (getActivity() != null) {
+                            requireActivity().runOnUiThread(() -> {
+                                if (isValid) {
+                                    tvAddressStatus.setVisibility(View.VISIBLE);
+                                    tvAddressStatus.setText("Valid Address");
+                                    tvAddressStatus.setTextColor(Color.parseColor("#4CAF50")); // Green
+                                    btnSave.setEnabled(true);
+
+                                    if (!nearbyPlaces.isEmpty()) {
+                                        // Set up the drop down list first
+                                        ArrayAdapter<String> adapter = new ArrayAdapter<>(requireContext(), android.R.layout.simple_dropdown_item_1line);
+                                        for (Place p : nearbyPlaces) {
+                                            adapter.add(p.getName());
+                                        }
+                                        actvName.setAdapter(adapter);
+                                        actvName.setOnItemClickListener((parent, view1, position, id) -> {
+                                            String selectedName = adapter.getItem(position);
+                                            for (Place p : nearbyPlaces) {
+                                                if (p.getName().equals(selectedName)) {
+                                                    selectedPlace = p;
+                                                    if (p.getIcon() != null) {
+                                                        selectedIcon = p.getIcon();
+                                                    }
+                                                    if (p.getColor() != null) {
+                                                        selectedColor = p.getColor();
+                                                    }
+                                                    updateIconAndColorUi();
+                                                    break;
+                                                }
+                                            }
+                                        });
+
+                                        // 1. Pop up the pop up
+                                        Place firstPlace = nearbyPlaces.get(0);
+                                        new MaterialAlertDialogBuilder(requireContext())
+                                            .setTitle(HtmlCompat.fromHtml("Is the place: <b>" + firstPlace.getName() + "</b>?", HtmlCompat.FROM_HTML_MODE_LEGACY))
+                                            .setMessage(HtmlCompat.fromHtml("Is the place you're looking for <b>" + firstPlace.getName() + "</b>?", HtmlCompat.FROM_HTML_MODE_LEGACY))
+                                            .setPositiveButton("Yes", (dialog, which) -> {
+                                                actvName.setText(firstPlace.getName(), false);
+                                                if (firstPlace.getIcon() != null) {
+                                                    selectedIcon = firstPlace.getIcon();
+                                                }
+                                                if (firstPlace.getColor() != null) {
+                                                    selectedColor = firstPlace.getColor();
+                                                }
+                                                selectedPlace = firstPlace;
+                                                updateIconAndColorUi();
+                                                actvName.showDropDown();
+                                            })
+                                            .setNegativeButton("No", (dialog, which) -> {
+                                                // If they say no, make sure the dropdown is shown for them to choose another
+                                                actvName.showDropDown();
+                                            })
+                                            .setOnDismissListener(dialog -> {
+                                                if (selectedPlace == null) {
+                                                    actvName.showDropDown();
+                                                }
+                                            })
+                                            .show();
+
+
+                                    }
+                                } else {
+                                    tvAddressStatus.setVisibility(View.VISIBLE);
+                                    tvAddressStatus.setText("Invalid Address");
+                                    tvAddressStatus.setTextColor(Color.RED);
+                                    btnSave.setEnabled(false);
+                                }
+                            });
+                        }
+                    } catch (Exception e) {
+                        if (getActivity() != null) {
+                            requireActivity().runOnUiThread(() -> {
+                                tvAddressStatus.setVisibility(View.VISIBLE);
+                                tvAddressStatus.setText("Unable to validate address");
+                                tvAddressStatus.setTextColor(Color.RED);
+                                btnSave.setEnabled(false);
+                            });
+                        }
+                    }
+                });
+            }
+        };
+
+        etAddress.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {}
+
+            @Override
+            public void afterTextChanged(Editable s) {
+                // Clear any previous error styling
+                etAddress.setError(null);
+                
+                // Reset selected place if the user types a new address
+                selectedPlace = null;
+                
+                // Show checking status immediately when user is typing
+                tvAddressStatus.setVisibility(View.VISIBLE);
+                tvAddressStatus.setText("Checking...");
+                tvAddressStatus.setTextColor(Color.GRAY);
+                btnSave.setEnabled(false);
+                
+                validationHandler.removeCallbacks(validationRunnable);
+                validationHandler.postDelayed(validationRunnable, 1000); // 1 second debounce
+            }
+        });
+
         btnSave.setOnClickListener(v -> {
             String name = actvName.getText().toString().trim();
             if (name.isEmpty()) {
@@ -155,17 +303,13 @@ public class AddCustomActivitySheet extends BottomSheetDialogFragment {
             app.getDatabaseWriteExecutor().execute(() -> {
                 StillLocation newStill = new StillLocation();
                 newStill.setPlaceName(finalName);
-                newStill.setPlaceAddress(address);
+                newStill.setPlaceAddressAndUpdateCoordinates(address, requireContext());
                 newStill.setStartTimeDate(editedStartTime);
                 newStill.setEndTimeDate(editedEndTime);
                 newStill.setIcon(selectedIcon);
                 newStill.setColor(selectedColor);
-                newStill.setCategory(selectedCategory);
                 newStill.setGeofencePlaceId(selectedGeofenceId);
 
-                // Add default lat lng if 0 (we don't have location here unless we select from map, using 0 for custom)
-                newStill.setLat(0.0);
-                newStill.setLng(0.0);
 
                 if (selectedPlace != null) {
                     newStill.setPlaceId(selectedPlace.getId());

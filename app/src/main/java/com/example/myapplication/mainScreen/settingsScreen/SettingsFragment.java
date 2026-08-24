@@ -1,4 +1,4 @@
-package com.example.myapplication.mainScreen;
+package com.example.myapplication.mainScreen.settingsScreen;
 
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -9,6 +9,8 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.app.AlertDialog;
+import android.widget.RadioGroup;
+import android.widget.RadioButton;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -21,10 +23,17 @@ import com.example.myapplication.database.ActivityDatabase;
 import com.example.myapplication.database.PlaceDao;
 import com.google.android.material.button.MaterialButtonToggleGroup;
 
+import java.util.Calendar;
+
 public class SettingsFragment extends Fragment {
 
     private static final String PREFS_NAME = "MyPrefs";
+    private static final String KEY_WEEK_START_DAY = "week_start_day";
     private LifeTrackerApp app;
+
+    private RadioGroup weekStartDayRadioGroup;
+    private RadioButton radioMonday;
+    private RadioButton radioSunday;
 
     @Nullable
     @Override
@@ -40,9 +49,14 @@ public class SettingsFragment extends Fragment {
         TextView btnExportData = view.findViewById(R.id.btn_export_data);
         TextView btnDeleteHistory = view.findViewById(R.id.btn_delete_history);
 
+        weekStartDayRadioGroup = view.findViewById(R.id.weekStartDayRadioGroup);
+        radioMonday = view.findViewById(R.id.radio_monday);
+        radioSunday = view.findViewById(R.id.radio_sunday);
+
         app = (LifeTrackerApp) requireActivity().getApplication();
 
         setupThemePreferences(themeToggleGroup);
+        setupWeekStartDayPreference(weekStartDayRadioGroup);
         setupDataPrivacyListeners(btnExportData, btnDeleteHistory);
     }
 
@@ -77,6 +91,31 @@ public class SettingsFragment extends Fragment {
         });
     }
 
+    private void setupWeekStartDayPreference(RadioGroup radioGroup) {
+        int savedWeekStartDay = getWeekStartDayPreference();
+        if (savedWeekStartDay == Calendar.MONDAY) {
+            radioMonday.setChecked(true);
+        } else {
+            radioSunday.setChecked(true);
+        }
+
+        radioGroup.setOnCheckedChangeListener((group, checkedId) -> {
+            int weekStartDay = (checkedId == R.id.radio_monday) ? Calendar.MONDAY : Calendar.SUNDAY;
+            saveWeekStartDayPreference(weekStartDay);
+            // TODO: Potentially trigger a reload of statistics if the user is on the statistics screen
+        });
+    }
+
+    private void saveWeekStartDayPreference(int weekStartDay) {
+        SharedPreferences preferences = requireContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        preferences.edit().putInt(KEY_WEEK_START_DAY, weekStartDay).apply();
+    }
+
+    private int getWeekStartDayPreference() {
+        SharedPreferences preferences = requireContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        // Default to Monday if no preference is set
+        return preferences.getInt(KEY_WEEK_START_DAY, Calendar.MONDAY);
+    }
 
     private void setupDataPrivacyListeners(TextView btnExportData, TextView btnDeleteHistory) {
         btnExportData.setOnClickListener(v -> handleExportData());

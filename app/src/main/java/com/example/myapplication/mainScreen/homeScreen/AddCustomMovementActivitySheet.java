@@ -1,4 +1,4 @@
-package com.example.myapplication.mainScreen;
+package com.example.myapplication.mainScreen.homeScreen;
 
 import android.app.TimePickerDialog;
 import android.graphics.drawable.GradientDrawable;

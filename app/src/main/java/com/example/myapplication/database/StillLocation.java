@@ -1,10 +1,21 @@
 package com.example.myapplication.database;
 
+import static com.example.myapplication.locationTracking.LocationService.TAG;
+
+import android.location.Address;
+import android.location.Geocoder;
+import android.util.Log;
+import android.content.Context; // Added import for Context
+
 import androidx.room.ColumnInfo;
 import androidx.room.Entity;
 import androidx.room.ForeignKey;
 import androidx.room.PrimaryKey;
 
+import com.example.myapplication.helpers.Logger;
+
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.Objects;
 @Entity(tableName = "still_locations",
@@ -159,8 +170,36 @@ public class StillLocation implements TimelineItem {
     public String getPlaceAddress() {
         return placeAddress;
     }
-
     public void setPlaceAddress(String placeAddress) {
         this.placeAddress = placeAddress;
+    }
+    public void setPlaceAddressAndUpdateCoordinates(String placeAddress, Context context) {
+        Geocoder coder = new Geocoder(context);
+        this.placeAddress = placeAddress;
+        try {
+            ArrayList<Address> addresses = (ArrayList<Address>) coder.getFromLocationName(placeAddress, 1);
+            if (addresses != null && !addresses.isEmpty()) {
+                double longitude = 0;
+                double latitude = 0;
+                for (Address add : addresses) {//TODO ACCOUNT FOR MULTIPLE DIFFRENT ADDRESS THAT COULD BE IN DIFFRENT COUNTRIES
+                    longitude = add.getLongitude();
+                    latitude = add.getLatitude();
+                    Log.w(TAG, "found coordinates" + latitude + " " + longitude);
+                    break; //TODO REMOVE THIS BREAK
+                }
+                this.lng = longitude;
+                this.lat = latitude;
+            } else {
+                String msg = String.format(TAG + "WARNING: No coordinates found for address: " + placeAddress);
+                Log.w(TAG, msg);
+                Logger.saveLog(context, msg);
+
+            }
+        } catch (IOException e) {
+            String msg = String.format(TAG + "ERROR: Cant find coordinates for still location ");
+            Log.w(TAG, msg);
+            Logger.saveLog(context, msg);
+            // In case of an exception, lat and lng will also not be updated.
+        }
     }
 }

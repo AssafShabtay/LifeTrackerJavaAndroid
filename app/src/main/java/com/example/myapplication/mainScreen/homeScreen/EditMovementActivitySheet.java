@@ -1,6 +1,4 @@
-package com.example.myapplication.mainScreen;
-
-import static com.example.myapplication.helpers.UiFormatters.category;
+package com.example.myapplication.mainScreen.homeScreen;
 
 import android.app.TimePickerDialog;
 import android.graphics.drawable.GradientDrawable;
@@ -24,24 +22,17 @@ import com.example.myapplication.LifeTrackerApp;
 import com.example.myapplication.R;
 import com.example.myapplication.database.ActivityDatabase;
 import com.example.myapplication.database.MovementActivity;
-import com.example.myapplication.database.Place;
 import com.example.myapplication.database.PlaceDao;
 import com.example.myapplication.helpers.ColorAndIcons;
 import com.example.myapplication.helpers.UiFormatters;
-import com.google.android.gms.maps.model.LatLng;
 import com.google.android.libraries.places.api.Places;
-import com.google.android.libraries.places.api.model.CircularBounds;
 import com.google.android.libraries.places.api.net.PlacesClient;
-import com.google.android.libraries.places.api.net.SearchNearbyRequest;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.List;
 
 public class EditMovementActivitySheet extends BottomSheetDialogFragment {
 
@@ -133,7 +124,7 @@ public class EditMovementActivitySheet extends BottomSheetDialogFragment {
         updateTimeButtons();
 
         btnSave.setOnClickListener(v -> {
-//todo
+
             movement.setActivityTypeName(actvActivityType.getText().toString()); // Ensure activity type is saved
             if (listener != null) {
                 listener.onUpdate(movement);

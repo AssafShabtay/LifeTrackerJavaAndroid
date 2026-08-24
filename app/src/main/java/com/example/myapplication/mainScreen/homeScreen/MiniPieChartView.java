@@ -1,4 +1,4 @@
-package com.example.myapplication.mainScreen;
+package com.example.myapplication.mainScreen.homeScreen;
 
 import android.content.Context;
 import android.graphics.Canvas;

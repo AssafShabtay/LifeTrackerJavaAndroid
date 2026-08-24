@@ -21,7 +21,6 @@ import com.google.android.libraries.places.api.net.SearchNearbyResponse;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
-import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 public class GeofenceUtilsManager {

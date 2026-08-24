@@ -1,10 +1,9 @@
-package com.example.myapplication.mainScreen;
+package com.example.myapplication.mainScreen.homeScreen;
 
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.LayoutInflater;
-import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;

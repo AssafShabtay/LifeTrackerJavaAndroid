@@ -1,8 +1,9 @@
-package com.example.myapplication.mainScreen;
+package com.example.myapplication.mainScreen.homeScreen;
 
 import android.animation.Animator;
 import android.animation.ValueAnimator;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.graphics.Typeface;
 import android.util.TypedValue;
 import android.view.Gravity;
@@ -30,14 +31,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 public class CalendarManager {
 
     public interface OnDateSelectedListener {
         void onDateSelected(Date date);
     }
-
 
     private final Context context;
     private final View dateCard;
@@ -62,6 +61,9 @@ public class CalendarManager {
     private final ActivityDao dao;
     private final Map<String, List<MiniPieChartView.Slice>> sliceCache = new HashMap<>();
 
+    private static final String PREFS_NAME = "MyPrefs";
+    private static final String KEY_WEEK_START_DAY = "week_start_day";
+
     public CalendarManager(View root, OnDateSelectedListener listener, ExecutorService databaseWriteExecutor) {
         this.context = root.getContext();
         this.listener = listener;
@@ -81,6 +83,7 @@ public class CalendarManager {
         dao = ActivityDatabase.getDatabase(context.getApplicationContext()).activityDao();
 
         Calendar cal = Calendar.getInstance();
+        cal.setFirstDayOfWeek(getWeekStartDayPreference()); // Set preferred first day of week
         cal.setTime(selectedDate);
         currentMonth = cal.get(Calendar.MONTH);
         currentYear = cal.get(Calendar.YEAR);
@@ -107,6 +110,7 @@ public class CalendarManager {
 
         btnNextMonth.setOnClickListener(v -> {
             Calendar today = Calendar.getInstance();
+            today.setFirstDayOfWeek(getWeekStartDayPreference()); // Ensure consistency
             int thisMonth = today.get(Calendar.MONTH);
             int thisYear = today.get(Calendar.YEAR);
 
@@ -151,6 +155,7 @@ public class CalendarManager {
         if (calendarExpanded) {
             calendarContainer.setVisibility(View.VISIBLE);
             Calendar selected = Calendar.getInstance();
+            selected.setFirstDayOfWeek(getWeekStartDayPreference()); // Ensure consistency
             selected.setTime(selectedDate);
             currentMonth = selected.get(Calendar.MONTH);
             currentYear = selected.get(Calendar.YEAR);
@@ -239,9 +244,31 @@ public class CalendarManager {
 
     private void buildWeekHeader() {
         weekHeader.removeAllViews();
-        String[] days = {"S", "M", "T", "W", "T", "F", "S"};
 
-        for (String day : days) {
+        // Get the preferred start day of the week
+        int preferredFirstDayOfWeek = getWeekStartDayPreference();
+
+        String[] daysShort = {"S", "M", "T", "W", "T", "F", "S"};
+        String[] orderedDays = new String[7];
+
+        // Map Calendar day constants to the indices of daysShort array
+        Map<Integer, Integer> dayToDaysShortIndex = new HashMap<>();
+        dayToDaysShortIndex.put(Calendar.SUNDAY, 0);
+        dayToDaysShortIndex.put(Calendar.MONDAY, 1);
+        dayToDaysShortIndex.put(Calendar.TUESDAY, 2);
+        dayToDaysShortIndex.put(Calendar.WEDNESDAY, 3);
+        dayToDaysShortIndex.put(Calendar.THURSDAY, 4);
+        dayToDaysShortIndex.put(Calendar.FRIDAY, 5);
+        dayToDaysShortIndex.put(Calendar.SATURDAY, 6);
+
+        // Populate orderedDays starting from the preferred first day of the week
+        for (int i = 0; i < 7; i++) {
+            int calendarDay = (preferredFirstDayOfWeek + i - 1) % 7; // Adjust for 0-indexed array vs 1-indexed Calendar.DAY_OF_WEEK
+            if (calendarDay == 0) calendarDay = 7; // If it wraps to 0, it means Sunday, which is 7 in our adjusted logic
+            orderedDays[i] = daysShort[dayToDaysShortIndex.get(calendarDay)];
+        }
+
+        for (String day : orderedDays) {
             TextView tv = new TextView(context);
             LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
             tv.setLayoutParams(params);
@@ -256,6 +283,7 @@ public class CalendarManager {
 
     private void renderCalendar() {
         Calendar monthCal = Calendar.getInstance();
+        monthCal.setFirstDayOfWeek(getWeekStartDayPreference()); // Set preferred first day of week
         monthCal.set(Calendar.YEAR, currentYear);
         monthCal.set(Calendar.MONTH, currentMonth);
         monthCal.set(Calendar.DAY_OF_MONTH, 1);
@@ -264,7 +292,11 @@ public class CalendarManager {
 
         calendarGrid.removeAllViews();
 
-        int firstDayOffset = monthCal.get(Calendar.DAY_OF_WEEK) - 1;
+        // Calculate first day offset based on the preferred first day of the week
+        int preferredFirstDayOfWeek = getWeekStartDayPreference();
+        int firstDayOfMonth = monthCal.get(Calendar.DAY_OF_WEEK);
+        int firstDayOffset = (firstDayOfMonth - preferredFirstDayOfWeek + 7) % 7;
+
         int daysInMonth = monthCal.getActualMaximum(Calendar.DAY_OF_MONTH);
 
         Calendar today = Calendar.getInstance();
@@ -283,6 +315,7 @@ public class CalendarManager {
                 calendarGrid.addView(createEmptyCell());
             } else {
                 Calendar cellCal = Calendar.getInstance();
+                cellCal.setFirstDayOfWeek(preferredFirstDayOfWeek); // Ensure consistency
                 cellCal.set(Calendar.YEAR, currentYear);
                 cellCal.set(Calendar.MONTH, currentMonth);
                 cellCal.set(Calendar.DAY_OF_MONTH, dayNumber);
@@ -469,6 +502,7 @@ public class CalendarManager {
 
     private void updateNextButtonState() {
         Calendar today = Calendar.getInstance();
+        today.setFirstDayOfWeek(getWeekStartDayPreference()); // Ensure consistency
         int thisMonth = today.get(Calendar.MONTH);
         int thisYear = today.get(Calendar.YEAR);
 
@@ -490,5 +524,11 @@ public class CalendarManager {
                 value,
                 context.getResources().getDisplayMetrics()
         );
+    }
+
+    private int getWeekStartDayPreference() {
+        SharedPreferences preferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        // Default to Monday if no preference is set
+        return preferences.getInt(KEY_WEEK_START_DAY, Calendar.MONDAY);
     }
 }

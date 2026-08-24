@@ -1,4 +1,4 @@
-package com.example.myapplication.mainScreen;
+package com.example.myapplication.mainScreen.homeScreen;
 
 import static com.example.myapplication.helpers.ColorAndIcons.getStillColor;
 import static com.example.myapplication.helpers.UiFormatters.category;
@@ -135,7 +135,7 @@ public class EditStillActivitySheet extends BottomSheetDialogFragment {
 
         updateIconAndColorUi();
         fetchNearbyPlaceSuggestions();
-        addressAutocompleteHelper = new AddressAutocompleteHelper(requireContext(), etAddress); // Initialize the member variable
+        addressAutocompleteHelper = new AddressAutocompleteHelper(requireContext(), etAddress);
 
         // Set up icon picker
         if (layoutIconPicker != null) {
@@ -149,7 +149,7 @@ public class EditStillActivitySheet extends BottomSheetDialogFragment {
 
         btnSave.setOnClickListener(v -> {
             still.setPlaceName(actvName.getText().toString().trim()); // Ensure this line is present
-            still.setPlaceAddress(etAddress.getText().toString().trim());
+            still.setPlaceAddressAndUpdateCoordinates(etAddress.getText().toString().trim(), requireContext());
             still.setStartTimeDate(editedStartTime);
             still.setEndTimeDate(editedEndTime);
             still.setIcon(selectedIcon);
@@ -244,7 +244,6 @@ public class EditStillActivitySheet extends BottomSheetDialogFragment {
     private void fetchNearbyPlaceSuggestions() {
         if (still.getLat() == null || still.getLng() == null) return;
 
-        // 1. Add FORMATTED_ADDRESS and TYPES to the fields request
         List<com.google.android.libraries.places.api.model.Place.Field> placeFields = Arrays.asList(
                 com.google.android.libraries.places.api.model.Place.Field.DISPLAY_NAME,
                 com.google.android.libraries.places.api.model.Place.Field.ID,
@@ -260,6 +259,14 @@ public class EditStillActivitySheet extends BottomSheetDialogFragment {
         placesClient.searchNearby(request)
                 .addOnSuccessListener(response -> {
                     List<com.google.android.libraries.places.api.model.Place> places = new ArrayList<>(response.getPlaces());
+
+                    // 1. Define or generate your list of integers here.
+                    // Ensure the size matches the 'places' list to avoid IndexOutOfBounds exceptions.
+                    List<Integer> myIntList = new ArrayList<>();
+                    for (int i = 0; i < places.size(); i++) {
+                        myIntList.add(i * 10); // Example: just generating some dummy integers
+                    }
+
                     if (isAdded()) {
                         ArrayAdapter<com.google.android.libraries.places.api.model.Place> adapter = new ArrayAdapter<>(requireContext(),
                                 android.R.layout.simple_dropdown_item_1line, places) {
@@ -279,6 +286,12 @@ public class EditStillActivitySheet extends BottomSheetDialogFragment {
                                         displayText += " (" + category + ")";
                                     }
 
+                                    // 2. Retrieve the integer for this specific position and append it
+                                    if (position < myIntList.size()) {
+                                        int associatedInt = myIntList.get(position);
+                                        displayText += " - [Val: " + associatedInt + "]";
+                                    }
+
                                     tv.setText(displayText);
                                 }
                                 return tv;
@@ -286,10 +299,12 @@ public class EditStillActivitySheet extends BottomSheetDialogFragment {
                         };
                         actvName.setAdapter(adapter);
 
-                        // listener to handle when the user taps a suggestion
                         actvName.setOnItemClickListener((parent, view, position, id) -> {
                             com.google.android.libraries.places.api.model.Place selectedGeofencePlace = adapter.getItem(position);
                             if (selectedGeofencePlace == null) return;
+
+                            // You can also grab the selected integer here if needed:
+                            // int selectedInt = myIntList.get(position);
 
                             // Update Name
                             String displayText = selectedGeofencePlace.getDisplayName();
@@ -315,11 +330,9 @@ public class EditStillActivitySheet extends BottomSheetDialogFragment {
                             app.getDatabaseWriteExecutor().execute(() -> {
                                 selectedPlace = placeDao.getPlaceIdFromGeofenceId(selectedGeofenceId);
                                 if(selectedPlace != null){
-                                    // Update UI on the main thread
                                     requireActivity().runOnUiThread(() -> {
                                         selectedColor = selectedPlace.getColor();
                                         selectedIcon = selectedPlace.getIcon();
-                                        // Refresh the UI to reflect the new icon and color
                                         updateIconAndColorUi();
                                     });
                                 }
@@ -331,7 +344,6 @@ public class EditStillActivitySheet extends BottomSheetDialogFragment {
                     Log.e("EditStillActivitySheet", "Failed to fetch nearby places", e);
                 });
     }
-
     private void updateTimeButtons() {
         btnStartTime.setText("Start: " + UiFormatters.timeOnly(editedStartTime));
         btnEndTime.setText("End: " + UiFormatters.timeOnly(editedEndTime));

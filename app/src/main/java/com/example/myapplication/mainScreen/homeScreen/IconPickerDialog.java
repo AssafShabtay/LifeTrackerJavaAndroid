@@ -1,4 +1,4 @@
-package com.example.myapplication.mainScreen;
+package com.example.myapplication.mainScreen.homeScreen;
 
 import static com.example.myapplication.helpers.ColorAndIcons.getIconList;
 import static com.example.myapplication.helpers.ColorAndIcons.DEFAULT_COLORS;

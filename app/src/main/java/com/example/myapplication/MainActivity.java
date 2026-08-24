@@ -8,7 +8,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
-import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
@@ -27,9 +26,9 @@ import androidx.fragment.app.Fragment;
 
 import com.example.myapplication.helpers.Logger;
 import com.example.myapplication.helpers.PermissionManager;
-import com.example.myapplication.mainScreen.HomeFragment;
-import com.example.myapplication.mainScreen.SettingsFragment;
-import com.example.myapplication.mainScreen.StatisticsFragment;
+import com.example.myapplication.mainScreen.homeScreen.HomeFragment;
+import com.example.myapplication.mainScreen.settingsScreen.SettingsFragment;
+import com.example.myapplication.mainScreen.statisticsScreen.StatisticsFragment;
 import com.example.myapplication.locationTracking.receiver.ActivityTransitionReceiver;
 import com.example.myapplication.locationTracking.LocationService;
 import com.google.android.gms.location.ActivityRecognition;
@@ -44,8 +43,6 @@ import com.google.firebase.appcheck.FirebaseAppCheck;
 import com.google.firebase.appcheck.debug.DebugAppCheckProviderFactory;
 
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 import java.util.Map;
 
 public class MainActivity extends AppCompatActivity {

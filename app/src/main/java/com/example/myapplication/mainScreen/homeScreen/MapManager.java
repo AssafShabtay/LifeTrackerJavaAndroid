@@ -1,4 +1,4 @@
-package com.example.myapplication.mainScreen;
+package com.example.myapplication.mainScreen.homeScreen;
 
 import static com.example.myapplication.helpers.ColorAndIcons.getStillColor;
 import static com.example.myapplication.helpers.ColorAndIcons.getStillIconRes;
@@ -29,6 +29,7 @@ import com.example.myapplication.database.MovementActivity;
 import com.example.myapplication.database.RoutePoint;
 import com.example.myapplication.database.StillLocation;
 import com.example.myapplication.database.TimelineItem;
+import com.example.myapplication.helpers.Logger;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -121,20 +122,29 @@ public class MapManager implements OnMapReadyCallback {
         if (item instanceof StillLocation) {
             addStillToMap((StillLocation) item, 1, true);
             StillLocation still = (StillLocation) item;
-            if(still.getPlaceAddress() != null){
+            // Use existing lat/lng if available for camera animation
+            if (still.getLat() != null && still.getLng() != null) {
+                mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(still.getLat(), still.getLng()), 15f));
+            } else if (still.getPlaceAddress() != null) {
+                // If lat/lng are not available, try geocoding the address for camera animation
                 Geocoder coder = new Geocoder(fragment.requireContext());
                 try {
-                    ArrayList<Address> adresses = (ArrayList<Address>) coder.getFromLocationName("Your Address", 50);
-                    for(Address add : adresses){
-                            double longitude = add.getLongitude();
-                            double latitude = add.getLatitude();
+                    ArrayList<Address> addresses = (ArrayList<Address>) coder.getFromLocationName(still.getPlaceAddress(), 1);
+                    if (addresses != null && !addresses.isEmpty()) {
+                        Address address = addresses.get(0);
+                        double latitude = address.getLatitude();
+                        double longitude = address.getLongitude();
+                        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(latitude, longitude), 15f));
+                    } else {
+                        String msg = String.format(TAG + "ERROR: Could not find coordinates for still location address: %s", still.getPlaceAddress());
+                        Log.w(TAG, msg);
+                        Logger.saveLog(fragment.requireContext(), msg);
                     }
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    String msg = String.format(TAG + "ERROR: Geocoding failed for still location address: %s", still.getPlaceAddress());
+                    Log.w(TAG, msg);
+                    Logger.saveLog(fragment.requireContext(), msg);
                 }
-            }
-            else if (still.getLat() != null && still.getLng() != null) {
-                mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(still.getLat(), still.getLng()), 15f));
             }
         } else if (item instanceof MovementActivity) {
             MovementActivity movement = (MovementActivity) item;
