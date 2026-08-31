@@ -49,10 +49,7 @@ public class PunctualityStatisticsManager {
 
     public interface PunctualityStatisticsListener {
         boolean isFragmentAdded();
-
         View getFragmentView();
-        Map<String, Long> getPlaceDurationMap(); // To pass placeDuration to bottom sheets if needed
-        // Callbacks for updating fragment's internal state
         void updateTopPlaceIds(List<String> newTopPlaceIds);
         void updatePlaceNamesMap(Map<String, String> newPlaceNamesMap);
         void updateArrivalTimesMap(Map<String, List<Integer>> newArrivalTimesMap);

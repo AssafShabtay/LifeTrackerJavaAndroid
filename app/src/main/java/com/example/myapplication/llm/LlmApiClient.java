@@ -1,5 +1,7 @@
 package com.example.myapplication.llm;
 
+import android.content.Context;
+import com.example.myapplication.helpers.ErrorLogger;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.ai.FirebaseAI;
@@ -17,6 +19,8 @@ import java.util.concurrent.Executors;
 
 public class LlmApiClient {
 
+    private static final String TAG = "LlmApiClient";
+
     // Initialize an ExecutorService for background tasks
     private static final ExecutorService executorService = Executors.newSingleThreadExecutor();
 
@@ -33,6 +37,7 @@ public class LlmApiClient {
 
         executorService.submit(() -> {
             try {
+                Context context = FirebaseApp.getInstance().getApplicationContext(); // Get context here
                 // Initialize the GenerativeModel. Replace "gemini-pro" with your desired model.
                 // You might need to configure the model with an API key if not using Firebase Auth.
                 GenerativeModel firebaseAI = FirebaseAI.getInstance(GenerativeBackend.vertexAI())
@@ -80,6 +85,7 @@ public class LlmApiClient {
                 future.complete(new LlmResponse(habit, anomaly));
 
             } catch (Exception e) {
+            ErrorLogger.logError(FirebaseApp.getInstance().getApplicationContext(), TAG, "Error", e);
                 future.completeExceptionally(e);
             }
         });

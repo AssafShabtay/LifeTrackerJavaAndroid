@@ -13,6 +13,7 @@ roomCompiler = "2.8.4"
 ksp = "2.3.10"
 playServicesMaps = "20.0.0"
 places = "5.3.0"
+gson = "2.14.0"
 
 [libraries]
 androidx-compose-material3 = { module = "androidx.compose.material3:material3", version.ref = "material3" }
@@ -28,6 +29,7 @@ room-compiler = { group = "androidx.room", name = "room-compiler", version.ref =
 ui = { module = "androidx.compose.ui:ui" }
 play-services-maps = { group = "com.google.android.gms", name = "play-services-maps", version.ref = "playServicesMaps" }
 places = { group = "com.google.android.libraries.places", name = "places", version.ref = "places" }
+gson = { group = "com.google.code.gson", name = "gson", version.ref = "gson" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

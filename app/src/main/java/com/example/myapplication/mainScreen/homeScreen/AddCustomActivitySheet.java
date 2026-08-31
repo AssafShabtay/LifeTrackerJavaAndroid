@@ -1,6 +1,8 @@
 package com.example.myapplication.mainScreen.homeScreen;
 
+import android.app.Activity;
 import android.app.TimePickerDialog;
+import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
 import android.location.Address;
@@ -21,6 +23,8 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.text.HtmlCompat;
@@ -28,24 +32,41 @@ import androidx.core.text.HtmlCompat;
 import com.example.myapplication.BuildConfig;
 import com.example.myapplication.LifeTrackerApp;
 import com.example.myapplication.R;
-import com.example.myapplication.database.StillLocation;
-import com.example.myapplication.helpers.AddressAutocompleteHelper;
-import com.example.myapplication.helpers.UiFormatters;
-import com.example.myapplication.helpers.ColorAndIcons;
+import com.example.myapplication.database.ActivityDatabase;
 import com.example.myapplication.database.Place;
 import com.example.myapplication.database.PlaceDao;
-import com.example.myapplication.database.ActivityDatabase;
+import com.example.myapplication.database.StillLocation;
+import com.example.myapplication.helpers.AddressAutocompleteHelper;
+import com.example.myapplication.helpers.ColorAndIcons;
+import com.example.myapplication.helpers.ContainsArrayAdapter;
+import com.example.myapplication.helpers.ErrorLogger;
+import com.example.myapplication.helpers.PlaceDropdownAdapter;
+import com.example.myapplication.helpers.UiFormatters;
+import com.google.android.gms.maps.model.LatLng;
 import com.google.android.libraries.places.api.Places;
+import com.google.android.libraries.places.api.model.CircularBounds;
 import com.google.android.libraries.places.api.net.PlacesClient;
+import com.google.android.libraries.places.api.net.SearchNearbyRequest;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class AddCustomActivitySheet extends BottomSheetDialogFragment {
+
+    private static final String TAG = "AddCustomActivitySheet";
 
     public interface OnActivityAddedListener {
         void onActivityAdded();
@@ -58,6 +79,7 @@ public class AddCustomActivitySheet extends BottomSheetDialogFragment {
 
     private AutoCompleteTextView actvName;
     private AutoCompleteTextView etAddress;
+    private AutoCompleteTextView actvCategory;
     private TextView tvAddressStatus;
     private Button btnStartTime, btnEndTime;
 
@@ -73,6 +95,21 @@ public class AddCustomActivitySheet extends BottomSheetDialogFragment {
     private String selectedGeofenceId;
     private LifeTrackerApp app;
     private Date selectedDate;
+
+    private final ActivityResultLauncher<Intent> mapPickerLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(),
+            result -> {
+                if (result.getResultCode() == Activity.RESULT_OK && result.getData() != null) {
+                    String address = result.getData().getStringExtra(MapPickerActivity.EXTRA_ADDRESS);
+                    if (address != null) {
+                        etAddress.setText(address);
+                        tvAddressStatus.setText("Location picked from map");
+                        tvAddressStatus.setVisibility(View.VISIBLE);
+                        tvAddressStatus.setTextColor(requireContext().getColor(android.R.color.holo_green_dark));
+                    }
+                }
+            }
+    );
 
     public static AddCustomActivitySheet newInstance(Date date, OnActivityAddedListener listener) {
         AddCustomActivitySheet fragment = new AddCustomActivitySheet();
@@ -100,6 +137,7 @@ public class AddCustomActivitySheet extends BottomSheetDialogFragment {
 
         actvName = view.findViewById(R.id.actvName);
         etAddress = view.findViewById(R.id.etAddress);
+        actvCategory = view.findViewById(R.id.actvCategory);
         tvAddressStatus = view.findViewById(R.id.tvAddressStatus);
         btnStartTime = view.findViewById(R.id.btnStartTime);
         btnEndTime = view.findViewById(R.id.btnEndTime);
@@ -132,8 +170,11 @@ public class AddCustomActivitySheet extends BottomSheetDialogFragment {
             updateIconAndColorUi();
         });
 
+        setupCategoryDropdown();
+
         updateIconAndColorUi();
         addressAutocompleteHelper = new AddressAutocompleteHelper(requireContext(), etAddress);
+        addressAutocompleteHelper.setMapPickerLauncher(mapPickerLauncher);
 
         if (layoutIconPicker != null) {
             layoutIconPicker.setOnClickListener(v -> showIconPickerDialog());
@@ -154,7 +195,7 @@ public class AddCustomActivitySheet extends BottomSheetDialogFragment {
                 if (address.isEmpty()) {
                     tvAddressStatus.setVisibility(View.INVISIBLE);
                     tvAddressStatus.setText(null);
-                    btnSave.setEnabled(true); // Allow saving without an address (it's optional)
+                    btnSave.setEnabled(true); // Allow saving without an address
                     return;
                 }
 
@@ -166,10 +207,12 @@ public class AddCustomActivitySheet extends BottomSheetDialogFragment {
                         boolean isValid = addresses != null && !addresses.isEmpty();
 
                         List<Place> nearbyPlaces = new ArrayList<>();
+                        double lat = 0;
+                        double lng = 0;
                         if (isValid) {
                             Address add = addresses.get(0);
-                            double lat = add.getLatitude();
-                            double lng = add.getLongitude();
+                            lat = add.getLatitude();
+                            lng = add.getLongitude();
 
                             List<Place> allPlaces = placeDao.getAllPlaces();
                             for (Place p : allPlaces) {
@@ -181,6 +224,8 @@ public class AddCustomActivitySheet extends BottomSheetDialogFragment {
                             }
                         }
 
+                        final double finalLat = lat;
+                        final double finalLng = lng;
                         if (getActivity() != null) {
                             requireActivity().runOnUiThread(() -> {
                                 if (isValid) {
@@ -191,10 +236,11 @@ public class AddCustomActivitySheet extends BottomSheetDialogFragment {
 
                                     if (!nearbyPlaces.isEmpty()) {
                                         // Set up the drop down list first
-                                        ArrayAdapter<String> adapter = new ArrayAdapter<>(requireContext(), android.R.layout.simple_dropdown_item_1line);
+                                        List<String> names = new ArrayList<>();
                                         for (Place p : nearbyPlaces) {
-                                            adapter.add(p.getName());
+                                            names.add(p.getName());
                                         }
+                                        PlaceDropdownAdapter adapter = new PlaceDropdownAdapter(requireContext(), names);
                                         actvName.setAdapter(adapter);
                                         actvName.setOnItemClickListener((parent, view1, position, id) -> {
                                             String selectedName = adapter.getItem(position);
@@ -213,7 +259,7 @@ public class AddCustomActivitySheet extends BottomSheetDialogFragment {
                                             }
                                         });
 
-                                        // 1. Pop up the pop up
+                                        // Pop up the pop up
                                         Place firstPlace = nearbyPlaces.get(0);
                                         new MaterialAlertDialogBuilder(requireContext())
                                             .setTitle(HtmlCompat.fromHtml("Is the place: <b>" + firstPlace.getName() + "</b>?", HtmlCompat.FROM_HTML_MODE_LEGACY))
@@ -231,13 +277,36 @@ public class AddCustomActivitySheet extends BottomSheetDialogFragment {
                                                 actvName.showDropDown();
                                             })
                                             .setNegativeButton("No", (dialog, which) -> {
-                                                // If they say no, make sure the dropdown is shown for them to choose another
-                                                actvName.showDropDown();
-                                            })
-                                            .setOnDismissListener(dialog -> {
-                                                if (selectedPlace == null) {
-                                                    actvName.showDropDown();
+                                                //  Show another pop up with a list of all the places
+                                                String[] placeNames = new String[nearbyPlaces.size()];
+                                                for (int i = 0; i < nearbyPlaces.size(); i++) {
+                                                    placeNames[i] = nearbyPlaces.get(i).getName();
                                                 }
+
+                                                new MaterialAlertDialogBuilder(requireContext())
+                                                        .setTitle("Select a place")
+                                                        .setItems(placeNames, (dialog1, which1) -> {
+                                                            Place selected = nearbyPlaces.get(which1);
+                                                            actvName.setText(selected.getName(), false);
+                                                            if (selected.getIcon() != null) {
+                                                                selectedIcon = selected.getIcon();
+                                                            }
+                                                            if (selected.getColor() != null) {
+                                                                selectedColor = selected.getColor();
+                                                            }
+                                                            selectedPlace = selected;
+                                                            updateIconAndColorUi();
+                                                        })
+                                                        .setNegativeButton("Not here", (dialog1, which1) -> {
+                                                            // Populate the drop down with google places
+                                                            searchGooglePlaces(finalLat, finalLng);
+                                                        })
+                                                        .setOnDismissListener(dialog1 -> {
+                                                            if (selectedPlace == null) {
+                                                                searchGooglePlaces(finalLat, finalLng);
+                                                            }
+                                                        })
+                                                        .show();
                                             })
                                             .show();
 
@@ -252,6 +321,7 @@ public class AddCustomActivitySheet extends BottomSheetDialogFragment {
                             });
                         }
                     } catch (Exception e) {
+                        ErrorLogger.logError(requireContext(), TAG, "Error", e);
                         if (getActivity() != null) {
                             requireActivity().runOnUiThread(() -> {
                                 tvAddressStatus.setVisibility(View.VISIBLE);
@@ -308,6 +378,7 @@ public class AddCustomActivitySheet extends BottomSheetDialogFragment {
                 newStill.setEndTimeDate(editedEndTime);
                 newStill.setIcon(selectedIcon);
                 newStill.setColor(selectedColor);
+                newStill.setCategory(selectedCategory);
                 newStill.setGeofencePlaceId(selectedGeofenceId);
 
 
@@ -335,12 +406,105 @@ public class AddCustomActivitySheet extends BottomSheetDialogFragment {
         });
     }
 
+    private void setupCategoryDropdown() {
+        Map<String, String> categoryMap = loadCategories();
+        List<String> displayNames = new ArrayList<>(categoryMap.keySet());
+        Collections.sort(displayNames);
+
+        ContainsArrayAdapter adapter = new ContainsArrayAdapter(requireContext(),
+                R.layout.item_dropdown_compact, displayNames);
+        actvCategory.setAdapter(adapter);
+
+        if (selectedCategory != null) {
+            actvCategory.setText(UiFormatters.category(selectedCategory), false);
+        }
+
+        actvCategory.setOnItemClickListener((parent, view, position, id) -> {
+            String selectedDisplay = (String) parent.getItemAtPosition(position);
+            selectedCategory = categoryMap.get(selectedDisplay);
+        });
+    }
+
+    private Map<String, String> loadCategories() {
+        Map<String, String> map = new HashMap<>();
+        try (InputStream is = getResources().openRawResource(R.raw.categories);
+             InputStreamReader reader = new InputStreamReader(is)) {
+            Type type = new TypeToken<Map<String, List<String>>>() {}.getType();
+            Map<String, List<String>> categories = new Gson().fromJson(reader, type);
+            if (categories != null) {
+                for (List<String> list : categories.values()) {
+                    for (String raw : list) {
+                        map.put(UiFormatters.category(raw), raw);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            ErrorLogger.logError(requireContext(), TAG, "Failed to load categories", e);
+        }
+        return map;
+    }
+
     @Override
     public void onStart() {
         super.onStart();
         if (getDialog() != null && getDialog().getWindow() != null) {
             getDialog().getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
         }
+    }
+
+    private void searchGooglePlaces(double lat, double lng) {
+        if (getActivity() == null) return;
+
+        List<com.google.android.libraries.places.api.model.Place.Field> placeFields = Arrays.asList(
+                com.google.android.libraries.places.api.model.Place.Field.DISPLAY_NAME,
+                com.google.android.libraries.places.api.model.Place.Field.TYPES,
+                com.google.android.libraries.places.api.model.Place.Field.ID,
+                com.google.android.libraries.places.api.model.Place.Field.LOCATION
+        );
+
+        LatLng latLng = new LatLng(lat, lng);
+        CircularBounds circle = CircularBounds.newInstance(latLng, 100.0);
+        SearchNearbyRequest request = SearchNearbyRequest.builder(circle, placeFields)
+                .setMaxResultCount(10)
+                .build();
+
+        placesClient.searchNearby(request)
+                .addOnSuccessListener(response -> {
+                    if (isAdded() && response.getPlaces() != null) {
+                        List<com.google.android.libraries.places.api.model.Place> googlePlaces = response.getPlaces();
+                        List<String> names = new ArrayList<>();
+                        for (com.google.android.libraries.places.api.model.Place p : googlePlaces) {
+                            names.add(p.getDisplayName());
+                        }
+                        PlaceDropdownAdapter adapter = new PlaceDropdownAdapter(requireContext(), names);
+                        actvName.setAdapter(adapter);
+                        actvName.setOnItemClickListener((parent, view, position, id) -> {
+                            String selectedName = adapter.getItem(position);
+                            for (com.google.android.libraries.places.api.model.Place p : googlePlaces) {
+                                if (p.getDisplayName() != null && p.getDisplayName().equals(selectedName)) {
+                                    actvName.setText(p.getDisplayName(), false);
+                                    // Create a local Place object from Google Place
+                                    com.example.myapplication.database.Place newLocalPlace = new com.example.myapplication.database.Place();
+                                    newLocalPlace.setName(p.getDisplayName());
+                                    if (p.getLocation() != null) {
+                                        newLocalPlace.setLat(p.getLocation().latitude);
+                                        newLocalPlace.setLng(p.getLocation().longitude);
+                                    } else {
+                                        newLocalPlace.setLat(lat);
+                                        newLocalPlace.setLng(lng);
+                                    }
+                                    selectedPlace = newLocalPlace;
+                                    updateIconAndColorUi();
+                                    break;
+                                }
+                            }
+                        });
+                        actvName.showDropDown();
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    ErrorLogger.logError(requireContext(), TAG, "Google Places search failed", e);
+                });
     }
 
     private void showIconPickerDialog() {

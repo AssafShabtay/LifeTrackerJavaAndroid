@@ -29,6 +29,7 @@ import com.example.myapplication.database.MovementActivity;
 import com.example.myapplication.database.RoutePoint;
 import com.example.myapplication.database.StillLocation;
 import com.example.myapplication.database.TimelineItem;
+import com.example.myapplication.helpers.ErrorLogger;
 import com.example.myapplication.helpers.Logger;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -141,6 +142,7 @@ public class MapManager implements OnMapReadyCallback {
                         Logger.saveLog(fragment.requireContext(), msg);
                     }
                 } catch (IOException e) {
+            ErrorLogger.logError(fragment.requireContext(), TAG, "Error", e);
                     String msg = String.format(TAG + "ERROR: Geocoding failed for still location address: %s", still.getPlaceAddress());
                     Log.w(TAG, msg);
                     Logger.saveLog(fragment.requireContext(), msg);
@@ -159,6 +161,7 @@ public class MapManager implements OnMapReadyCallback {
                         try {
                             mMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 100));
                         } catch (IllegalStateException e) {
+            ErrorLogger.logError(fragment.requireContext(), TAG, "Error", e);
                             if (movement.getStartLat() != null) {
                                 mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(movement.getStartLat(), movement.getStartLng()), 15f));
                             }
@@ -331,7 +334,8 @@ public class MapManager implements OnMapReadyCallback {
             fragment.requireActivity().runOnUiThread(() -> {
                 try {
                     mMap.animateCamera(CameraUpdateFactory.newLatLngBounds(totalBounds.build(), 100));
-                } catch (Exception ignored) {}
+                } catch (Exception e) {
+            ErrorLogger.logError(fragment.requireContext(), TAG, "Error", e);}
             });
         });
     }
@@ -449,6 +453,7 @@ public class MapManager implements OnMapReadyCallback {
             try {
                 mMap.setMyLocationEnabled(true);
             } catch (SecurityException e) {
+            ErrorLogger.logError(fragment.requireContext(), TAG, "Error", e);
                 Log.e(TAG, "SecurityException setting my location enabled", e);
             }
         }

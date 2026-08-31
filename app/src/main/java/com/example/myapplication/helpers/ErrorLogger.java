@@ -12,6 +12,7 @@ import java.util.Locale;
 public class ErrorLogger {
 
     private static final String LOG_FILE_NAME = "error_log.txt";
+    private static final String TAG = "ErrorLogger";
 
     public static void logError(Context context, String tag, String message, Throwable throwable) {
         File logFile = new File(context.getFilesDir(), LOG_FILE_NAME);
@@ -30,10 +31,10 @@ public class ErrorLogger {
                 throwable.printStackTrace(printWriter);
             }
             printWriter.println("------------------------------------");
-            printWriter.flush(); // Ensure data is written to the file immediately
+            printWriter.flush();
 
         } catch (IOException e) {
-            // If logging to file fails, log to Logcat as a fallback
+            ErrorLogger.logError(context, TAG, "Error", e);
             android.util.Log.e("ErrorLogger", "Failed to write error to log file", e);
         }
     }

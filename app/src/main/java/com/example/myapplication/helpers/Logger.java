@@ -10,6 +10,7 @@ import java.util.Date;
 import java.util.Locale;
 //code genertate dby Gemini
 public final class Logger {
+    private static final String TAG = "Logger";
     private Logger() {}
 
     public static void saveLog(Context context, String message) {
@@ -21,10 +22,12 @@ public final class Logger {
         try {
             writer = new FileWriter(file, true);
             writer.write(logMessage);
-        } catch (IOException ignored) {
+        } catch (IOException e) {
+            ErrorLogger.logError(context, TAG, "Error", e);
         } finally {
             if (writer != null) {
-                try { writer.close(); } catch (IOException ignored) {}
+                try { writer.close(); } catch (IOException e) {
+            ErrorLogger.logError(context, TAG, "Error", e);}
             }
         }
     }

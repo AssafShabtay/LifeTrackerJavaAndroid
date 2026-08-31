@@ -35,6 +35,7 @@ import com.example.myapplication.database.Place;
 import com.example.myapplication.database.PlaceDao;
 import com.example.myapplication.database.RoutePoint;
 import com.example.myapplication.database.StillLocation;
+import com.example.myapplication.helpers.ErrorLogger;
 import com.example.myapplication.helpers.Logger;
 import com.example.myapplication.locationTracking.receiver.ActivityTransitionReceiver;
 import com.example.myapplication.locationTracking.receiver.LocationServiceRestartReceiver;
@@ -289,17 +290,15 @@ public class LocationService extends Service {
                 //TODO        previousActivityName = getActivityName(prevType);
                 //TODO    }
                 //TODO}
-//TODO
-                //TODO// Ensure only one activity is active by ending any ongoing ones before starting the new one
-                //TODO// if the ongoing activity is the same as the new one, do nothing(later in the script they will be merged)
-                //TODOif (currentStillTrackingId != null && activityType != DetectedActivity.STILL) {
-                //TODO    endStillTracking(eventTime);
-                //TODO}
-                //TODOfor (Integer type : new HashSet<>(currentMovementTrackingIds.keySet())) {
-                //TODO    if (type != activityType) {
-                //TODO        endMovementTracking(type, eventTime);
-                //TODO    }
-                //TODO}
+
+                if (currentStillTrackingId != null && activityType != DetectedActivity.STILL) {
+                    endStillTracking(eventTime);
+                }
+                for (Integer type : new HashSet<>(currentMovementTrackingIds.keySet())) {
+                    if (type != activityType) {
+                        endMovementTracking(type, eventTime);
+                    }
+                }
 
                 currentActivityType = activityType;
 
@@ -327,6 +326,7 @@ public class LocationService extends Service {
             updateNotificationSafe();
         }
         catch (Exception e) {
+            ErrorLogger.logError(this, TAG, "Error", e);
             Log.e(TAG, "Error in handleActivityUpdate: " + e.getMessage(), e);
             Logger.saveLog(this, "Error in handleActivityUpdate: " + e.getMessage());
         }
@@ -381,13 +381,14 @@ public class LocationService extends Service {
         }
 
         try {
-            String msg = String.format("DB Update from startStillTracking: Inserting new still location %s %s",
+            String msg = String.format("DB Update from startStillTracking: Inserting new still location %s",
                     (currentLocation != null ? String.format(Locale.US, "at [%.6f, %.6f]", currentLocation.getLatitude(), currentLocation.getLongitude()) : "(no location)"));
             Log.d(TAG, msg);
             Logger.saveLog(this, msg);
             currentStillTrackingId = dao.insertStillLocation(still);
             Log.d(TAG, "STILL started: ID=" + currentStillTrackingId);
         } catch (Exception e) {
+            ErrorLogger.logError(this, TAG, "Error", e);
             Log.d(TAG, "Error:" + e);
             Logger.saveLog(this, "Error:" + e);
             currentStillTrackingId = null;
@@ -473,7 +474,8 @@ public class LocationService extends Service {
                 Logger.saveLog(this, msg);
                 dao.replaceStillWithMovement(id, movement);
             }
-        } else {
+        }
+        else {
             String msg = String.format(Locale.US, "DB Update from endStillTracking: Ending still location %d (fallback, no location info)", id);
             Log.d(TAG, msg);
             Logger.saveLog(this, msg);
@@ -520,6 +522,7 @@ public class LocationService extends Service {
             currentMovementTrackingIds.put(activityType, id);
             locationProvider.startRouteUpdates();
         } catch (Exception e) {
+            ErrorLogger.logError(this, TAG, "Error", e);
             Log.e(TAG, "Error starting movement activity: " + activityName, e);
             Logger.saveLog(this, "Error starting movement activity: " + activityName + " " + e.getMessage());
         }
@@ -620,6 +623,7 @@ public class LocationService extends Service {
                         endTime);
             }
         } catch (Exception e) {
+            ErrorLogger.logError(this, TAG, "Error", e);
             Log.e(TAG, "Error ending movement activity: " + id, e);
             Logger.saveLog(this, "Error ending movement activity: " + id + " " + e.getMessage());
         } finally {
@@ -652,11 +656,13 @@ public class LocationService extends Service {
                 startForeground(NOTIFICATION_ID, notification);
             }
         } catch (SecurityException e) {
+            ErrorLogger.logError(this, TAG, "Error", e);
             Log.e(TAG, "Permissions revoked. Cannot start foreground service.", e);
             Intent PermIntent = new Intent("com.example.myapplication.PERMISSION_REVOKED").setPackage(getPackageName());;
             sendBroadcast(PermIntent);
             stopSelf();
         } catch (Throwable e) {
+            ErrorLogger.logError(this, TAG, "Error", e);
             Log.e(TAG, "Error starting foreground service: " + e.getMessage(), e);
         }
     }
@@ -691,6 +697,7 @@ public class LocationService extends Service {
             NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
             if (manager != null) manager.notify(NOTIFICATION_ID, buildNotification());
         } catch (SecurityException e) {
+            ErrorLogger.logError(this, TAG, "Error", e);
             Intent PermIntent = new Intent("com.example.myapplication.PERMISSION_REVOKED").setPackage(getPackageName());;
             sendBroadcast(PermIntent);
             stopSelf();

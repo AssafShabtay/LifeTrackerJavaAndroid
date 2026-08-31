@@ -21,11 +21,14 @@ import com.example.myapplication.R;
 import com.example.myapplication.database.ActivityDatabase;
 import com.example.myapplication.database.MovementActivity;
 import com.example.myapplication.helpers.ColorAndIcons;
+import com.example.myapplication.helpers.ContainsArrayAdapter;
 import com.example.myapplication.helpers.UiFormatters;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
 
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.List;
 
 public class AddCustomMovementActivitySheet extends BottomSheetDialogFragment {
 
@@ -87,8 +90,8 @@ public class AddCustomMovementActivitySheet extends BottomSheetDialogFragment {
         selectedActivityName = "Walking"; // Default activity type
         
         // Setup activity type dropdown
-        String[] activityTypes = {"Cycling", "Walking", "Running", "Driving"};
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(requireContext(), android.R.layout.simple_dropdown_item_1line, activityTypes);
+        List<String> activityTypes = Arrays.asList("Cycling", "Walking", "Running", "Driving");
+        ContainsArrayAdapter adapter = new ContainsArrayAdapter(requireContext(), R.layout.item_dropdown_compact, activityTypes);
         actvActivityType.setAdapter(adapter);
         actvActivityType.setText(selectedActivityName, false);
 

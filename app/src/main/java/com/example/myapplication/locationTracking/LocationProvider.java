@@ -17,6 +17,7 @@ import androidx.core.app.ActivityCompat;
 import com.example.myapplication.database.ActivityDao;
 import com.example.myapplication.database.RoutePoint;
 import com.example.myapplication.database.StillLocation;
+import com.example.myapplication.helpers.ErrorLogger;
 import com.example.myapplication.helpers.Logger;
 import com.google.android.gms.location.DetectedActivity;
 import com.google.android.gms.location.FusedLocationProviderClient;
@@ -142,6 +143,7 @@ public class LocationProvider {
         try {
             fusedLocationClient.requestLocationUpdates(locationRequest, routeLocationCallback, Looper.getMainLooper());
         } catch (SecurityException e) {
+            ErrorLogger.logError(context, TAG, "Error", e);
             Log.e(TAG, "Location permission missing", e);
             stopRouteUpdates();
             Intent PermIntent = new Intent("com.example.myapplication.PERMISSION_REVOKED").setPackage(context.getPackageName());;
@@ -206,6 +208,7 @@ public class LocationProvider {
             fusedLocationClient.requestLocationUpdates(locationRequest, stillLocationCallback, Looper.getMainLooper());
             isRequestingStillLocationUpdates = true;
         } catch (SecurityException e) {
+            ErrorLogger.logError(context, TAG, "Error", e);
             Log.e(TAG, "Location permission missing for frequent still updates", e);
             Logger.saveLog(context, "Location permission missing for frequent still updates");
             Intent PermIntent = new Intent("com.example.myapplication.PERMISSION_REVOKED").setPackage(context.getPackageName());;
@@ -267,11 +270,13 @@ public class LocationProvider {
                     TimeUnit.SECONDS
             );
         } catch (TimeoutException e) {
+            ErrorLogger.logError(context, TAG, "Error", e);
             String msg = String.format(TAG + ": getCurrentLocation timed out for priority: " + priority);
             Log.w(TAG, msg);
             Logger.saveLog(context, msg);
             cancellationTokenSource.cancel();
         } catch (Exception e) {
+            ErrorLogger.logError(context, TAG, "Error", e);
             String msg = String.format(TAG + ": Exception in getCurrentLocation", e);
             Log.e(TAG, msg);
             Logger.saveLog(context, msg);

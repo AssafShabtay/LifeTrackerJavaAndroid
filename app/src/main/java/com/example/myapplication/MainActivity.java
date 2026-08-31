@@ -24,6 +24,7 @@ import androidx.appcompat.app.AppCompatDelegate; // Import AppCompatDelegate
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
+import com.example.myapplication.helpers.ErrorLogger;
 import com.example.myapplication.helpers.Logger;
 import com.example.myapplication.helpers.PermissionManager;
 import com.example.myapplication.mainScreen.homeScreen.HomeFragment;
@@ -67,6 +68,7 @@ public class MainActivity extends AppCompatActivity {
     private MaterialCardView permissionIconCard, permissionVideoCard;
     private ImageView permissionIcon;
     private VideoView permissionVideo;
+    private BottomNavigationView bottomNav;
     private static final String PREFS_NAME = "MyPrefs";
     private static final String THEME_KEY = "theme_preference";
 
@@ -174,7 +176,7 @@ public class MainActivity extends AppCompatActivity {
         foregroundPermissions = permissionManager.getRequiredPermissions();
 
 
-        BottomNavigationView bottomNav = findViewById(R.id.bottom_navigation);
+        bottomNav = findViewById(R.id.bottom_navigation);
         bottomNav.setOnItemSelectedListener(navListener);
 
         if (savedInstanceState == null) {
@@ -203,14 +205,15 @@ public class MainActivity extends AppCompatActivity {
 
         refreshPermissionUi(permissionManager.hasAllPermissions());
     }
+
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
-        BottomNavigationView bottomNav = findViewById(R.id.bottom_navigation);
         if (bottomNav != null) {
             outState.putInt("selected_nav_id", bottomNav.getSelectedItemId());
         }
     }
+
     @Override
     protected void onResume() {
         super.onResume();
@@ -229,11 +232,13 @@ public class MainActivity extends AppCompatActivity {
             startTrackingService();
         }
     }
+
     @Override
     protected void onPause() {
         super.onPause();
         unregisterReceiver(permissionRevokedReceiver);
     }
+
     private final BroadcastReceiver permissionRevokedReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -270,10 +275,12 @@ public class MainActivity extends AppCompatActivity {
         Logger.saveLog(this, TAG + ": refreshPermissionUi called with hasPerms: " + hasPerms);
         if (hasPerms) {
             permissionBlocker.setVisibility(View.GONE);
+            if (bottomNav != null) bottomNav.setVisibility(View.VISIBLE);
             getSupportFragmentManager().beginTransaction().show(activeFragment).commit();
             if (permissionVideo.isPlaying()) permissionVideo.stopPlayback();
         } else {
             permissionBlocker.setVisibility(View.VISIBLE);
+            if (bottomNav != null) bottomNav.setVisibility(View.GONE);
             getSupportFragmentManager().beginTransaction().hide(activeFragment).commit();
 
             boolean permanent = permissionManager.isAnyPermissionPermanentlyDenied();
@@ -293,6 +300,7 @@ public class MainActivity extends AppCompatActivity {
             }
         }
     }
+
     private void updatePermissionStepUI() {
         int totalSteps = 3;
         permissionProgressBar.setMax(totalSteps);
@@ -410,9 +418,11 @@ public class MainActivity extends AppCompatActivity {
                     .addOnFailureListener(e -> Logger.saveLog(this, TAG + ": Failed to request initial activity updates: " + e.getMessage()));
 
         } catch (SecurityException e) {
+            ErrorLogger.logError(this, TAG, "Error", e);
             transitionsRegistered = false;
             Logger.saveLog(this, TAG + ": Missing permission for transitions: " + e.getMessage());
-            Intent PermIntent = new Intent("com.example.myapplication.PERMISSION_REVOKED").setPackage(getPackageName());;
+            Intent PermIntent = new Intent("com.example.myapplication.PERMISSION_REVOKED").setPackage(getPackageName());
+            ;
             sendBroadcast(PermIntent);
         }
     }
@@ -428,16 +438,8 @@ public class MainActivity extends AppCompatActivity {
             }
             Logger.saveLog(this, TAG + ": Tracking service started successfully.");
         } catch (Throwable t) {
+            ErrorLogger.logError(this, TAG, "Error", t);
             Logger.saveLog(this, TAG + ": Failed to start tracking service: " + t.getMessage());
         }
-    }
-
-    // Getters and Setters
-    public void setOnHomeAddressChangedListener(OnHomeAddressChangedListener listener) {
-        this.onHomeAddressChangedListener = listener;
-    }
-
-    public OnHomeAddressChangedListener getOnHomeAddressChangedListener() {
-        return onHomeAddressChangedListener;
     }
 }

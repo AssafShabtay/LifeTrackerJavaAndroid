@@ -12,6 +12,7 @@ import com.example.myapplication.LifeTrackerApp;
 import com.example.myapplication.R;
 import com.example.myapplication.database.ActivityDatabase;
 import com.example.myapplication.database.StillLocation;
+import com.example.myapplication.helpers.ErrorLogger;
 import com.example.myapplication.llm.LlmApiClient;
 import com.example.myapplication.llm.LlmResponse;
 
@@ -37,8 +38,6 @@ public class LlmInsightsManager {
 
     public interface LlmInsightsListener {
         boolean isFragmentAdded();
-        Context getFragmentContext();
-        View getFragmentView();
     }
 
     public LlmInsightsManager(Context context, LifeTrackerApp app, Handler mainHandler, LlmInsightsListener listener, View rootView) {
@@ -54,13 +53,12 @@ public class LlmInsightsManager {
     }
 
     public void loadLlmInsights() {
-        mainHandler.post(() -> {
-            if (!listener.isFragmentAdded()) return;
-            tvLlmLoadingError.setVisibility(View.VISIBLE);
-            tvLlmLoadingError.setText("Loading habits and anomalies...");
-            tvHabitText.setText("");
-            tvAnomalyText.setText("");
-        });
+        if (!listener.isFragmentAdded()) return;
+        tvLlmLoadingError.setVisibility(View.VISIBLE);
+        tvLlmLoadingError.setText("Loading habits and anomalies...");
+        tvHabitText.setText("");
+        tvAnomalyText.setText("");
+
 
         app.getDatabaseWriteExecutor().execute(() -> {
             if (!listener.isFragmentAdded()) return;
@@ -108,6 +106,7 @@ public class LlmInsightsManager {
                 });
 
             } catch (Exception e) {
+            ErrorLogger.logError(context, TAG, "Error", e);
                 // Log the exception for debugging
                 Log.e(TAG, "Error loading LLM insights", e);
                 mainHandler.post(() -> {

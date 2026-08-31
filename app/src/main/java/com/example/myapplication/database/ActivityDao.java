@@ -55,6 +55,9 @@ public interface ActivityDao {
 
     @Query("UPDATE movement_activities SET endTimeDate = :endTimeDate WHERE id = :id")
     void updateMovementEndTime(long id, Date endTimeDate);
+    @NonNull
+    @Query("SELECT * FROM still_locations WHERE placeId = :placeId AND startTimeDate <= :end AND (endTimeDate IS NULL OR endTimeDate >= :start)")
+    List<StillLocation> getStillsFromRangeAndPlace(long placeId, Date start, Date end);
 
     @Query("UPDATE movement_activities SET endTimeDate = NULL WHERE id = :id")
     void resumeMovementActivity(long id);
@@ -138,6 +141,23 @@ public interface ActivityDao {
 
     @Query("SELECT SUM(CASE WHEN endTimeDate IS NULL THEN :now ELSE endTimeDate END - startTimeDate) FROM still_locations WHERE category = 'Home' AND startTimeDate >= :sevenDaysAgo")
     long getTimeAtHomeSince(long sevenDaysAgo, long now);
+
+    @Query("UPDATE places SET name = :name, address = :address, lat = :lat, lng = :lng, category = :category, icon = :icon, color = :color, geofencePlaceId = :geofencePlaceId WHERE id = :id")
+    void updatePlaceInfo(long id, String name, String address, double lat, double lng, String category, String icon, Integer color, String geofencePlaceId);
+
+    @Query("UPDATE still_locations SET placeName = :placeName, placeAddress = :placeAddress, lat = :lat, lng = :lng, category = :category, icon = :icon, color = :color, geofencePlaceId = :geofencePlaceId WHERE placeId = :placeId")
+    void updateStillsByPlaceId(long placeId, String placeName, String placeAddress, Double lat, Double lng, String category, String icon, Integer color, String geofencePlaceId);
+
+    @Transaction
+    default void updateStillAndSyncPlace(StillLocation still) {
+        updateStillLocation(still);
+        if (still.getPlaceId() != null) {
+            double lat = still.getLat() != null ? still.getLat() : 0.0;
+            double lng = still.getLng() != null ? still.getLng() : 0.0;
+            updatePlaceInfo(still.getPlaceId(), still.getPlaceName(), still.getPlaceAddress(), lat, lng, still.getCategory(), still.getIcon(), still.getColor(), still.getGeofencePlaceId());
+            updateStillsByPlaceId(still.getPlaceId(), still.getPlaceName(), still.getPlaceAddress(), still.getLat(), still.getLng(), still.getCategory(), still.getIcon(), still.getColor(), still.getGeofencePlaceId());
+        }
+    }
 
     /**
      * Calculates the sum duration of all activities (StillLocation and MovementActivity)

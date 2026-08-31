@@ -8,6 +8,7 @@ import android.content.Intent;
 import android.os.Build;
 import android.util.Log;
 
+import com.example.myapplication.helpers.ErrorLogger;
 import com.example.myapplication.helpers.Logger;
 import com.example.myapplication.locationTracking.LocationService;
 import com.google.android.gms.location.ActivityTransition;
@@ -75,6 +76,7 @@ public class ActivityTransitionReceiver extends BroadcastReceiver {
                 context.startService(serviceIntent);
             }
         } catch (Exception e) {
+            ErrorLogger.logError(context, TAG, "Error", e);
             String errorMsg = "notifyService: Failed to start service from receiver: " + e.getMessage();
             Log.e(TAG, errorMsg);
             Logger.saveLog(context, errorMsg);

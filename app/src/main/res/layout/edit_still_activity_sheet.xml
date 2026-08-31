@@ -79,14 +79,14 @@
             </FrameLayout>
 
             <com.google.android.material.textfield.TextInputLayout
-                style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense.ExposedDropdownMenu"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:hint="Place Name"
                 app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.MediumComponent">
 
-                <AutoCompleteTextView
+                <com.google.android.material.textfield.MaterialAutoCompleteTextView
                     android:id="@+id/actvName"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -97,27 +97,37 @@
         </LinearLayout>
 
         <com.google.android.material.textfield.TextInputLayout
-            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
             android:layout_width="match_parent"
-            android:layout_height="56dp"
+            android:layout_height="wrap_content"
             android:hint="Address"
             android:layout_marginBottom="24dp"
             app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.MediumComponent"
             app:endIconMode="clear_text">
 
-            <AutoCompleteTextView
+            <com.google.android.material.textfield.MaterialAutoCompleteTextView
                 android:id="@+id/etAddress"
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:inputType="textPostalAddress"
-                android:paddingStart="16dp" />
+                android:layout_height="wrap_content"
+                android:inputType="textPostalAddress" />
 
         </com.google.android.material.textfield.TextInputLayout>
+
+        <TextView
+            android:id="@+id/tvAddressStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="-20dp"
+            android:layout_marginBottom="16dp"
+            android:layout_marginStart="4dp"
+            android:textSize="12sp"
+            android:visibility="gone" />
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
+            android:gravity="center_vertical"
             android:layout_marginBottom="24dp">
 
             <Button
@@ -130,17 +140,39 @@
                 android:text="Start: --:--" />
 
             <View
-                android:layout_width="12dp"
+                android:layout_width="8dp"
                 android:layout_height="0dp" />
 
             <Button
                 android:id="@+id/btnEndTime"
                 style="@style/Widget.Material3.Button.TonalButton"
                 android:layout_width="0dp"
-                android:layout_weight="1"
                 android:layout_height="wrap_content"
+                android:layout_weight="1"
                 android:backgroundTint="?attr/colorSecondaryContainer"
                 android:text="End: --:--" />
+
+            <View
+                android:layout_width="12dp"
+                android:layout_height="0dp" />
+
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense.ExposedDropdownMenu"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1.5"
+                android:hint="Category"
+                app:startIconDrawable="@drawable/ic_search"
+                app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.MediumComponent">
+
+                <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                    android:id="@+id/actvCategory"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="textCapWords"
+                    android:dropDownHeight="180dp" />
+
+            </com.google.android.material.textfield.TextInputLayout>
         </LinearLayout>
 
 

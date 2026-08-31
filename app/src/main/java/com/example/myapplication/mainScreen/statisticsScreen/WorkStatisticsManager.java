@@ -14,6 +14,8 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.core.content.ContextCompat;
+
 import com.example.myapplication.LifeTrackerApp;
 import com.example.myapplication.R;
 import com.example.myapplication.database.ActivityDatabase;
@@ -21,7 +23,6 @@ import com.example.myapplication.database.Place;
 import com.example.myapplication.database.PlaceDao;
 import com.example.myapplication.database.StillLocation;
 
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -29,6 +30,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 
 public class WorkStatisticsManager {
 
@@ -37,16 +39,13 @@ public class WorkStatisticsManager {
     private final Handler mainHandler;
     private final WorkStatisticsListener listener;
 
-    private static final String PREFS_NAME = "MyPrefs"; // Duplicated from SettingsFragment
-    private static final String KEY_WEEK_START_DAY = "week_start_day"; // Duplicated from SettingsFragment
-
+    private static final String PREFS_NAME = "MyPrefs";
+    private static final String KEY_WEEK_START_DAY = "week_start_day";
 
     private final View workStatisticsContent;
     private final View workStatisticsPlaceholder;
     private final LinearLayout chartWorkHoursContainer;
     private final TextView tvWorkHoursSummary;
-    private final TextView tvWorkHoursMinLabel;
-    private final TextView tvWorkHoursMaxLabel;
 
     public interface WorkStatisticsListener {
         boolean isFragmentAdded();
@@ -63,8 +62,7 @@ public class WorkStatisticsManager {
         this.workStatisticsPlaceholder = rootView.findViewById(R.id.work_statistics_placeholder);
         this.chartWorkHoursContainer = rootView.findViewById(R.id.chart_work_hours_container);
         this.tvWorkHoursSummary = rootView.findViewById(R.id.tv_work_hours_summary);
-        this.tvWorkHoursMinLabel = rootView.findViewById(R.id.tv_work_hours_min_label);
-        this.tvWorkHoursMaxLabel = rootView.findViewById(R.id.tv_work_hours_max_label);
+
     }
 
     public void onWorkAddressSelected(String address) {
@@ -122,25 +120,31 @@ public class WorkStatisticsManager {
 
             Place workPlace = placeDao.getWorkPlace();
 
-            // Get the preferred start day of the week from SharedPreferences
-            int preferredFirstDayOfWeek = getWeekStartDayPreference();
+            if (workPlace == null) {
+                mainHandler.post(() -> {
+                    if (!listener.isFragmentAdded()) return;
+                    workStatisticsContent.setVisibility(View.GONE);
+                    workStatisticsPlaceholder.setVisibility(View.VISIBLE);
+                });
+                return;
+            }
 
             Calendar calendar = Calendar.getInstance();
-            calendar.setFirstDayOfWeek(preferredFirstDayOfWeek); // Use preferred first day of the week
+            calendar.setFirstDayOfWeek(getWeekStartDayPreference());
 
-            // Set to the first day of the current week (e.g., Monday or Sunday)
-            calendar.setTime(new Date()); // Set to today
-            calendar.set(Calendar.DAY_OF_WEEK, preferredFirstDayOfWeek);
+            // Set to the first day of the current week (Monday or Sunday)
+            calendar.setTime(new Date());
+            calendar.set(Calendar.DAY_OF_WEEK, calendar.getFirstDayOfWeek());
             calendar.set(Calendar.HOUR_OF_DAY, 0);
             calendar.set(Calendar.MINUTE, 0);
             calendar.set(Calendar.SECOND, 0);
             calendar.set(Calendar.MILLISECOND, 0);
 
-            // Go back one week to get "last week"
+            // Go back one week to get last week
             calendar.add(Calendar.WEEK_OF_YEAR, -1);
             Date startOfLastWeek = calendar.getTime();
 
-            // Calculate end of last week (6 days after startOfLastWeek, at 23:59:59.999)
+            // Calculate end of last week (6 days after startOfLastWeek)
             calendar.add(Calendar.DAY_OF_YEAR, 6);
             calendar.set(Calendar.HOUR_OF_DAY, 23);
             calendar.set(Calendar.MINUTE, 59);
@@ -148,93 +152,103 @@ public class WorkStatisticsManager {
             calendar.set(Calendar.MILLISECOND, 999);
             Date endOfLastWeek = calendar.getTime();
 
-            // Fetch all places to easily get categories by ID on a background thread
-            final List<Place> allPlaces = placeDao.getAllPlaces();
-            final Map<Long, String> placeCategoryMap = new HashMap<>();
-            for (Place place : allPlaces) {
-                placeCategoryMap.put(place.getId(), place.getCategory());
-            }
+            // Calculate dates for the week before last week
+            Calendar calendarPrevious = Calendar.getInstance();
+            calendarPrevious.setFirstDayOfWeek(getWeekStartDayPreference());
+            calendarPrevious.setTime(startOfLastWeek);
+            calendarPrevious.add(Calendar.WEEK_OF_YEAR, -1); // Go back one more week
+            Date startOfPreviousWeek = calendarPrevious.getTime();
 
-            // Fetch stills on a background thread
-            final List<StillLocation> stillsLastWeek = db.activityDao().getStillsFromRange(startOfLastWeek, endOfLastWeek);
+            calendarPrevious.add(Calendar.DAY_OF_YEAR, 6); // Add 6 days to get to the end of the previous week
+            calendarPrevious.set(Calendar.HOUR_OF_DAY, 23);
+            calendarPrevious.set(Calendar.MINUTE, 59);
+            calendarPrevious.set(Calendar.SECOND, 59);
+            calendarPrevious.set(Calendar.MILLISECOND, 999);
+            Date endOfPreviousWeek = calendarPrevious.getTime();
 
-            // Map to store daily work durations in minutes. Using String for date key to simplify comparison without full Date object comparison issues.
-            final Map<String, Long> dailyWorkMinutes = new HashMap<>();
-            final SimpleDateFormat dayFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
 
-            // Initialize map for the last 7 days with 0
+            final List<StillLocation> stillsLastWeek = db.activityDao().getStillsFromRangeAndPlace(workPlace.getId(), startOfLastWeek, endOfLastWeek);
+            final List<StillLocation> stillsPreviousWeek = db.activityDao().getStillsFromRangeAndPlace(workPlace.getId(), startOfPreviousWeek, endOfPreviousWeek);
+
+
+            // create a map to store daily work minutes throughout the week
+            final Map<Long, Long> dailyWorkMinutes = new HashMap<>();
             Calendar tempCal = Calendar.getInstance();
             tempCal.setTime(startOfLastWeek);
             for (int i = 0; i < 7; i++) {
-                dailyWorkMinutes.put(dayFormat.format(tempCal.getTime()), 0L);
+                dailyWorkMinutes.put(getDayStartTimestamp(tempCal.getTime()), 0L);
                 tempCal.add(Calendar.DAY_OF_YEAR, 1);
             }
             tempCal.setTime(startOfLastWeek); // Reset for later use
 
             for (StillLocation still : stillsLastWeek) {
-                Long placeId = still.getPlaceId();
-                String category = placeCategoryMap.get(placeId);
-
-                if ("Work".equals(category)) {
+                Date stillDate = still.getStartTimeDate();
+                Long stillDayKey = getDayStartTimestamp(stillDate);
+                if (dailyWorkMinutes.containsKey(stillDayKey)) {
                     long durationMs = calculateStillDuration(still, startOfLastWeek, endOfLastWeek);
                     long durationMins = durationMs / (1000 * 60);
-
                     if (durationMins > 0) {
-                        // Ensure we only count duration within the last week for each day
-                        Date stillDate = still.getStartTimeDate();
-                        // Clamp stillDay to be within the last week range
-                        // This clamping logic with Date objects is more complex,
-                        // instead, I\'ll rely on the stillsLastWeek already being within the range
-                        // and just get the day part of the stillDate.
-                        String stillDayKey = dayFormat.format(stillDate);
-
-                        // Only add if the day key is actually within the last week\'s keys
-                        if (dailyWorkMinutes.containsKey(stillDayKey)) {
-                            dailyWorkMinutes.merge(stillDayKey, durationMins, Long::sum);
-                        }
+                        dailyWorkMinutes.merge(stillDayKey, durationMins, Long::sum);
                     }
                 }
             }
 
-            // Convert daily minutes to a list of hours for the chart
+            // Calculate daily work minutes for the previous week
+            final Map<Long, Long> dailyWorkMinutesPreviousWeek = new HashMap<>();
+            Calendar tempCalPrevious = Calendar.getInstance();
+            tempCalPrevious.setTime(startOfPreviousWeek);
+            for (int i = 0; i < 7; i++) {
+                dailyWorkMinutesPreviousWeek.put(getDayStartTimestamp(tempCalPrevious.getTime()), 0L);
+                tempCalPrevious.add(Calendar.DAY_OF_YEAR, 1);
+            }
+
+            for (StillLocation still : stillsPreviousWeek) {
+                Date stillDate = still.getStartTimeDate();
+                Long stillDayKey = getDayStartTimestamp(stillDate);
+                if (dailyWorkMinutesPreviousWeek.containsKey(stillDayKey)) {
+                    long durationMs = calculateStillDuration(still, startOfPreviousWeek, endOfPreviousWeek);
+                    long durationMins = durationMs / (1000 * 60);
+                    if (durationMins > 0) {
+                        dailyWorkMinutesPreviousWeek.merge(stillDayKey, durationMins, Long::sum);
+                    }
+                }
+            }
+
+            long totalWorkMinutesPreviousWeek = 0;
+            for (Long minutes : dailyWorkMinutesPreviousWeek.values()) {
+                totalWorkMinutesPreviousWeek += minutes;
+            }
+            final double previousWeekTotalHours = totalWorkMinutesPreviousWeek / 60.0;
+
+
+            // move daily minutes to a list of hours for the chart
             List<Double> workHoursPerDay = new ArrayList<>();
             long totalWorkMinutes = 0;
 
             tempCal.setTime(startOfLastWeek); // Reset calendar to start of last week
             for (int i = 0; i < 7; i++) {
-                String dayKey = dayFormat.format(tempCal.getTime());
-                long minutes = dailyWorkMinutes.getOrDefault(dayKey, 0L);
+                Long dayKey = getDayStartTimestamp(tempCal.getTime());
+                long minutes = Objects.requireNonNullElse(dailyWorkMinutes.get(dayKey), 0L);
                 workHoursPerDay.add(minutes / 60.0);
                 totalWorkMinutes += minutes;
                 tempCal.add(Calendar.DAY_OF_YEAR, 1);
             }
 
             final double finalTotalWorkHours = totalWorkMinutes / 60.0;
-            final double finalAverageDailyWorkHours = finalTotalWorkHours / 7.0;
             final List<Double> finalWorkHoursPerDay = workHoursPerDay;
 
             mainHandler.post(() -> {
                 if (!listener.isFragmentAdded()) return;
-                if (workPlace == null) {
-                    workStatisticsContent.setVisibility(View.GONE);
-                    workStatisticsPlaceholder.setVisibility(View.VISIBLE);
-                } else {
-                    workStatisticsContent.setVisibility(View.VISIBLE);
-                    workStatisticsPlaceholder.setVisibility(View.GONE);
+                workStatisticsContent.setVisibility(View.VISIBLE);
+                workStatisticsPlaceholder.setVisibility(View.GONE);
 
-                    // Display the bar chart
-                    drawWorkHoursBarChart(finalWorkHoursPerDay,
-                            R.id.chart_work_hours_container,
-                            "#4CAF50", "#8BC34A", "#DCEDC8"); // Green colors
+                // Display the bar chart
+                drawWorkHoursBarChart(finalWorkHoursPerDay);
 
-                    // Update summary text
-                    // For demonstration, use a fixed average as historical average calculation is complex
-                    int usualAverageHours = 25; // Example fixed average
-                    String summaryText = String.format(Locale.getDefault(),
-                            "You worked %.0f hours last week. This is compared to your usual average of %d hours per week.",
-                            finalTotalWorkHours, usualAverageHours);
-                    tvWorkHoursSummary.setText(summaryText);
-                }
+
+                tvWorkHoursSummary.setText(String.format(Locale.getDefault(),
+                        "You worked %.0f hours last week. This is compared to last when you worked %.0f hours per week.",
+                        finalTotalWorkHours, previousWeekTotalHours));
             });
         });
     }
@@ -243,14 +257,14 @@ public class WorkStatisticsManager {
         Date startTime = still.getStartTimeDate();
         Date endTime = still.getEndTimeDate();
 
-        if (endTime == null) endTime = new Date(); // If still active, consider current time
+        if (endTime == null) endTime = new Date(); // If still active, end should be now
 
-        // Clamp the start and end times to the given range
+        // if the start is before the range start or the end is after the range end, then adjust accordingly
         Date actualStart = startTime.before(rangeStart) ? rangeStart : startTime;
         Date actualEnd = endTime.after(rangeEnd) ? rangeEnd : endTime;
 
         if (actualStart.after(actualEnd)) {
-            return 0; // No valid duration within the range
+            return 0;
         }
 
         return actualEnd.getTime() - actualStart.getTime();
@@ -258,12 +272,11 @@ public class WorkStatisticsManager {
 
     private int getWeekStartDayPreference() {
         SharedPreferences preferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-        // Default to Monday if no preference is set
-        return preferences.getInt(KEY_WEEK_START_DAY, Calendar.MONDAY);
+        return preferences.getInt(KEY_WEEK_START_DAY, Calendar.SUNDAY);
     }
 
-    private void drawWorkHoursBarChart(List<Double> dailyHours, int containerId, String colorDarkHex, String colorMedHex, String colorLightHex) {
-        LinearLayout chartContainer = chartWorkHoursContainer; // Use the initialized field
+    private void drawWorkHoursBarChart(List<Double> dailyHours) {
+        LinearLayout chartContainer = chartWorkHoursContainer;
         if (chartContainer == null || dailyHours == null || dailyHours.isEmpty()) return;
 
         chartContainer.removeAllViews();
@@ -275,69 +288,45 @@ public class WorkStatisticsManager {
                 maxHours = hours;
             }
         }
-        if (maxHours == 0) maxHours = 1; // Prevent division by zero, show a tiny bar if all are zero
-        // For the UI representation, ensure maxHours is at least 9 as per the image
-        if (maxHours < 9) maxHours = 9; // Set minimum max value to 9 hours for consistent scaling with design
+        if (maxHours == 0) maxHours = 1;
+        if (maxHours < 9) maxHours = 9;
 
+        int colorDark = Color.parseColor("#4CAF50");// TODO FIX COLORS
+        int colorLight = Color.parseColor("#DCEDC8");// TODO FIX COLORS
 
-        int colorDark = Color.parseColor(colorDarkHex);
-        int colorMedium = Color.parseColor(colorMedHex);
-        int colorLight = Color.parseColor(colorLightHex);
-
-        // The days array should also reflect the start day of the week preference.
-        // However, this drawWorkHoursBarChart method simply draws 7 bars based on the order of `dailyHours`.
-        // The `dailyHours` list is already populated in `loadWorkStatistics` respecting the `startOfLastWeek`.
-        // So, the `days` array here should dynamically start with the chosen day.
-
+        String[] allDays = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
         String[] days = new String[7];
-        int startDay = getWeekStartDayPreference(); // Get preferred start day for display
 
-        // Map Calendar day constants to abbreviated day names
-        Map<Integer, String> dayNames = new HashMap<>();
-        dayNames.put(Calendar.MONDAY, "Mon");
-        dayNames.put(Calendar.TUESDAY, "Tue");
-        dayNames.put(Calendar.WEDNESDAY, "Wed");
-        dayNames.put(Calendar.THURSDAY, "Thu");
-        dayNames.put(Calendar.FRIDAY, "Fri");
-        dayNames.put(Calendar.SATURDAY, "Sat");
-        dayNames.put(Calendar.SUNDAY, "Sun");
-
-        // Populate the days array starting from the preferred start day
         for (int i = 0; i < 7; i++) {
-            int currentDay = (startDay + i - 1) % 7; // -1 because Calendar.MONDAY is 2, SUNDAY is 1
-            if (currentDay == 0) currentDay = 7; // Adjust for Sunday being 1 in Calendar
-            days[i] = dayNames.get(currentDay);
+            days[i] = allDays[(getWeekStartDayPreference() + i - 1) % 7];
         }
 
+
         for (int i = 0; i < dailyHours.size(); i++) {
-            LinearLayout dayColumn = new LinearLayout(context); // Use context from manager
+            LinearLayout dayColumn = new LinearLayout(context);
             dayColumn.setOrientation(LinearLayout.VERTICAL);
             LinearLayout.LayoutParams columnParams = new LinearLayout.LayoutParams(
                     0, ViewGroup.LayoutParams.MATCH_PARENT, 1.0f);
             dayColumn.setLayoutParams(columnParams);
             dayColumn.setGravity(android.view.Gravity.BOTTOM | android.view.Gravity.CENTER_HORIZONTAL);
 
-            // FIX: Explicitly set weight sum so the heightPercent logic calculates correctly
             dayColumn.setWeightSum(1.0f);
 
-            // --- NEW: Add a label for the exact hours worked above the bar ---
             TextView hoursLabel = new TextView(context);
             hoursLabel.setLayoutParams(new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
             double hoursWorked = dailyHours.get(i);
             if (hoursWorked > 0) {
-                // Format to a clean decimal (e.g., "8h", "5.5h")
                 hoursLabel.setText(new java.text.DecimalFormat("0.#").format(hoursWorked) + "h");
             } else {
-                hoursLabel.setText(""); // Keep the space clean on days with 0 hours
+                hoursLabel.setText("");
             }
 
             hoursLabel.setTextSize(9f);
-            hoursLabel.setTextColor(Color.parseColor("#757575"));
+            hoursLabel.setTextColor(ContextCompat.getColor(context, R.color.on_surface_variant));
             hoursLabel.setPadding(0, 0, 0, 4); // Small gap between text and the bar
             dayColumn.addView(hoursLabel);
-            // ------------------------------------------------------------------
 
             // Bar view
             View bar = new View(context);
@@ -370,15 +359,20 @@ public class WorkStatisticsManager {
                     ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
             dayLabel.setText(days[i]);
             dayLabel.setTextSize(9f);
-            dayLabel.setTextColor(Color.parseColor("#757575"));
+            dayLabel.setTextColor(ContextCompat.getColor(context, R.color.on_surface_variant));
 
             dayColumn.addView(dayLabel);
             chartContainer.addView(dayColumn);
         }
+    }
 
-        // Update min and max labels. Max is always 9 hours in this design.
-        // Min is always 0 hours.
-        tvWorkHoursMinLabel.setText("0 hours");
-        tvWorkHoursMaxLabel.setText(String.format(Locale.getDefault(), "%.0f hours", maxHours));
+    private long getDayStartTimestamp(Date date) {
+        Calendar cal = Calendar.getInstance();
+        cal.setTime(date);
+        cal.set(Calendar.HOUR_OF_DAY, 0);
+        cal.set(Calendar.MINUTE, 0);
+        cal.set(Calendar.SECOND, 0);
+        cal.set(Calendar.MILLISECOND, 0);
+        return cal.getTimeInMillis();
     }
 }

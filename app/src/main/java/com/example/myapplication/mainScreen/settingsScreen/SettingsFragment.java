@@ -92,6 +92,7 @@ public class SettingsFragment extends Fragment {
     }
 
     private void setupWeekStartDayPreference(RadioGroup radioGroup) {
+        //TODO fetch system first day of the week
         int savedWeekStartDay = getWeekStartDayPreference();
         if (savedWeekStartDay == Calendar.MONDAY) {
             radioMonday.setChecked(true);

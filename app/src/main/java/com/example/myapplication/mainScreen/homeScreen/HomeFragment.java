@@ -177,7 +177,7 @@ public class HomeFragment extends Fragment {
             @Override
             public void onUpdate(StillLocation updatedStill) {
                 app.getDatabaseWriteExecutor().execute(() -> {
-                    dao.updateStillLocation(updatedStill);
+                    dao.updateStillAndSyncPlace(updatedStill);
                     if (isAdded()) {
                         requireActivity().runOnUiThread(() -> {
                             loadTimelineData(calendarManager.getSelectedDate());
@@ -306,6 +306,12 @@ public class HomeFragment extends Fragment {
     public void onPause() {
         super.onPause();
         stopPeriodicRefresh();
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        calendarManager.destroy();
     }
 
 

@@ -14,12 +14,13 @@
         android:layout_marginBottom="16dp"/>
 
     <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/tilWorkAddress"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:hint="Work Address"
         style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense.ExposedDropdownMenu">
 
-        <AutoCompleteTextView
+        <com.google.android.material.textfield.MaterialAutoCompleteTextView
             android:id="@+id/etWorkAddressInput"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

@@ -7,16 +7,22 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewParent;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
 import android.widget.TextView;
-import android.widget.AdapterView; // Import AdapterView
+import android.widget.AdapterView;
+import android.content.Intent;
+import androidx.activity.result.ActivityResultLauncher;
+
+import com.example.myapplication.mainScreen.homeScreen.MapPickerActivity;
+import com.google.android.material.textfield.TextInputLayout;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.example.myapplication.BuildConfig;
-import com.example.myapplication.R; // Import R class for custom layout
+import com.example.myapplication.R;
 import com.google.android.libraries.places.api.Places;
 import com.google.android.libraries.places.api.model.AutocompletePrediction;
 import com.google.android.libraries.places.api.model.AutocompleteSessionToken;
@@ -33,12 +39,38 @@ public class AddressAutocompleteHelper {
     private final AutoCompleteTextView autoCompleteTextView;
     private PlacesClient placesClient;
     private AutocompleteSessionToken autocompleteSessionToken;
+    private ActivityResultLauncher<Intent> mapPickerLauncher;
 
     public AddressAutocompleteHelper(Context context, AutoCompleteTextView autoCompleteTextView) {
         this.context = context;
         this.autoCompleteTextView = autoCompleteTextView;
         initPlacesClient();
         setupAddressAutocomplete();
+    }
+
+    public void setMapPickerLauncher(ActivityResultLauncher<Intent> launcher) {
+        this.mapPickerLauncher = launcher;
+        setupMapPickerIcon();
+    }
+
+    private void setupMapPickerIcon() {
+        ViewParent parent = autoCompleteTextView.getParent();
+        while (parent != null && !(parent instanceof TextInputLayout)) {
+            parent = parent.getParent();
+        }
+
+        if (parent instanceof TextInputLayout) {
+            TextInputLayout textInputLayout = (TextInputLayout) parent;
+            textInputLayout.setEndIconMode(TextInputLayout.END_ICON_CUSTOM);
+            textInputLayout.setEndIconDrawable(R.drawable.lucide_map);
+            textInputLayout.setEndIconContentDescription("Select on Map");
+            textInputLayout.setEndIconOnClickListener(v -> {
+                if (mapPickerLauncher != null) {
+                    Intent intent = new Intent(context, MapPickerActivity.class);
+                    mapPickerLauncher.launch(intent);
+                }
+            });
+        }
     }
 
     private void initPlacesClient() {

@@ -5,6 +5,7 @@ import android.animation.ValueAnimator;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.graphics.Typeface;
+import android.graphics.drawable.GradientDrawable;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
@@ -24,12 +25,9 @@ import com.example.myapplication.database.MovementActivity;
 import com.example.myapplication.database.StillLocation;
 import com.example.myapplication.helpers.UiFormatters;
 
-import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ExecutorService;
 
 public class CalendarManager {
@@ -59,8 +57,9 @@ public class CalendarManager {
     private int measuredHeight = 0; // Field to store the measured height
     private final ExecutorService databaseWriteExecutor;
     private final ActivityDao dao;
-    private final Map<String, List<MiniPieChartView.Slice>> sliceCache = new HashMap<>();
 
+    private SharedPreferences sharedPreferences;
+    private SharedPreferences.OnSharedPreferenceChangeListener preferenceChangeListener;
     private static final String PREFS_NAME = "MyPrefs";
     private static final String KEY_WEEK_START_DAY = "week_start_day";
 
@@ -82,15 +81,31 @@ public class CalendarManager {
 
         dao = ActivityDatabase.getDatabase(context.getApplicationContext()).activityDao();
 
-        Calendar cal = Calendar.getInstance();
-        cal.setFirstDayOfWeek(getWeekStartDayPreference()); // Set preferred first day of week
-        cal.setTime(selectedDate);
-        currentMonth = cal.get(Calendar.MONTH);
-        currentYear = cal.get(Calendar.YEAR);
+        this.sharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+
+        this.preferenceChangeListener = (prefs, key) -> {
+            if (KEY_WEEK_START_DAY.equals(key)) {
+                Calendar cal = Calendar.getInstance();
+                cal.setFirstDayOfWeek(getWeekStartDayPreference());
+                cal.setTime(selectedDate);
+                currentMonth = cal.get(Calendar.MONTH);
+                currentYear = cal.get(Calendar.YEAR);
+
+                buildWeekHeader();
+                renderCalendar();
+            }
+        };
+
+
+        this.sharedPreferences.registerOnSharedPreferenceChangeListener(preferenceChangeListener);
 
         init();
     }
-
+    public void destroy() {
+        if (sharedPreferences != null && preferenceChangeListener != null) {
+            sharedPreferences.unregisterOnSharedPreferenceChangeListener(preferenceChangeListener);
+        }
+    }
     private void init() {
         buildWeekHeader();
         updateHeader(selectedDate);
@@ -248,24 +263,16 @@ public class CalendarManager {
         // Get the preferred start day of the week
         int preferredFirstDayOfWeek = getWeekStartDayPreference();
 
-        String[] daysShort = {"S", "M", "T", "W", "T", "F", "S"};
+        String[] daysShort = {"S", "M", "T", "W", "T", "F", "S"}; // 0=Sunday, 1=Monday, ..., 6=Saturday
         String[] orderedDays = new String[7];
 
-        // Map Calendar day constants to the indices of daysShort array
-        Map<Integer, Integer> dayToDaysShortIndex = new HashMap<>();
-        dayToDaysShortIndex.put(Calendar.SUNDAY, 0);
-        dayToDaysShortIndex.put(Calendar.MONDAY, 1);
-        dayToDaysShortIndex.put(Calendar.TUESDAY, 2);
-        dayToDaysShortIndex.put(Calendar.WEDNESDAY, 3);
-        dayToDaysShortIndex.put(Calendar.THURSDAY, 4);
-        dayToDaysShortIndex.put(Calendar.FRIDAY, 5);
-        dayToDaysShortIndex.put(Calendar.SATURDAY, 6);
+        // Convert Calendar.DAY_OF_WEEK (1-7) to a 0-6 index for daysShort array
+        int firstDayOfWeekIndex = (preferredFirstDayOfWeek - 1 + 7) % 7;
 
         // Populate orderedDays starting from the preferred first day of the week
         for (int i = 0; i < 7; i++) {
-            int calendarDay = (preferredFirstDayOfWeek + i - 1) % 7; // Adjust for 0-indexed array vs 1-indexed Calendar.DAY_OF_WEEK
-            if (calendarDay == 0) calendarDay = 7; // If it wraps to 0, it means Sunday, which is 7 in our adjusted logic
-            orderedDays[i] = daysShort[dayToDaysShortIndex.get(calendarDay)];
+            int currentDayShortIndex = (firstDayOfWeekIndex + i) % 7;
+            orderedDays[i] = daysShort[currentDayShortIndex];
         }
 
         for (String day : orderedDays) {
@@ -362,44 +369,36 @@ public class CalendarManager {
         tvDay.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
         tvDay.setGravity(Gravity.CENTER);
 
+        LinearLayout.LayoutParams tvParams = new LinearLayout.LayoutParams(dp(32), dp(32));
+        tvDay.setLayoutParams(tvParams);
+
         if (isFuture) {
             tvDay.setTextColor(ContextCompat.getColor(context, R.color.on_surface_variant));
             tvDay.setAlpha(0.3f);
         } else if (isSelected) {
-            tvDay.setTextColor(ContextCompat.getColor(context, R.color.primary));
+            tvDay.setTextColor(ContextCompat.getColor(context, R.color.on_primary));
             tvDay.setTypeface(Typeface.DEFAULT_BOLD);
+            
+            GradientDrawable shape = new GradientDrawable();
+            shape.setShape(GradientDrawable.OVAL);
+            shape.setColor(ContextCompat.getColor(context, R.color.primary));
+            tvDay.setBackground(shape);
         } else {
             tvDay.setTextColor(ContextCompat.getColor(context, R.color.on_surface));
         }
         root.addView(tvDay); // Add tvDay first
 
         if (!isFuture) {
-            String cacheKey = getCacheKey(cellDate);
             databaseWriteExecutor.execute(() -> {
-                List<MiniPieChartView.Slice> slices = calculateSlicesForDate(cellDate);
-                sliceCache.put(cacheKey, slices);
+                boolean hasData = hasDataForDate(cellDate);
                 root.post(() -> {
-                    // Check if the day is "full in data"
-                    if (isDayFull(slices)) {
-                        // Create a solid circle or checkmark icon
-                        ImageView fullDayIndicator = new ImageView(context);
-                        LinearLayout.LayoutParams indicatorParams = new LinearLayout.LayoutParams(dp(20), dp(20));
-                        indicatorParams.topMargin = dp(6);
-                        fullDayIndicator.setLayoutParams(indicatorParams);
-                        fullDayIndicator.setImageResource(R.drawable.ic_check_circle); // Assuming you have a checkmark icon
-                        fullDayIndicator.setColorFilter(ContextCompat.getColor(context, R.color.primary)); // Tint with primary color
-                        root.addView(fullDayIndicator);
-                    } else {
-                        MiniPieChartView pieChartView = new MiniPieChartView(context);
-                        LinearLayout.LayoutParams circleParams = new LinearLayout.LayoutParams(dp(20), dp(20));
-                        circleParams.topMargin = dp(6);
-                        pieChartView.setLayoutParams(circleParams);
+                    DayDataIndicatorView indicatorView = new DayDataIndicatorView(context);
+                    LinearLayout.LayoutParams dotParams = new LinearLayout.LayoutParams(dp(6), dp(6));
+                    dotParams.topMargin = dp(4);
+                    indicatorView.setLayoutParams(dotParams);
 
-                        pieChartView.setSelected(isSelected);
-                        pieChartView.setFuture(isFuture);
-                        pieChartView.setSlices(slices);
-                        root.addView(pieChartView);
-                    }
+                    indicatorView.setHasData(hasData);
+                    root.addView(indicatorView);
                 });
             });
 
@@ -419,20 +418,8 @@ public class CalendarManager {
         return root;
     }
 
-    private boolean isDayFull(List<MiniPieChartView.Slice> slices) {
-        float totalDurationMinutes = 0;
-        for (MiniPieChartView.Slice slice : slices) {
-            totalDurationMinutes += slice.value;
-        }
-        // A day has 1440 minutes. Consider "full" if covered for at least 23.5 hours (1410 minutes)
-        return totalDurationMinutes >= 1410;
-    }
 
-    private String getCacheKey(Date date) {
-        return UiFormatters.isoDate(date);
-    }
-
-    private List<MiniPieChartView.Slice> calculateSlicesForDate(Date date) {
+    private boolean hasDataForDate(Date date) {
         Calendar cal = Calendar.getInstance();
         cal.setTime(date);
         cal.set(Calendar.HOUR_OF_DAY, 0);
@@ -448,50 +435,12 @@ public class CalendarManager {
         long endOfDayMillis = cal.getTimeInMillis();
 
         List<StillLocation> stills = dao.getStillsFromRange(new Date(startOfDayMillis), new Date(endOfDayMillis));
+        if (!stills.isEmpty()) return true;
+
         List<MovementActivity> movements = dao.getMovementsFromRange(new Date(startOfDayMillis), new Date(endOfDayMillis));
-
-        List<MiniPieChartView.Slice> slices = new ArrayList<>();
-
-        for (StillLocation still : stills) {
-            long s = Math.max(still.getStartTimeDate().getTime(), startOfDayMillis);
-            long e = (still.getEndTimeDate() == null) ? Math.min(System.currentTimeMillis(), endOfDayMillis) : Math.min(still.getEndTimeDate().getTime(), endOfDayMillis);
-
-            if (e > s) {
-                float startTimeMinutes = (s - startOfDayMillis) / 60000f;
-                float durationMinutes = (e - s) / 60000f;
-                slices.add(new MiniPieChartView.Slice(startTimeMinutes, durationMinutes, ContextCompat.getColor(context, R.color.activity_still)));
-            }
-        }
-
-        for (MovementActivity movement : movements) {
-            if (movement.getStartTimeDate() == null) continue;
-            long s = Math.max(movement.getStartTimeDate().getTime(), startOfDayMillis);
-            long e = (movement.getEndTimeDate() == null) ? Math.min(System.currentTimeMillis(), endOfDayMillis) : Math.min(movement.getEndTimeDate().getTime(), endOfDayMillis);
-
-            if (e > s) {
-                float startTimeMinutes = (s - startOfDayMillis) / 60000f;
-                float durationMinutes = (e - s) / 60000f;
-                slices.add(new MiniPieChartView.Slice(startTimeMinutes, durationMinutes, getColorForActivity(movement.getActivityTypeName())));
-            }
-        }
-
-        return slices;
+        return !movements.isEmpty();
     }
 
-    private int getColorForActivity(String type) {
-        if (type == null) return ContextCompat.getColor(context, R.color.on_surface_variant);
-        switch (type.toLowerCase()) {
-            case "walking":
-            case "on foot":
-            case "running":
-                return ContextCompat.getColor(context, R.color.activity_walking);
-            case "in_vehicle":
-            case "driving":
-                return ContextCompat.getColor(context, R.color.activity_vehicle);
-            default:
-                return ContextCompat.getColor(context, R.color.secondary);
-        }
-    }
 
     private long calculateDurationInRange(Date start, Date end, Date rangeStart, Date rangeEnd) {
         if (start == null) return 0;

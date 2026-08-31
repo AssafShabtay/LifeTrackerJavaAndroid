@@ -7,6 +7,7 @@ import android.location.Location;
 import android.util.Log;
 
 import com.example.myapplication.database.RoutePoint;
+import com.example.myapplication.helpers.ErrorLogger;
 import com.example.myapplication.helpers.Logger;
 import com.google.android.gms.location.DetectedActivity;
 
@@ -129,6 +130,7 @@ public class ActivityTrackingUtils {
                 return new double[]{location.getLatitude(), location.getLongitude()};
             }
         } catch (IOException e) {
+            ErrorLogger.logError(context, TAG, "Error", e);
             Log.e("StatisticsFragment", "Geocoding failed", e);
         }
         return null;

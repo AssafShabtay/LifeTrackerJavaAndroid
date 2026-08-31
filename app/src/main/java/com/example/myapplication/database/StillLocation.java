@@ -12,6 +12,7 @@ import androidx.room.Entity;
 import androidx.room.ForeignKey;
 import androidx.room.PrimaryKey;
 
+import com.example.myapplication.helpers.ErrorLogger;
 import com.example.myapplication.helpers.Logger;
 
 import java.io.IOException;
@@ -196,6 +197,7 @@ public class StillLocation implements TimelineItem {
 
             }
         } catch (IOException e) {
+            ErrorLogger.logError(context, TAG, "Error", e);
             String msg = String.format(TAG + "ERROR: Cant find coordinates for still location ");
             Log.w(TAG, msg);
             Logger.saveLog(context, msg);

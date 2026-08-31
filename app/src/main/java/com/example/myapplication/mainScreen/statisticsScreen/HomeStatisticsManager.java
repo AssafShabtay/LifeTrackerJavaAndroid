@@ -38,8 +38,6 @@ public class HomeStatisticsManager {
 
     public interface HomeStatisticsListener {
         boolean isFragmentAdded();
-
-
     }
 
     public HomeStatisticsManager(Context context, LifeTrackerApp app, Handler mainHandler, HomeStatisticsListener listener, View rootView) {
@@ -55,13 +53,12 @@ public class HomeStatisticsManager {
         this.messageText = rootView.findViewById(R.id.tv_cabin_fever_message);
     }
 
-    public void onAddressSelected(String address) {
+
+
+    public void onHomeAddressSelected(String address) {
         saveHomeAddress(address);
     }
 
-    public void onHomeAddressChanged() {
-        loadCabinFeverIndex();
-    }
 
     private void saveHomeAddress(String address) {
         if (address.isEmpty()) {
@@ -110,15 +107,14 @@ public class HomeStatisticsManager {
     }
 
     public void loadCabinFeverIndex() {
-        // Get the preferred start day of the week from SharedPreferences
-        int preferredFirstDayOfWeek = getWeekStartDayPreference();
+        if (!listener.isFragmentAdded()) return;
 
         Calendar calendar = Calendar.getInstance();
-        calendar.setFirstDayOfWeek(preferredFirstDayOfWeek); // Use preferred first day of the week
+        calendar.setFirstDayOfWeek(getWeekStartDayPreference());
 
-        // Set to the first day of the current week ( Monday or Sunday)
+        // Set to the first day of the current week (Monday or Sunday)
         calendar.setTime(new Date());
-        calendar.set(Calendar.DAY_OF_WEEK, preferredFirstDayOfWeek);
+        calendar.set(Calendar.DAY_OF_WEEK, calendar.getFirstDayOfWeek());
         calendar.set(Calendar.HOUR_OF_DAY, 0);
         calendar.set(Calendar.MINUTE, 0);
         calendar.set(Calendar.SECOND, 0);

@@ -62,6 +62,7 @@ dependencies {
     implementation(libs.play.services.location)
     implementation(libs.play.services.maps)
     implementation(libs.places)
+    implementation(libs.gson)
     ksp(libs.room.compiler)
     implementation(libs.room.runtime)
     testImplementation(libs.junit)

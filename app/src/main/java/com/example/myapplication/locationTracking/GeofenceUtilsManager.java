@@ -10,6 +10,7 @@ import android.util.Log;
 import com.example.myapplication.database.Place;
 import com.example.myapplication.database.PlaceDao;
 import com.example.myapplication.database.StillLocation;
+import com.example.myapplication.helpers.ErrorLogger;
 import com.example.myapplication.helpers.Logger;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.tasks.Tasks;
@@ -123,6 +124,7 @@ public class GeofenceUtilsManager {
                 Logger.saveLog(context, msg);
             }
         } catch (Exception e) {
+            ErrorLogger.logError(context, TAG, "Error", e);
             Log.e(TAG, "Failed to detect Google Place", e);
         }
     }

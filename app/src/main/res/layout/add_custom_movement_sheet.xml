@@ -63,12 +63,13 @@
             </FrameLayout>
 
             <com.google.android.material.textfield.TextInputLayout
-                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense.ExposedDropdownMenu"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:hint="Activity Type">
-                <AutoCompleteTextView
+                android:hint="Activity Type"
+                app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.MediumComponent">
+                <com.google.android.material.textfield.MaterialAutoCompleteTextView
                     android:id="@+id/actvActivityType"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
