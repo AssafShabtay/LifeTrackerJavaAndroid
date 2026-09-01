@@ -128,7 +128,7 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:layout_marginBottom="24dp">
+            android:layout_marginBottom="16dp">
 
             <Button
                 android:id="@+id/btnStartTime"
@@ -140,7 +140,7 @@
                 android:text="Start: --:--" />
 
             <View
-                android:layout_width="8dp"
+                android:layout_width="12dp"
                 android:layout_height="0dp" />
 
             <Button
@@ -151,29 +151,26 @@
                 android:layout_weight="1"
                 android:backgroundTint="?attr/colorSecondaryContainer"
                 android:text="End: --:--" />
-
-            <View
-                android:layout_width="12dp"
-                android:layout_height="0dp" />
-
-            <com.google.android.material.textfield.TextInputLayout
-                style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense.ExposedDropdownMenu"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1.5"
-                android:hint="Category"
-                app:startIconDrawable="@drawable/ic_search"
-                app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.MediumComponent">
-
-                <com.google.android.material.textfield.MaterialAutoCompleteTextView
-                    android:id="@+id/actvCategory"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="textCapWords"
-                    android:dropDownHeight="180dp" />
-
-            </com.google.android.material.textfield.TextInputLayout>
         </LinearLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="24dp"
+            android:hint="Category"
+            app:startIconDrawable="@drawable/ic_search"
+            app:endIconMode="clear_text"
+            app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.MediumComponent">
+
+            <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                android:id="@+id/actvCategory"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="textCapWords"
+                android:dropDownHeight="180dp" />
+
+        </com.google.android.material.textfield.TextInputLayout>
 
 
         <com.google.android.material.button.MaterialButton

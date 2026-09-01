@@ -1,55 +1,27 @@
 package com.example.myapplication.mainScreen.statisticsScreen;
 
-import static com.example.myapplication.locationTracking.ActivityTrackingUtils.calculateRadiusBox;
-import static com.example.myapplication.locationTracking.ActivityTrackingUtils.getCoordinatesFromAddress;
-
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.graphics.Color;
-import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
-import android.widget.LinearLayout;
-import android.widget.ProgressBar;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
 import com.example.myapplication.LifeTrackerApp;
-import com.example.myapplication.MainActivity;
 import com.example.myapplication.R;
-import com.example.myapplication.database.ActivityDatabase;
-import com.example.myapplication.database.Place;
-import com.example.myapplication.database.PlaceDao;
-import com.example.myapplication.database.StillLocation;
-import com.example.myapplication.llm.LlmApiClient;
-import com.example.myapplication.llm.LlmResponse;
 
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Collections;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-
-import com.example.myapplication.mainScreen.statisticsScreen.PrecisionResult;
-import com.example.myapplication.mainScreen.statisticsScreen.HomeStatisticsManager;
-import com.example.myapplication.mainScreen.statisticsScreen.WorkStatisticsManager;
-import com.example.myapplication.mainScreen.statisticsScreen.PunctualityStatisticsManager;
-import com.example.myapplication.mainScreen.statisticsScreen.LlmInsightsManager; // New import
 
 public class StatisticsFragment extends Fragment implements HomeAddressPickerBottomSheet.OnHomeAddressSelectedListener, WorkAddressPickerBottomSheet.OnWorkAddressSelectedListener, HomeStatisticsManager.HomeStatisticsListener, WorkStatisticsManager.WorkStatisticsListener, PunctualityStatisticsManager.PunctualityStatisticsListener, LlmInsightsManager.LlmInsightsListener {
 

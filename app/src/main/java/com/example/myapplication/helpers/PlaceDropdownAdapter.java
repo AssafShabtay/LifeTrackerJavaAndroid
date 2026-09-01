@@ -26,19 +26,16 @@ public class PlaceDropdownAdapter extends ArrayAdapter<String> {
         this.filteredItems = new ArrayList<>(objects);
     }
 
-    @Override
     public int getCount() {
         return filteredItems.size();
     }
 
     @Nullable
-    @Override
     public String getItem(int position) {
         return filteredItems.get(position);
     }
 
     @NonNull
-    @Override
     public View getView(int position, @Nullable View convertView, @NonNull ViewGroup parent) {
         if (convertView == null) {
             convertView = LayoutInflater.from(getContext()).inflate(R.layout.item_place_dropdown, parent, false);
@@ -54,10 +51,9 @@ public class PlaceDropdownAdapter extends ArrayAdapter<String> {
     }
 
     @NonNull
-    @Override
     public Filter getFilter() {
         return new Filter() {
-            @Override
+
             protected FilterResults performFiltering(CharSequence constraint) {
                 FilterResults results = new FilterResults();
                 if (constraint == null || constraint.length() == 0) {
@@ -78,7 +74,7 @@ public class PlaceDropdownAdapter extends ArrayAdapter<String> {
             }
 
             @SuppressWarnings("unchecked")
-            @Override
+
             protected void publishResults(CharSequence constraint, FilterResults results) {
                 filteredItems.clear();
                 if (results.values != null) {

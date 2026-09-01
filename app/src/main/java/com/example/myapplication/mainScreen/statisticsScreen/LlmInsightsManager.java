@@ -13,8 +13,8 @@ import com.example.myapplication.R;
 import com.example.myapplication.database.ActivityDatabase;
 import com.example.myapplication.database.StillLocation;
 import com.example.myapplication.helpers.ErrorLogger;
-import com.example.myapplication.llm.LlmApiClient;
-import com.example.myapplication.llm.LlmResponse;
+import com.example.myapplication.mainScreen.statisticsScreen.llm.LlmApiClient;
+import com.example.myapplication.mainScreen.statisticsScreen.llm.LlmResponse;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;

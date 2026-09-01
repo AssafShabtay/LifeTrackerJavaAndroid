@@ -234,32 +234,10 @@ public class AddCustomActivitySheet extends BottomSheetDialogFragment {
                                     tvAddressStatus.setTextColor(Color.parseColor("#4CAF50")); // Green
                                     btnSave.setEnabled(true);
 
-                                    if (!nearbyPlaces.isEmpty()) {
-                                        // Set up the drop down list first
-                                        List<String> names = new ArrayList<>();
-                                        for (Place p : nearbyPlaces) {
-                                            names.add(p.getName());
-                                        }
-                                        PlaceDropdownAdapter adapter = new PlaceDropdownAdapter(requireContext(), names);
-                                        actvName.setAdapter(adapter);
-                                        actvName.setOnItemClickListener((parent, view1, position, id) -> {
-                                            String selectedName = adapter.getItem(position);
-                                            for (Place p : nearbyPlaces) {
-                                                if (p.getName().equals(selectedName)) {
-                                                    selectedPlace = p;
-                                                    if (p.getIcon() != null) {
-                                                        selectedIcon = p.getIcon();
-                                                    }
-                                                    if (p.getColor() != null) {
-                                                        selectedColor = p.getColor();
-                                                    }
-                                                    updateIconAndColorUi();
-                                                    break;
-                                                }
-                                            }
-                                        });
+                                    // Populate actvName with Google Places (and local nearby places) from the start
+                                    searchGooglePlaces(finalLat, finalLng, nearbyPlaces);
 
-                                        // Pop up the pop up
+                                    if (!nearbyPlaces.isEmpty()) {
                                         Place firstPlace = nearbyPlaces.get(0);
                                         new MaterialAlertDialogBuilder(requireContext())
                                             .setTitle(HtmlCompat.fromHtml("Is the place: <b>" + firstPlace.getName() + "</b>?", HtmlCompat.FROM_HTML_MODE_LEGACY))
@@ -272,12 +250,12 @@ public class AddCustomActivitySheet extends BottomSheetDialogFragment {
                                                 if (firstPlace.getColor() != null) {
                                                     selectedColor = firstPlace.getColor();
                                                 }
+                                                selectedGeofenceId = firstPlace.getGeofencePlaceId();
                                                 selectedPlace = firstPlace;
                                                 updateIconAndColorUi();
-                                                actvName.showDropDown();
                                             })
                                             .setNegativeButton("No", (dialog, which) -> {
-                                                //  Show another pop up with a list of all the places
+                                                // Show another pop up with a list of all the places
                                                 String[] placeNames = new String[nearbyPlaces.size()];
                                                 for (int i = 0; i < nearbyPlaces.size(); i++) {
                                                     placeNames[i] = nearbyPlaces.get(i).getName();
@@ -294,23 +272,21 @@ public class AddCustomActivitySheet extends BottomSheetDialogFragment {
                                                             if (selected.getColor() != null) {
                                                                 selectedColor = selected.getColor();
                                                             }
+                                                            selectedGeofenceId = selected.getGeofencePlaceId();
                                                             selectedPlace = selected;
                                                             updateIconAndColorUi();
                                                         })
                                                         .setNegativeButton("Not here", (dialog1, which1) -> {
-                                                            // Populate the drop down with google places
-                                                            searchGooglePlaces(finalLat, finalLng);
+                                                            searchGooglePlaces(finalLat, finalLng, nearbyPlaces);
                                                         })
                                                         .setOnDismissListener(dialog1 -> {
                                                             if (selectedPlace == null) {
-                                                                searchGooglePlaces(finalLat, finalLng);
+                                                                searchGooglePlaces(finalLat, finalLng, nearbyPlaces);
                                                             }
                                                         })
                                                         .show();
                                             })
                                             .show();
-
-
                                     }
                                 } else {
                                     tvAddressStatus.setVisibility(View.VISIBLE);
@@ -357,7 +333,7 @@ public class AddCustomActivitySheet extends BottomSheetDialogFragment {
                 btnSave.setEnabled(false);
                 
                 validationHandler.removeCallbacks(validationRunnable);
-                validationHandler.postDelayed(validationRunnable, 1000); // 1 second debounce
+                validationHandler.postDelayed(validationRunnable, 3000); // 1 second debounce
             }
         });
 
@@ -419,9 +395,29 @@ public class AddCustomActivitySheet extends BottomSheetDialogFragment {
             actvCategory.setText(UiFormatters.category(selectedCategory), false);
         }
 
+        actvCategory.setOnClickListener(v -> actvCategory.showDropDown());
+
         actvCategory.setOnItemClickListener((parent, view, position, id) -> {
             String selectedDisplay = (String) parent.getItemAtPosition(position);
             selectedCategory = categoryMap.get(selectedDisplay);
+        });
+
+        actvCategory.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {}
+
+            @Override
+            public void afterTextChanged(Editable s) {
+                String text = s.toString().trim();
+                if (text.isEmpty()) {
+                    selectedCategory = null;
+                } else {
+                    selectedCategory = categoryMap.getOrDefault(text, text);
+                }
+            }
         });
     }
 
@@ -452,8 +448,10 @@ public class AddCustomActivitySheet extends BottomSheetDialogFragment {
         }
     }
 
-    private void searchGooglePlaces(double lat, double lng) {
-        if (getActivity() == null) return;
+
+
+    private void searchGooglePlaces(double lat, double lng, @Nullable List<Place> nearbyPlaces) {
+        if (getActivity() == null || placesClient == null) return;
 
         List<com.google.android.libraries.places.api.model.Place.Field> placeFields = Arrays.asList(
                 com.google.android.libraries.places.api.model.Place.Field.DISPLAY_NAME,
@@ -473,17 +471,45 @@ public class AddCustomActivitySheet extends BottomSheetDialogFragment {
                     if (isAdded() && response.getPlaces() != null) {
                         List<com.google.android.libraries.places.api.model.Place> googlePlaces = response.getPlaces();
                         List<String> names = new ArrayList<>();
-                        for (com.google.android.libraries.places.api.model.Place p : googlePlaces) {
-                            names.add(p.getDisplayName());
+
+                        if (nearbyPlaces != null) {
+                            for (Place p : nearbyPlaces) {
+                                if (p.getName() != null && !names.contains(p.getName())) {
+                                    names.add(p.getName());
+                                }
+                            }
                         }
+
+                        for (com.google.android.libraries.places.api.model.Place p : googlePlaces) {
+                            if (p.getDisplayName() != null && !names.contains(p.getDisplayName())) {
+                                names.add(p.getDisplayName());
+                            }
+                        }
+
+                        if (names.isEmpty()) return;
+
                         PlaceDropdownAdapter adapter = new PlaceDropdownAdapter(requireContext(), names);
                         actvName.setAdapter(adapter);
                         actvName.setOnItemClickListener((parent, view, position, id) -> {
                             String selectedName = adapter.getItem(position);
+
+                            if (nearbyPlaces != null) {
+                                for (Place p : nearbyPlaces) {
+                                    if (p.getName() != null && p.getName().equals(selectedName)) {
+                                        actvName.setText(p.getName(), false);
+                                        selectedPlace = p;
+                                        if (p.getIcon() != null) selectedIcon = p.getIcon();
+                                        if (p.getColor() != null) selectedColor = p.getColor();
+                                        selectedGeofenceId = p.getGeofencePlaceId();
+                                        updateIconAndColorUi();
+                                        return;
+                                    }
+                                }
+                            }
+
                             for (com.google.android.libraries.places.api.model.Place p : googlePlaces) {
                                 if (p.getDisplayName() != null && p.getDisplayName().equals(selectedName)) {
                                     actvName.setText(p.getDisplayName(), false);
-                                    // Create a local Place object from Google Place
                                     com.example.myapplication.database.Place newLocalPlace = new com.example.myapplication.database.Place();
                                     newLocalPlace.setName(p.getDisplayName());
                                     if (p.getLocation() != null) {
@@ -493,6 +519,8 @@ public class AddCustomActivitySheet extends BottomSheetDialogFragment {
                                         newLocalPlace.setLat(lat);
                                         newLocalPlace.setLng(lng);
                                     }
+                                    newLocalPlace.setGeofencePlaceId(p.getId());
+                                    selectedGeofenceId = p.getId();
                                     selectedPlace = newLocalPlace;
                                     updateIconAndColorUi();
                                     break;
@@ -504,6 +532,30 @@ public class AddCustomActivitySheet extends BottomSheetDialogFragment {
                 })
                 .addOnFailureListener(e -> {
                     ErrorLogger.logError(requireContext(), TAG, "Google Places search failed", e);
+                    if (isAdded() && nearbyPlaces != null && !nearbyPlaces.isEmpty()) {
+                        List<String> names = new ArrayList<>();
+                        for (Place p : nearbyPlaces) {
+                            if (p.getName() != null && !names.contains(p.getName())) {
+                                names.add(p.getName());
+                            }
+                        }
+                        PlaceDropdownAdapter adapter = new PlaceDropdownAdapter(requireContext(), names);
+                        actvName.setAdapter(adapter);
+                        actvName.setOnItemClickListener((parent, view, position, id) -> {
+                            String selectedName = adapter.getItem(position);
+                            for (Place p : nearbyPlaces) {
+                                if (p.getName() != null && p.getName().equals(selectedName)) {
+                                    actvName.setText(p.getName(), false);
+                                    selectedPlace = p;
+                                    if (p.getIcon() != null) selectedIcon = p.getIcon();
+                                    if (p.getColor() != null) selectedColor = p.getColor();
+                                    selectedGeofenceId = p.getGeofencePlaceId();
+                                    updateIconAndColorUi();
+                                    break;
+                                }
+                            }
+                        });
+                    }
                 });
     }
 

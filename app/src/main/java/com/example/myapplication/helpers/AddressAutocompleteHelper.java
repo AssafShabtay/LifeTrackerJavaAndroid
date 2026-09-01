@@ -59,7 +59,7 @@ public class AddressAutocompleteHelper {
             parent = parent.getParent();
         }
 
-        if (parent instanceof TextInputLayout) {
+        if (parent != null) {
             TextInputLayout textInputLayout = (TextInputLayout) parent;
             textInputLayout.setEndIconMode(TextInputLayout.END_ICON_CUSTOM);
             textInputLayout.setEndIconDrawable(R.drawable.lucide_map);
@@ -147,6 +147,7 @@ public class AddressAutocompleteHelper {
             this.prediction = prediction;
         }
 
+        @NonNull
         @Override
         public String toString() {
             return prediction.getFullText(null).toString();

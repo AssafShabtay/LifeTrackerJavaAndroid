@@ -19,16 +19,6 @@ public class DayDataIndicatorView extends View {
         init(context);
     }
 
-    public DayDataIndicatorView(Context context, @Nullable AttributeSet attrs) {
-        super(context, attrs);
-        init(context);
-    }
-
-    public DayDataIndicatorView(Context context, @Nullable AttributeSet attrs, int defStyleAttr) {
-        super(context, attrs, defStyleAttr);
-        init(context);
-    }
-
     private void init(Context context) {
         paint.setStyle(Paint.Style.FILL);
 

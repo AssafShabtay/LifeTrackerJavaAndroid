@@ -1,4 +1,4 @@
-package com.example.myapplication.llm;
+package com.example.myapplication.mainScreen.statisticsScreen.llm;
 
 import android.content.Context;
 import com.example.myapplication.helpers.ErrorLogger;

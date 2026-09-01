@@ -1,4 +1,4 @@
-package com.example.myapplication.llm;
+package com.example.myapplication.mainScreen.statisticsScreen.llm;
 
 public class LlmResponse {
     private final String habit;

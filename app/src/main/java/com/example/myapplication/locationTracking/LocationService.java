@@ -273,7 +273,7 @@ public class LocationService extends Service {
         return null;
     }
 
-    private void handleActivityUpdate(int activityType, int transitionType, long timestampMs) {
+    private synchronized void handleActivityUpdate(int activityType, int transitionType, long timestampMs) {
 
         try {
 
@@ -397,11 +397,11 @@ public class LocationService extends Service {
 
     void endStillTracking(Date endTime) {
         // Get the id of the current still activity
-        long id;
         if (currentStillTrackingId == null) {
             return;
         }
-        id = currentStillTrackingId;
+        long id = currentStillTrackingId;
+        currentStillTrackingId = null;
 
 
         Location currentLocation = locationProvider.getLocationOnceBlocking(); // get current location
@@ -529,7 +529,7 @@ public class LocationService extends Service {
     }
 
     void endMovementTracking(int activityType, Date endTime) {
-        Long id = currentMovementTrackingIds.get(activityType);
+        Long id = currentMovementTrackingIds.remove(activityType);
         if (id == null) return;
         Location currentLocation = locationProvider.getLocationOnceBlocking();
 
@@ -627,7 +627,6 @@ public class LocationService extends Service {
             Log.e(TAG, "Error ending movement activity: " + id, e);
             Logger.saveLog(this, "Error ending movement activity: " + id + " " + e.getMessage());
         } finally {
-            currentMovementTrackingIds.remove(activityType);
             if (currentMovementTrackingIds.isEmpty()) {
                 locationProvider.stopRouteUpdates();
             }

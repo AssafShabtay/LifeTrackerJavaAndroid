@@ -16,7 +16,7 @@ public class ErrorLogger {
 
     public static void logError(Context context, String tag, String message, Throwable throwable) {
         File logFile = new File(context.getFilesDir(), LOG_FILE_NAME);
-        try (FileWriter fileWriter = new FileWriter(logFile, true); // true for append mode
+        try (FileWriter fileWriter = new FileWriter(logFile, true);
              PrintWriter printWriter = new PrintWriter(fileWriter)) {
 
             String timestamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(new Date());

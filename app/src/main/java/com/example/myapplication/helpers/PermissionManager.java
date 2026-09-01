@@ -17,9 +17,6 @@ import androidx.core.content.ContextCompat;
 
 import java.util.ArrayList;
 
-
-
-//TODO FIX PERMISISONS DECLINED
 public class PermissionManager {
     private final Activity activity;
     private final SharedPreferences prefs;
@@ -97,6 +94,7 @@ public class PermissionManager {
     }
 
     public boolean isAnyPermanentlyDenied(String[] permissions) {
+
         if (permissions == null) return false;
         for (String permission : permissions) {
             if (isPermanentlyDenied(permission)) {
