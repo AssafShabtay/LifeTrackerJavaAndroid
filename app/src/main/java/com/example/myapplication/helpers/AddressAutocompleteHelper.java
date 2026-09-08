@@ -88,7 +88,7 @@ public class AddressAutocompleteHelper {
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
-                if (s.length() > 2) { // Only trigger search if user typed more than 2 characters
+                if (s.length() > 2) { // trigger search if user typed more than 2 characters
                     fetchAutocompletePredictions(s.toString());
                 }
             }

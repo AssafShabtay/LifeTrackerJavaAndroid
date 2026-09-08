@@ -13,8 +13,8 @@
 
 
     <color name="gym">#B22222</color>
-    <!-- Modern Neutral & Soft Palette -->
-    <color name="primary">#edf0da</color>
+    <!-- Modern Neutral & Soft Palette 596D5B -->
+    <color name="primary">#425945</color>
     <color name="on_primary">#edf0da</color>
     <color name="primary_container">#edf0da</color>
     <color name="on_primary_container">#174EA6</color>
