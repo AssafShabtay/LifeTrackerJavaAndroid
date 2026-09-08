@@ -106,7 +106,7 @@ public class EditMovementActivitySheet extends BottomSheetDialogFragment {
         selectedActivityName = movement.getActivityTypeName();
         // Setup activity type dropdown
         List<String> activityTypes = Arrays.asList("Cycling", "Walking", "Running", "Driving");
-        ContainsArrayAdapter adapter = new ContainsArrayAdapter(requireContext(), R.layout.item_dropdown_compact, activityTypes);
+        ArrayAdapter<String> adapter = new ArrayAdapter<String>(requireContext(), R.layout.item_dropdown_compact, activityTypes);
         actvActivityType.setAdapter(adapter);
 
         if (selectedActivityName != null) {

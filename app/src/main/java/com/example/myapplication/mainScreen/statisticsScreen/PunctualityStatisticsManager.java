@@ -29,8 +29,6 @@ public class PunctualityStatisticsManager {
     private final LifeTrackerApp app;
     private final Handler mainHandler;
     private final PunctualityStatisticsListener listener;
-
-    // UI elements to update, passed from the fragment
     private final TextView tvPunctualityTitle;
     private final TextView btnPrevPlace;
     private final TextView btnNextPlace;

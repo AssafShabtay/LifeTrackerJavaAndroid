@@ -56,8 +56,6 @@ public class WorkStatisticsManager {
         this.app = app;
         this.mainHandler = mainHandler;
         this.listener = listener;
-
-        // Initialize UI elements
         this.workStatisticsContent = rootView.findViewById(R.id.work_statistics_content);
         this.workStatisticsPlaceholder = rootView.findViewById(R.id.work_statistics_placeholder);
         this.chartWorkHoursContainer = rootView.findViewById(R.id.chart_work_hours_container);

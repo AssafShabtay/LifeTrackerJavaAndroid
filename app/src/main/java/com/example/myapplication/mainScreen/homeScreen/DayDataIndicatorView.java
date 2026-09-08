@@ -21,8 +21,6 @@ public class DayDataIndicatorView extends View {
 
     private void init(Context context) {
         paint.setStyle(Paint.Style.FILL);
-
-        // Use activity_still color for better visibility as a "data present" indicator
         colorPrimary = context.getColor(com.example.myapplication.R.color.activity_still);
         paint.setColor(colorPrimary);
     }
