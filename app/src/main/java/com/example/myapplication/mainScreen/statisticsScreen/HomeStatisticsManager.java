@@ -4,7 +4,6 @@ import static com.example.myapplication.locationTracking.ActivityTrackingUtils.c
 import static com.example.myapplication.locationTracking.ActivityTrackingUtils.getCoordinatesFromAddress;
 
 import android.content.Context;
-import android.content.SharedPreferences;
 import android.os.Handler;
 import android.view.View;
 import android.widget.ProgressBar;
@@ -17,18 +16,12 @@ import com.example.myapplication.database.ActivityDatabase;
 import com.example.myapplication.database.Place;
 import com.example.myapplication.database.PlaceDao;
 
-import java.util.Calendar;
-import java.util.Date;
-
 public class HomeStatisticsManager {
 
     private final Context context;
     private final LifeTrackerApp app;
     private final Handler mainHandler;
     private final HomeStatisticsListener listener;
-
-    private static final String PREFS_NAME = "MyPrefs";
-    private static final String KEY_WEEK_START_DAY = "week_start_day";
 
     private final View cabinFeverContent;
     private final View cabinFeverPlaceholder;
@@ -81,11 +74,12 @@ public class HomeStatisticsManager {
                 homePlace.setCategory("Home");
                 homePlace.setIcon("Home");
                 homePlace.setColor(0xFF9E9E9E);
-                if(coords != null){
+                if (coords != null) {
                     homePlace.setLat(coords[0]);
                     homePlace.setLng(coords[1]);
                 }
-                placeDao.insertPlace(homePlace);
+                long insertedId = placeDao.insertPlace(homePlace);
+                homePlace.setId(insertedId);
 
                 if (coords != null) {
                     double[] bounds = calculateRadiusBox(coords[0], coords[1], 50.0);
@@ -96,7 +90,16 @@ public class HomeStatisticsManager {
                 homePlace.setCategory("Home");
                 homePlace.setName("Home");
                 homePlace.setIcon("Home");
+                if (coords != null) {
+                    homePlace.setLat(coords[0]);
+                    homePlace.setLng(coords[1]);
+                }
                 placeDao.updatePlace(homePlace);
+
+                if (coords != null) {
+                    double[] bounds = calculateRadiusBox(coords[0], coords[1], 50.0);
+                    db.activityDao().updateStillsWithinBounds(bounds[0], bounds[1], bounds[2], bounds[3], "Home");
+                }
             }
 
             mainHandler.post(() -> {
@@ -109,31 +112,8 @@ public class HomeStatisticsManager {
     public void loadCabinFeverIndex() {
         if (!listener.isFragmentAdded()) return;
 
-        Calendar calendar = Calendar.getInstance();
-        calendar.setFirstDayOfWeek(getWeekStartDayPreference());
-
-        // Set to the first day of the current week (Monday or Sunday)
-        calendar.setTime(new Date());
-        calendar.set(Calendar.DAY_OF_WEEK, calendar.getFirstDayOfWeek());
-        calendar.set(Calendar.HOUR_OF_DAY, 0);
-        calendar.set(Calendar.MINUTE, 0);
-        calendar.set(Calendar.SECOND, 0);
-        calendar.set(Calendar.MILLISECOND, 0);
-
-        // Go back one week to get last week
-        calendar.add(Calendar.WEEK_OF_YEAR, -1);
-        Date startOfLastWeek = calendar.getTime();
-
-        // Calculate end of last week (6 days after startOfLastWeek)
-        calendar.add(Calendar.DAY_OF_YEAR, 6);
-        calendar.set(Calendar.HOUR_OF_DAY, 23);
-        calendar.set(Calendar.MINUTE, 59);
-        calendar.set(Calendar.SECOND, 59);
-        calendar.set(Calendar.MILLISECOND, 999);
-        Date endOfLastWeek = calendar.getTime();
-
-        final long finalSevenDaysAgo = startOfLastWeek.getTime();
-        final long finalNow = endOfLastWeek.getTime();
+        final long finalNow = System.currentTimeMillis();
+        final long finalSevenDaysAgo = finalNow - (7L * 24 * 60 * 60 * 1000);
 
         app.getDatabaseWriteExecutor().execute(() -> {
             if (!listener.isFragmentAdded()) return;
@@ -142,10 +122,14 @@ public class HomeStatisticsManager {
 
             long timeAtHomeMs = 0;
             if (homePlace != null) {
-                timeAtHomeMs = db.activityDao().getTimeAtHomeSince(finalSevenDaysAgo, finalNow);
+                timeAtHomeMs = db.activityDao().getTimeAtHomeSince(homePlace.getId(), finalSevenDaysAgo, finalNow);
             }
-            long totalTime = db.activityDao().getSumDurationOfAllActivitiesLastSevenDays(finalSevenDaysAgo, finalNow);
+            long windowMs = finalNow - finalSevenDaysAgo; // 7 days in ms
+            long totalLoggedTime = db.activityDao().getSumDurationOfAllActivitiesLastSevenDays(finalSevenDaysAgo, finalNow);
+            long denominator = Math.max(totalLoggedTime, windowMs);
+
             final long finalTimeAtHomeMs = timeAtHomeMs;
+            final long finalDenominator = denominator;
 
             mainHandler.post(() -> {
                 if (!listener.isFragmentAdded()) return;
@@ -156,18 +140,15 @@ public class HomeStatisticsManager {
                     if (cabinFeverContent != null) cabinFeverContent.setVisibility(View.VISIBLE);
                     if (cabinFeverPlaceholder != null) cabinFeverPlaceholder.setVisibility(View.GONE);
 
-                    int percentage = (int) (((float) finalTimeAtHomeMs / totalTime) * 100);
+                    int percentage = 0;
+                    if (finalDenominator > 0) {
+                        percentage = (int) (((double) finalTimeAtHomeMs / finalDenominator) * 100.0);
+                    }
                     if (percentage > 100) percentage = 100;
                     updateCabinFeverUi(percentage);
                 }
             });
         });
-    }
-
-    private int getWeekStartDayPreference() {
-        SharedPreferences preferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-
-        return preferences.getInt(KEY_WEEK_START_DAY, Calendar.MONDAY);// Default to Monday if no preference is set
     }
 
     private void updateCabinFeverUi(int percentage) {

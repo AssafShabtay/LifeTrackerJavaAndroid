@@ -139,8 +139,15 @@ public interface ActivityDao {
             "AND lng BETWEEN :minLng AND :maxLng")
     void updateStillsWithinBounds(double minLat, double maxLat, double minLng, double maxLng, String category);
 
-    @Query("SELECT SUM(CASE WHEN endTimeDate IS NULL THEN :now ELSE endTimeDate END - startTimeDate) FROM still_locations WHERE category = 'Home' AND startTimeDate >= :sevenDaysAgo")
-    long getTimeAtHomeSince(long sevenDaysAgo, long now);
+    @Query("SELECT SUM(" +
+            "CASE WHEN (CASE WHEN endTimeDate IS NULL OR endTimeDate > :now THEN :now ELSE endTimeDate END) > (CASE WHEN startTimeDate < :sevenDaysAgo THEN :sevenDaysAgo ELSE startTimeDate END) " +
+            "THEN (CASE WHEN endTimeDate IS NULL OR endTimeDate > :now THEN :now ELSE endTimeDate END) - (CASE WHEN startTimeDate < :sevenDaysAgo THEN :sevenDaysAgo ELSE startTimeDate END) " +
+            "ELSE 0 END) " +
+            "FROM still_locations " +
+            "WHERE (category = 'Home' OR placeName = 'Home' OR placeId = :homePlaceId) " +
+            "AND startTimeDate <= :now " +
+            "AND (endTimeDate IS NULL OR endTimeDate >= :sevenDaysAgo)")
+    long getTimeAtHomeSince(long homePlaceId, long sevenDaysAgo, long now);
 
     @Query("UPDATE places SET name = :name, address = :address, lat = :lat, lng = :lng, category = :category, icon = :icon, color = :color, geofencePlaceId = :geofencePlaceId WHERE id = :id")
     void updatePlaceInfo(long id, String name, String address, double lat, double lng, String category, String icon, Integer color, String geofencePlaceId);

@@ -21,7 +21,6 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
-import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
 import android.widget.Button;
 import android.widget.ImageView;
@@ -194,7 +193,7 @@ public class EditStillActivitySheet extends BottomSheetDialogFragment {
                     }
                 }
                 if (getActivity() != null) {
-                    requireActivity().runOnUiThread(() -> searchGooglePlaces(initialLat, initialLng, nearbyPlaces));
+                    requireActivity().runOnUiThread(() -> setupPlacesDropdown(initialLat, initialLng, nearbyPlaces));
                 }
             });
         }
@@ -324,7 +323,7 @@ public class EditStillActivitySheet extends BottomSheetDialogFragment {
                                     btnSave.setEnabled(true);
 
                                     // Populate actvName with Google Places (and local nearby places) from the start
-                                    searchGooglePlaces(finalLat, finalLng, nearbyPlaces);
+                                    setupPlacesDropdown(finalLat, finalLng, nearbyPlaces);
 
                                     if (!nearbyPlaces.isEmpty()) {
                                         Place firstPlace = nearbyPlaces.get(0);
@@ -366,11 +365,11 @@ public class EditStillActivitySheet extends BottomSheetDialogFragment {
                                                             updateIconAndColorUi();
                                                         })
                                                         .setNegativeButton("Not here", (dialog1, which1) -> {
-                                                            searchGooglePlaces(finalLat, finalLng, nearbyPlaces);
+                                                            setupPlacesDropdown(finalLat, finalLng, nearbyPlaces);
                                                         })
                                                         .setOnDismissListener(dialog1 -> {
                                                             if (selectedPlace == null) {
-                                                                searchGooglePlaces(finalLat, finalLng, nearbyPlaces);
+                                                                setupPlacesDropdown(finalLat, finalLng, nearbyPlaces);
                                                             }
                                                         })
                                                         .show();
@@ -516,7 +515,7 @@ public class EditStillActivitySheet extends BottomSheetDialogFragment {
         }
     }
 
-    private void searchGooglePlaces(double lat, double lng, @Nullable List<Place> nearbyPlaces) {
+    private void setupPlacesDropdown(double lat, double lng, @Nullable List<Place> nearbyPlaces) {
         if (getActivity() == null || placesClient == null) return;
 
         List<com.google.android.libraries.places.api.model.Place.Field> placeFields = Arrays.asList(
