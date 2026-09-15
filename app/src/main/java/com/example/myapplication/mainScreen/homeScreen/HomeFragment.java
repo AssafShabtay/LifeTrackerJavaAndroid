@@ -10,6 +10,8 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.PopupMenu;
+import android.widget.ProgressBar;
+import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -17,14 +19,17 @@ import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-// Removed import com.example.myapplication.locationTracking.GeofenceManager;
 import com.example.myapplication.LifeTrackerApp;
+import com.example.myapplication.R;
 import com.example.myapplication.database.ActivityDao;
 import com.example.myapplication.database.ActivityDatabase;
 import com.example.myapplication.database.MovementActivity;
+import com.example.myapplication.database.MovementWithHabit;
 import com.example.myapplication.database.StillLocation;
+import com.example.myapplication.database.StayWithHabit;
 import com.example.myapplication.database.TimelineItem;
-import com.example.myapplication.R;
+import com.example.myapplication.helpers.HabitManager;
+import com.example.myapplication.helpers.UiFormatters;
 
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -34,19 +39,23 @@ import java.util.List;
 public class HomeFragment extends Fragment {
 
     private static final String TAG = "HomeFragment";
-
     private static final long UPDATE_INTERVAL_MS = 2 * 60 * 1000; // 2 minutes
 
     private ActivityDao dao;
-
     private TimelineAdapter timelineAdapter;
-
     private MapManager mapManager;
     private CalendarManager calendarManager;
-
     private LifeTrackerApp app;
 
-    // refresh ui every 5 minutes
+    // Routine Hero Card Views
+    private TextView tvStreakCount;
+    private TextView tvRoutineScoreLabel;
+    private TextView tvRoutinesDoneSub;
+    private ProgressBar progressRoutineRing;
+    private TextView tvCounterFocusGoal;
+    private TextView tvCounterWalkGoal;
+    private TextView tvCounterPunctualGoal;
+
     private final Handler refreshHandler = new Handler(Looper.getMainLooper());
     private final Runnable refreshRunnable = new Runnable() {
         public void run() {
@@ -64,6 +73,16 @@ public class HomeFragment extends Fragment {
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
+
+        // Bind Routine Hero Card Views
+        tvStreakCount = view.findViewById(R.id.tv_streak_count);
+        tvRoutineScoreLabel = view.findViewById(R.id.tv_routine_score_label);
+        tvRoutinesDoneSub = view.findViewById(R.id.tv_routines_done_sub);
+        progressRoutineRing = view.findViewById(R.id.progress_routine_ring);
+        tvCounterFocusGoal = view.findViewById(R.id.tv_counter_focus_goal);
+        tvCounterWalkGoal = view.findViewById(R.id.tv_counter_walk_goal);
+        tvCounterPunctualGoal = view.findViewById(R.id.tv_counter_punctual_goal);
+
         Button btnShowFullDay = view.findViewById(R.id.btn_show_full_day);
         RecyclerView rvTimeline = view.findViewById(R.id.rvTimeline);
         ImageView btnAddCustomActivity = view.findViewById(R.id.btnAddCustomActivity);
@@ -76,10 +95,10 @@ public class HomeFragment extends Fragment {
                 PopupMenu popup = new PopupMenu(requireContext(), btnAddCustomActivity);
                 popup.getMenu().add(0, 1, 0, "Add Visit");
                 popup.getMenu().add(0, 2, 0, "Add Movement");
-                
+
                 popup.setOnMenuItemClickListener(item -> {
                     Date date = calendarManager != null ? calendarManager.getSelectedDate() : new Date();
-                    
+
                     if (item.getItemId() == 1) {
                         AddCustomActivitySheet sheet = AddCustomActivitySheet.newInstance(date, () -> {
                             loadTimelineData(calendarManager.getSelectedDate());
@@ -99,7 +118,6 @@ public class HomeFragment extends Fragment {
             });
         }
 
-        // --------------- initialize map ---------------
         if (btnShowFullDay != null) {
             btnShowFullDay.setOnClickListener(v -> {
                 if (mapManager != null && timelineAdapter != null) {
@@ -145,15 +163,21 @@ public class HomeFragment extends Fragment {
                 return false;
             });
         }
-        // ---------------- initialize calendar -----------------
+
         calendarManager = new CalendarManager(view, date -> {
             loadTimelineData(date);
         }, app.getDatabaseWriteExecutor());
 
-        // ----------------- initialize timeline --------------------
         timelineAdapter = new TimelineAdapter(item -> {
             if (mapManager != null) {
                 mapManager.focusOnItem(item);
+            }
+            if (item instanceof StayWithHabit) {
+                RoutineDetailBottomSheet sheet = RoutineDetailBottomSheet.newInstanceForStay((StayWithHabit) item);
+                sheet.show(getChildFragmentManager(), "RoutineDetailBottomSheet");
+            } else if (item instanceof MovementWithHabit) {
+                RoutineDetailBottomSheet sheet = RoutineDetailBottomSheet.newInstanceForMovement((MovementWithHabit) item);
+                sheet.show(getChildFragmentManager(), "RoutineDetailBottomSheet");
             }
         },
                 new TimelineAdapter.OnEditButtonClickListener() {
@@ -169,7 +193,6 @@ public class HomeFragment extends Fragment {
                 });
         rvTimeline.setLayoutManager(new LinearLayoutManager(requireContext()));
         rvTimeline.setAdapter(timelineAdapter);
-
     }
 
     private void showStillEditSheet(StillLocation still) {
@@ -182,8 +205,8 @@ public class HomeFragment extends Fragment {
                         requireActivity().runOnUiThread(() -> {
                             loadTimelineData(calendarManager.getSelectedDate());
                         });
-                    }}
-                );
+                    }
+                });
             }
 
             @Override
@@ -194,8 +217,8 @@ public class HomeFragment extends Fragment {
                         requireActivity().runOnUiThread(() -> {
                             loadTimelineData(calendarManager.getSelectedDate());
                         });
-                    }}
-                );
+                    }
+                });
             }
         });
         sheet.show(getChildFragmentManager(), "PlaceLabelSheet");
@@ -211,8 +234,8 @@ public class HomeFragment extends Fragment {
                         requireActivity().runOnUiThread(() -> {
                             loadTimelineData(calendarManager.getSelectedDate());
                         });
-                    }}
-                );
+                    }
+                });
             }
 
             @Override
@@ -223,8 +246,8 @@ public class HomeFragment extends Fragment {
                         requireActivity().runOnUiThread(() -> {
                             loadTimelineData(calendarManager.getSelectedDate());
                         });
-                    }}
-                );
+                    }
+                });
             }
         });
         sheet.show(getChildFragmentManager(), "PlaceLabelSheet");
@@ -232,7 +255,7 @@ public class HomeFragment extends Fragment {
 
     private void loadTimelineData(Date date) {
         if (date == null) return;
-        //get start of the day
+
         Calendar cal = Calendar.getInstance();
         cal.setTime(date);
         cal.set(Calendar.HOUR_OF_DAY, 0);
@@ -240,7 +263,7 @@ public class HomeFragment extends Fragment {
         cal.set(Calendar.SECOND, 0);
         cal.set(Calendar.MILLISECOND, 0);
         Date start = cal.getTime();
-        //get end of the day
+
         cal.set(Calendar.HOUR_OF_DAY, 23);
         cal.set(Calendar.MINUTE, 59);
         cal.set(Calendar.SECOND, 59);
@@ -255,28 +278,23 @@ public class HomeFragment extends Fragment {
             rawCombined.addAll(stills);
             rawCombined.addAll(movements);
 
-            // Sort by start time, from earliest to latest
             rawCombined.sort((a, b) -> {
                 if (a.getStartTimeDate() == null || b.getStartTimeDate() == null) return 0;
                 return a.getStartTimeDate().compareTo(b.getStartTimeDate());
             });
 
-            // check which stills are stops and add them to movement activities
             List<TimelineItem> processedCombined = new ArrayList<>();
             MovementActivity lastMovement = null;
             for (TimelineItem item : rawCombined) {
                 if (item instanceof StillLocation) {
                     StillLocation still = (StillLocation) item;
-                    // Check if this is a stop
                     if (lastMovement != null && ((still.getStartTimeDate() != null && still.getEndTimeDate() != null &&
                             lastMovement.getStartTimeDate() != null && lastMovement.getEndTimeDate() != null &&
                             still.getStartTimeDate().after(lastMovement.getStartTimeDate()) &&
                             still.getEndTimeDate().before(lastMovement.getEndTimeDate())))) {
                         still.setIsStop(true);
                         lastMovement.getStops().add(still);
-                        // stops not added to processedCombined
                     } else {
-                        // Not a stop, add to combined list
                         processedCombined.add(still);
                         lastMovement = null;
                     }
@@ -286,8 +304,68 @@ public class HomeFragment extends Fragment {
                 }
             }
 
+            // Evaluate Daily Habit Summary
+            HabitManager.DailyHabitSummary summary = HabitManager.evaluateDailyHabits(processedCombined);
+
+            // Enrich Items with Habit Progress
+            List<TimelineItem> enrichedList = new ArrayList<>();
+            for (TimelineItem item : processedCombined) {
+                if (item instanceof StillLocation) {
+                    StillLocation still = (StillLocation) item;
+                    String cat = still.getCategory() != null ? still.getCategory().toLowerCase() : "";
+                    String name = still.getPlaceName() != null ? still.getPlaceName().toLowerCase() : "";
+
+                    boolean isFocus = cat.contains("work") || cat.contains("office") || cat.contains("school")
+                            || name.contains("work") || name.contains("office");
+
+                    long target = isFocus ? HabitManager.DEFAULT_WORK_FOCUS_TARGET_MS : (2 * 60 * 60 * 1000L);
+                    long actual = still.getEndTimeDate() != null && still.getStartTimeDate() != null
+                            ? still.getEndTimeDate().getTime() - still.getStartTimeDate().getTime() : 0;
+                    boolean isMet = actual >= target;
+                    String badge = isMet ? "[✓ Goal Met]" : "[In Progress]";
+
+                    enrichedList.add(new StayWithHabit(still, target, isMet, badge, summary.getStreakDays()));
+                } else if (item instanceof MovementActivity) {
+                    MovementActivity movement = (MovementActivity) item;
+                    long target = HabitManager.DEFAULT_WALK_TARGET_MS;
+                    long actual = movement.getEndTimeDate() != null && movement.getStartTimeDate() != null
+                            ? movement.getEndTimeDate().getTime() - movement.getStartTimeDate().getTime() : 0;
+                    boolean isMet = actual >= target;
+                    String badge = isMet ? "[✓ Walk Goal Met]" : "[Active Movement]";
+
+                    enrichedList.add(new MovementWithHabit(movement, target, isMet, badge));
+                }
+            }
+
             if (isAdded()) {
-                requireActivity().runOnUiThread(() -> timelineAdapter.submitList(processedCombined)); // switch back to the main thread and updates the list
+                requireActivity().runOnUiThread(() -> {
+                    timelineAdapter.submitList(enrichedList);
+
+                    // Populate Routine Hero Card
+                    if (tvStreakCount != null) {
+                        tvStreakCount.setText("🔥 " + summary.getStreakDays() + " Day Streak");
+                    }
+                    if (tvRoutineScoreLabel != null) {
+                        tvRoutineScoreLabel.setText("Routine Completion: " + summary.getOverallScorePct() + "%");
+                    }
+                    if (tvRoutinesDoneSub != null) {
+                        tvRoutinesDoneSub.setText(summary.getCompletedGoals() + " / " + summary.getTotalGoals() + " Goals Met");
+                    }
+                    if (progressRoutineRing != null) {
+                        progressRoutineRing.setProgress(summary.getOverallScorePct());
+                    }
+
+                    if (tvCounterFocusGoal != null) {
+                        tvCounterFocusGoal.setText(UiFormatters.formatDurationMs(summary.getFocusActualMs()));
+                    }
+                    if (tvCounterWalkGoal != null) {
+                        tvCounterWalkGoal.setText(UiFormatters.formatDurationMs(summary.getWalkActualMs())
+                                + " / " + UiFormatters.formatDurationMs(summary.getWalkTargetMs()));
+                    }
+                    if (tvCounterPunctualGoal != null) {
+                        tvCounterPunctualGoal.setText(summary.getArrivalPunctualityText());
+                    }
+                });
             }
         });
     }
@@ -314,7 +392,6 @@ public class HomeFragment extends Fragment {
         calendarManager.destroy();
     }
 
-
     private void startPeriodicRefresh() {
         refreshHandler.removeCallbacks(refreshRunnable);
         refreshHandler.postDelayed(refreshRunnable, UPDATE_INTERVAL_MS);
@@ -323,6 +400,4 @@ public class HomeFragment extends Fragment {
     private void stopPeriodicRefresh() {
         refreshHandler.removeCallbacks(refreshRunnable);
     }
-
-
 }

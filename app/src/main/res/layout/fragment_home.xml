@@ -148,6 +148,186 @@
                         </LinearLayout>
                     </LinearLayout>
                 </androidx.cardview.widget.CardView>
+
+                <!-- Habit & Routine Dashboard Hero Card -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/hero_dashboard_card"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="16dp"
+                    android:layout_marginTop="8dp"
+                    app:cardCornerRadius="24dp"
+                    app:cardElevation="2dp"
+                    app:cardBackgroundColor="?attr/colorSurface"
+                    app:strokeWidth="1dp"
+                    app:strokeColor="@color/outline_variant">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="20dp">
+
+                        <RelativeLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content">
+
+                            <TextView
+                                android:id="@+id/tv_hero_title"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Daily Routines &amp; Goals"
+                                android:textSize="14sp"
+                                android:textAllCaps="true"
+                                android:letterSpacing="0.08"
+                                android:fontFamily="sans-serif-medium"
+                                android:textColor="?attr/colorOnSurfaceVariant" />
+
+                            <TextView
+                                android:id="@+id/tv_streak_count"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_alignParentEnd="true"
+                                android:background="@drawable/bg_streak_badge"
+                                android:paddingHorizontal="10dp"
+                                android:paddingVertical="4dp"
+                                android:text="🔥 7 Day Streak"
+                                android:textColor="@color/on_habit_streak_container"
+                                android:textSize="12sp"
+                                android:fontFamily="sans-serif-bold" />
+                        </RelativeLayout>
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:layout_marginTop="12dp">
+
+                            <RelativeLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content">
+
+                                <TextView
+                                    android:id="@+id/tv_routine_score_label"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Routine Completion: 75%"
+                                    android:textColor="@color/habit_success"
+                                    android:textSize="14sp"
+                                    android:fontFamily="sans-serif-bold" />
+
+                                <TextView
+                                    android:id="@+id/tv_routines_done_sub"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_alignParentEnd="true"
+                                    android:text="3 / 4 Goals Met"
+                                    android:textColor="?attr/colorOnSurfaceVariant"
+                                    android:textSize="13sp"
+                                    android:fontFamily="sans-serif-medium" />
+                            </RelativeLayout>
+
+                            <ProgressBar
+                                android:id="@+id/progress_routine_ring"
+                                style="?android:attr/progressBarStyleHorizontal"
+                                android:layout_width="match_parent"
+                                android:layout_height="10dp"
+                                android:layout_marginTop="8dp"
+                                android:progressDrawable="@drawable/bg_routine_progress"
+                                android:progress="75"
+                                android:max="100" />
+                        </LinearLayout>
+
+                        <!-- Quick Habit Goal Counters -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:layout_marginTop="16dp"
+                            android:baselineAligned="false">
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:orientation="vertical"
+                                android:gravity="center_horizontal"
+                                android:background="@drawable/bg_metric_tile"
+                                android:padding="10dp">
+
+                                <TextView
+                                    android:id="@+id/tv_counter_focus_goal"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="3h 45m"
+                                    android:textSize="16sp"
+                                    android:fontFamily="sans-serif-bold"
+                                    android:textColor="@color/habit_success" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Work Focus"
+                                    android:textSize="11sp"
+                                    android:textColor="?attr/colorOnSurfaceVariant" />
+                            </LinearLayout>
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:layout_marginStart="8dp"
+                                android:orientation="vertical"
+                                android:gravity="center_horizontal"
+                                android:background="@drawable/bg_metric_tile"
+                                android:padding="10dp">
+
+                                <TextView
+                                    android:id="@+id/tv_counter_walk_goal"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="28m / 30m"
+                                    android:textSize="16sp"
+                                    android:fontFamily="sans-serif-bold"
+                                    android:textColor="@color/habit_pending" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Daily Walk"
+                                    android:textSize="11sp"
+                                    android:textColor="?attr/colorOnSurfaceVariant" />
+                            </LinearLayout>
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:layout_marginStart="8dp"
+                                android:orientation="vertical"
+                                android:gravity="center_horizontal"
+                                android:background="@drawable/bg_metric_tile"
+                                android:padding="10dp">
+
+                                <TextView
+                                    android:id="@+id/tv_counter_punctual_goal"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="8:45 AM"
+                                    android:textSize="16sp"
+                                    android:fontFamily="sans-serif-bold"
+                                    android:textColor="@color/habit_purple" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="On-Time Arrival"
+                                    android:textSize="11sp"
+                                    android:textColor="?attr/colorOnSurfaceVariant" />
+                            </LinearLayout>
+                        </LinearLayout>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
                 <!-- Map Card -->
                 <com.google.android.material.card.MaterialCardView
                     android:layout_width="match_parent"

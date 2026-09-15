@@ -1,0 +1,218 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/bg_bottom_sheet"
+    android:padding="20dp">
+
+    <!-- Drag Handle -->
+    <View
+        android:layout_width="32dp"
+        android:layout_height="4dp"
+        android:layout_gravity="center_horizontal"
+        android:background="@color/outline"
+        android:layout_marginBottom="16dp"/>
+
+    <!-- Header Block -->
+    <TextView
+        android:id="@+id/tv_sheet_title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="20sp"
+        android:fontFamily="sans-serif-bold"
+        android:textColor="?attr/colorOnSurface"
+        tools:text="Workplace Dwell Analysis"/>
+
+    <TextView
+        android:id="@+id/tv_sheet_subtitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="13sp"
+        android:textColor="?attr/colorOnSurfaceVariant"
+        android:layout_marginTop="2dp"
+        tools:text="9:00 AM — 1:15 PM • Total Dwell: 4h 15m"/>
+
+    <!-- Metrics Summary Card -->
+    <com.google.android.material.card.MaterialCardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        app:cardCornerRadius="16dp"
+        app:cardBackgroundColor="@color/background"
+        app:strokeWidth="0dp">
+
+        <GridLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:columnCount="2"
+            android:rowCount="2"
+            android:padding="16dp">
+
+            <!-- Cell 1: Physical Dwell -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_columnWeight="1"
+                android:orientation="vertical"
+                android:padding="8dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Physical Presence"
+                    android:textSize="11sp"
+                    android:textColor="?attr/colorOnSurfaceVariant"/>
+
+                <TextView
+                    android:id="@+id/tv_sheet_presence_time"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textSize="15sp"
+                    android:fontFamily="sans-serif-bold"
+                    android:textColor="@color/presence_green"
+                    tools:text="3h 25m (80%)"/>
+            </LinearLayout>
+
+            <!-- Cell 2: Screen Time -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_columnWeight="1"
+                android:orientation="vertical"
+                android:padding="8dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Active Screen Time"
+                    android:textSize="11sp"
+                    android:textColor="?attr/colorOnSurfaceVariant"/>
+
+                <TextView
+                    android:id="@+id/tv_sheet_screen_time"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textSize="15sp"
+                    android:fontFamily="sans-serif-bold"
+                    android:textColor="@color/reclaim_alert"
+                    tools:text="50m (20%)"/>
+            </LinearLayout>
+
+            <!-- Cell 3: Pickups -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_columnWeight="1"
+                android:orientation="vertical"
+                android:padding="8dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Device Pickups"
+                    android:textSize="11sp"
+                    android:textColor="?attr/colorOnSurfaceVariant"/>
+
+                <TextView
+                    android:id="@+id/tv_sheet_pickups"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textSize="15sp"
+                    android:fontFamily="sans-serif-bold"
+                    android:textColor="?attr/colorOnSurface"
+                    tools:text="24 times"/>
+            </LinearLayout>
+
+            <!-- Cell 4: Avg Unlock Duration -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_columnWeight="1"
+                android:orientation="vertical"
+                android:padding="8dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Avg Pickup Duration"
+                    android:textSize="11sp"
+                    android:textColor="?attr/colorOnSurfaceVariant"/>
+
+                <TextView
+                    android:id="@+id/tv_sheet_avg_pickup"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textSize="15sp"
+                    android:fontFamily="sans-serif-bold"
+                    android:textColor="?attr/colorOnSurface"
+                    tools:text="2.1 mins"/>
+            </LinearLayout>
+        </GridLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- Time-Reclaim Callout Banner -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/card_time_reclaim_callout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        app:cardCornerRadius="12dp"
+        app:cardBackgroundColor="@color/reclaim_alert_container"
+        app:strokeWidth="0dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="12dp"
+            android:gravity="center_vertical">
+
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_statistics"
+                app:tint="@color/on_reclaim_alert_container"/>
+
+            <TextView
+                android:id="@+id/tv_reclaim_callout_text"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="12dp"
+                android:textSize="12sp"
+                android:textColor="@color/on_reclaim_alert_container"
+                android:fontFamily="sans-serif-medium"
+                tools:text="35 minutes were lost to social media during your core focus hours."/>
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- Top Apps Section -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="App Usage Breakdown"
+        android:textSize="15sp"
+        android:fontFamily="sans-serif-bold"
+        android:textColor="?attr/colorOnSurface"
+        android:layout_marginTop="20dp"
+        android:layout_marginBottom="8dp"/>
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rv_app_usage_list"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:nestedScrollingEnabled="false"
+        tools:listitem="@layout/item_app_usage_row"/>
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_close_sheet"
+        style="@style/Widget.Material3.Button.TonalButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:text="Close Breakdown"/>
+</LinearLayout>

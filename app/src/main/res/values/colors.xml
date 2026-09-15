@@ -48,6 +48,47 @@
 
     <color name="timeline_line">#E8EAED</color>
 
+    <!-- Semantic Spatial-Digital Color Tokens -->
+    <color name="presence_green">#2E7D32</color>
+    <color name="presence_green_container">#E8F5E9</color>
+    <color name="on_presence_green_container">#1B5E20</color>
+
+    <color name="reclaim_alert">#D32F2F</color>
+    <color name="reclaim_alert_container">#FFEBEE</color>
+    <color name="on_reclaim_alert_container">#C62828</color>
+
+    <color name="screen_amber">#E65100</color>
+    <color name="screen_amber_container">#FFF3E0</color>
+    <color name="on_screen_amber_container">#EF6C00</color>
+
+    <color name="transit_blue">#0288D1</color>
+    <color name="transit_blue_container">#E1F5FE</color>
+    <color name="on_transit_blue_container">#01579B</color>
+
+    <color name="progress_track_bg">#E0E0E0</color>
+    <color name="metric_tile_bg">#F5F5F0</color>
+    <color name="badge_neutral_bg">#EEEEEE</color>
+    <color name="on_badge_neutral">#424242</color>
+
+    <!-- Habit & Routine Dashboard Color Tokens -->
+    <color name="habit_success">#2E7D32</color>
+    <color name="habit_success_container">#E8F5E9</color>
+    <color name="on_habit_success_container">#1B5E20</color>
+
+    <color name="habit_pending">#F57C00</color>
+    <color name="habit_pending_container">#FFF3E0</color>
+    <color name="on_habit_pending_container">#E65100</color>
+
+    <color name="habit_streak">#FF6D00</color>
+    <color name="habit_streak_container">#FBE9E7</color>
+    <color name="on_habit_streak_container">#D84315</color>
+
+    <color name="habit_purple">#673AB7</color>
+    <color name="habit_purple_container">#EDE7F6</color>
+    <color name="on_habit_purple_container">#4A148C</color>
+
+    <color name="routine_card_bg">#F4F6F0</color>
+
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
 </resources>

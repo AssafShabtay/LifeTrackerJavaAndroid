@@ -53,4 +53,22 @@ public class UiFormatters {
         }
         return minutes + "m";
     }
+
+    public static String formatTimeRange(Date start, Date end) {
+        if (start == null) return "—";
+        String startStr = timeOnly(start);
+        String endStr = end != null ? timeOnly(end) : "Ongoing";
+        return startStr + " — " + endStr;
+    }
+
+    public static String formatDurationMs(long ms) {
+        long totalMinutes = Math.max(0, ms / 60000);
+        long hours = totalMinutes / 60;
+        long minutes = totalMinutes % 60;
+
+        if (hours > 0) {
+            return hours + "h " + minutes + "m";
+        }
+        return minutes + "m";
+    }
 }
