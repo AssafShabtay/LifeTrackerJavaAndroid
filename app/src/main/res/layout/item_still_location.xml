@@ -125,7 +125,43 @@
                             tools:text="1600 Amphitheatre Parkway, Mountain View, CA" />
 
 
+                    <LinearLayout
+                        android:id="@+id/layoutUsageBadge"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:background="@drawable/bg_timeline_usage_chip"
+                        android:visibility="gone"
+                        tools:visibility="visible">
+
+                        <ImageView
+                            android:id="@+id/ivUsageBadgeIcon"
+                            android:layout_width="14dp"
+                            android:layout_height="14dp"
+                            android:src="@drawable/ic_phone_android"
+                            app:tint="?attr/colorOnSurfaceVariant" />
+
+                        <TextView
+                            android:id="@+id/tvUsageBadgeText"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="4dp"
+                            android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
+                            android:textColor="?attr/colorOnSurfaceVariant"
+                            tools:text="28m (45%)" />
+
+                        <ImageView
+                            android:id="@+id/ivUsageBadgeExpand"
+                            android:layout_width="14dp"
+                            android:layout_height="14dp"
+                            android:layout_marginStart="2dp"
+                            android:src="@drawable/ic_expand_more"
+                            app:tint="?attr/colorOnSurfaceVariant" />
                     </LinearLayout>
+
+                </LinearLayout>
 
                     <TextView
                         android:id="@+id/itemDuration"
@@ -181,6 +217,13 @@
                         app:iconGravity="textStart"
                         app:iconPadding="4dp" />
                 </RelativeLayout>
+
+                <!-- Micro-breakdown container for expanded top apps -->
+                <FrameLayout
+                    android:id="@+id/layoutMicroBreakdownContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:visibility="gone" />
             </LinearLayout>
         </androidx.cardview.widget.CardView>
     </LinearLayout>

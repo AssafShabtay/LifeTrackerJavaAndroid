@@ -5,9 +5,9 @@
         android:icon="@drawable/ic_home"
         android:title="Home" />
     <item
-        android:id="@+id/nav_dashboard"
-        android:icon="@drawable/ic_dashboard"
-        android:title="Dashboard" />
+        android:id="@+id/nav_efficiency"
+        android:icon="@drawable/sprint_24px"
+        android:title="Efficiency" />
     <item
         android:id="@+id/nav_statistics"
         android:icon="@drawable/ic_statistics"

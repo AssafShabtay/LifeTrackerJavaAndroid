@@ -27,7 +27,6 @@ import androidx.fragment.app.Fragment;
 import com.example.myapplication.helpers.ErrorLogger;
 import com.example.myapplication.helpers.Logger;
 import com.example.myapplication.helpers.PermissionManager;
-import com.example.myapplication.mainScreen.dashboardScreen.DashboardFragment;
 import com.example.myapplication.mainScreen.homeScreen.HomeFragment;
 import com.example.myapplication.mainScreen.settingsScreen.SettingsFragment;
 import com.example.myapplication.mainScreen.statisticsScreen.StatisticsFragment;
@@ -61,7 +60,7 @@ public class MainActivity extends AppCompatActivity {
     private boolean transitionsRegistered = false;
 
     private HomeFragment homeFragment = new HomeFragment();
-    private DashboardFragment dashboardFragment = new DashboardFragment();
+    private com.example.myapplication.mainScreen.efficiencyScreen.EfficiencyFragment efficiencyFragment = new com.example.myapplication.mainScreen.efficiencyScreen.EfficiencyFragment();
     private StatisticsFragment statisticsFragment = new StatisticsFragment();
     private SettingsFragment settingsFragment = new SettingsFragment();
     private Fragment activeFragment = homeFragment;
@@ -185,21 +184,21 @@ public class MainActivity extends AppCompatActivity {
             // Initial load: add new fragments
             getSupportFragmentManager().beginTransaction().add(R.id.fragment_container, settingsFragment, "4").hide(settingsFragment).commit();
             getSupportFragmentManager().beginTransaction().add(R.id.fragment_container, statisticsFragment, "3").hide(statisticsFragment).commit();
-            getSupportFragmentManager().beginTransaction().add(R.id.fragment_container, dashboardFragment, "2").hide(dashboardFragment).commit();
+            getSupportFragmentManager().beginTransaction().add(R.id.fragment_container, efficiencyFragment, "2").hide(efficiencyFragment).commit();
             getSupportFragmentManager().beginTransaction().add(R.id.fragment_container, homeFragment, "1").commit();
             activeFragment = homeFragment;
         } else {
             // Recreation (e.g., theme change): retrieve existing fragments
             homeFragment = (HomeFragment) getSupportFragmentManager().findFragmentByTag("1");
-            dashboardFragment = (DashboardFragment) getSupportFragmentManager().findFragmentByTag("2");
+            efficiencyFragment = (com.example.myapplication.mainScreen.efficiencyScreen.EfficiencyFragment) getSupportFragmentManager().findFragmentByTag("2");
             statisticsFragment = (StatisticsFragment) getSupportFragmentManager().findFragmentByTag("3");
             settingsFragment = (SettingsFragment) getSupportFragmentManager().findFragmentByTag("4");
 
             // Pull the manually saved tab ID from the bundle, defaulting to nav_home
             int selectedId = savedInstanceState.getInt("selected_nav_id", R.id.nav_home);
 
-            if (selectedId == R.id.nav_dashboard) {
-                activeFragment = dashboardFragment;
+            if (selectedId == R.id.nav_efficiency) {
+                activeFragment = efficiencyFragment;
             } else if (selectedId == R.id.nav_statistics) {
                 activeFragment = statisticsFragment;
             } else if (selectedId == R.id.nav_settings) {
@@ -266,9 +265,9 @@ public class MainActivity extends AppCompatActivity {
                 if (itemId == R.id.nav_home) {
                     getSupportFragmentManager().beginTransaction().hide(activeFragment).show(homeFragment).commit();
                     activeFragment = homeFragment;
-                } else if (itemId == R.id.nav_dashboard) {
-                    getSupportFragmentManager().beginTransaction().hide(activeFragment).show(dashboardFragment).commit();
-                    activeFragment = dashboardFragment;
+                } else if (itemId == R.id.nav_efficiency) {
+                    getSupportFragmentManager().beginTransaction().hide(activeFragment).show(efficiencyFragment).commit();
+                    activeFragment = efficiencyFragment;
                 } else if (itemId == R.id.nav_statistics) {
                     getSupportFragmentManager().beginTransaction().hide(activeFragment).show(statisticsFragment).commit();
                     activeFragment = statisticsFragment;

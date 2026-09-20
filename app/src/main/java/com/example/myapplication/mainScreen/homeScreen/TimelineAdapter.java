@@ -10,6 +10,8 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
@@ -50,7 +52,7 @@ public class TimelineAdapter extends ListAdapter<TimelineItem, RecyclerView.View
 
     private final OnItemClickListener clickListener;
     private final OnEditButtonClickListener editButtonClickListener;
-
+    private final TimelineUsageBadgeHelper usageBadgeHelper = new TimelineUsageBadgeHelper();
 
     static class TimelineDiffCallback extends DiffUtil.ItemCallback<TimelineItem> {
         @Override
@@ -153,6 +155,20 @@ public class TimelineAdapter extends ListAdapter<TimelineItem, RecyclerView.View
                 if (editButtonClickListener != null) editButtonClickListener.onStillEditButtonClick(still);
             });
 
+            // Usage badge and breakdown
+            String itemKey = "still_" + still.getId();
+            usageBadgeHelper.bindUsageBadgeAndBreakdown(
+                    stillHolder.itemView.getContext(),
+                    itemKey,
+                    still.getStartTimeDate(),
+                    still.getEndTimeDate(),
+                    stillHolder.layoutUsageBadge,
+                    stillHolder.tvUsageBadgeText,
+                    stillHolder.ivUsageBadgeIcon,
+                    stillHolder.ivUsageBadgeExpand,
+                    stillHolder.layoutMicroBreakdownContainer
+            );
+
         } else {
             // --------------- Handle movement items ---------------
             MovementActivity movement = (MovementActivity) item;
@@ -163,14 +179,13 @@ public class TimelineAdapter extends ListAdapter<TimelineItem, RecyclerView.View
             if (movement.getActivityTypeName() != null) type = movement.getActivityTypeName();
             movementHolder.itemTitle.setText(type);
 
-
             // Time range and duration
             movementHolder.itemTimeRange.setText(UiFormatters.timeOnly(movement.getStartTimeDate()) + " — " +
                     UiFormatters.timeOnly(movement.getEndTimeDate()));
 
             movementHolder.itemDuration.setText(UiFormatters.duration(movement.getStartTimeDate(), movement.getEndTimeDate()));
 
-            // Geet movement color and icon
+            // Get movement color and icon
             int[] colorAndIcon = getMovementColorAndIcon(type.toLowerCase());
             int colorRes = colorAndIcon[0];
             int iconRes = colorAndIcon[1];
@@ -187,6 +202,21 @@ public class TimelineAdapter extends ListAdapter<TimelineItem, RecyclerView.View
             movementHolder.editBtn.setOnClickListener(v -> {
                 if (editButtonClickListener != null) editButtonClickListener.onMovementEditButtonClick(movement);
             });
+
+            // Usage Badge & Breakdown Setup for Movement
+            String itemKey = "movement_" + movement.getId();
+            usageBadgeHelper.bindUsageBadgeAndBreakdown(
+                    movementHolder.itemView.getContext(),
+                    itemKey,
+                    movement.getStartTimeDate(),
+                    movement.getEndTimeDate(),
+                    movementHolder.layoutUsageBadge,
+                    movementHolder.tvUsageBadgeText,
+                    movementHolder.ivUsageBadgeIcon,
+                    movementHolder.ivUsageBadgeExpand,
+                    movementHolder.layoutMicroBreakdownContainer
+            );
+
             // Handle nested stops
             movementHolder.stopsContainer.removeAllViews();
             if (movement.getStops() != null && !movement.getStops().isEmpty()) {
@@ -198,7 +228,7 @@ public class TimelineAdapter extends ListAdapter<TimelineItem, RecyclerView.View
                     TextView stopTitle = stopView.findViewById(R.id.stopTitle);
                     TextView stopDuration = stopView.findViewById(R.id.stopDuration);
                     TextView stopTimeRange = stopView.findViewById(R.id.stopTimeRange);
-                    android.widget.ImageView stopIcon = stopView.findViewById(R.id.stopIcon);
+                    ImageView stopIcon = stopView.findViewById(R.id.stopIcon);
                     View btnLabelStop = stopView.findViewById(R.id.btnLabelStop);
                     TextView stopAddress = stopView.findViewById(R.id.stopAddress);
                     TextView stopCategory = stopView.findViewById(R.id.itemCategory);
@@ -249,6 +279,26 @@ public class TimelineAdapter extends ListAdapter<TimelineItem, RecyclerView.View
                         if (editButtonClickListener != null) editButtonClickListener.onStillEditButtonClick(stop);
                     });
 
+                    // Stop Usage Badge & Breakdown
+                    LinearLayout layoutUsageBadge = stopView.findViewById(R.id.layoutUsageBadge);
+                    TextView tvUsageBadgeText = stopView.findViewById(R.id.tvUsageBadgeText);
+                    ImageView ivUsageBadgeIcon = stopView.findViewById(R.id.ivUsageBadgeIcon);
+                    ImageView ivUsageBadgeExpand = stopView.findViewById(R.id.ivUsageBadgeExpand);
+                    FrameLayout layoutMicroBreakdown = stopView.findViewById(R.id.layoutMicroBreakdownContainer);
+
+                    String stopKey = "stop_" + stop.getId();
+                    usageBadgeHelper.bindUsageBadgeAndBreakdown(
+                            stopView.getContext(),
+                            stopKey,
+                            stop.getStartTimeDate(),
+                            stop.getEndTimeDate(),
+                            layoutUsageBadge,
+                            tvUsageBadgeText,
+                            ivUsageBadgeIcon,
+                            ivUsageBadgeExpand,
+                            layoutMicroBreakdown
+                    );
+
                     movementHolder.stopsContainer.addView(stopView);
                 }
             } else {
@@ -260,9 +310,16 @@ public class TimelineAdapter extends ListAdapter<TimelineItem, RecyclerView.View
     static class StillViewHolder extends RecyclerView.ViewHolder {
         TextView itemTitle, itemTimeRange, itemDuration, itemAddress, itemCategory;
         View lineDot;
-        android.widget.ImageView itemIcon;
+        ImageView itemIcon;
         Button editBtn;
         CardView iconContainer;
+
+        // Usage badge and breakdown
+        LinearLayout layoutUsageBadge;
+        TextView tvUsageBadgeText;
+        ImageView ivUsageBadgeIcon;
+        ImageView ivUsageBadgeExpand;
+        FrameLayout layoutMicroBreakdownContainer;
 
         StillViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -275,6 +332,12 @@ public class TimelineAdapter extends ListAdapter<TimelineItem, RecyclerView.View
             itemAddress = itemView.findViewById(R.id.itemAddress);
             itemCategory = itemView.findViewById(R.id.itemCategory);
             iconContainer = itemView.findViewById(R.id.iconContainer);
+
+            layoutUsageBadge = itemView.findViewById(R.id.layoutUsageBadge);
+            tvUsageBadgeText = itemView.findViewById(R.id.tvUsageBadgeText);
+            ivUsageBadgeIcon = itemView.findViewById(R.id.ivUsageBadgeIcon);
+            ivUsageBadgeExpand = itemView.findViewById(R.id.ivUsageBadgeExpand);
+            layoutMicroBreakdownContainer = itemView.findViewById(R.id.layoutMicroBreakdownContainer);
         }
     }
 
@@ -284,9 +347,16 @@ public class TimelineAdapter extends ListAdapter<TimelineItem, RecyclerView.View
         TextView itemDuration;
         View lineDot;
         Button editBtn;
-        android.widget.ImageView itemIcon;
+        ImageView itemIcon;
         LinearLayout stopsContainer;
         CardView iconContainer;
+
+        // Usage badge and breakdown
+        LinearLayout layoutUsageBadge;
+        TextView tvUsageBadgeText;
+        ImageView ivUsageBadgeIcon;
+        ImageView ivUsageBadgeExpand;
+        FrameLayout layoutMicroBreakdownContainer;
 
         MovementViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -298,6 +368,12 @@ public class TimelineAdapter extends ListAdapter<TimelineItem, RecyclerView.View
             itemIcon = itemView.findViewById(R.id.itemIcon);
             stopsContainer = itemView.findViewById(R.id.stopsContainer);
             iconContainer = itemView.findViewById(R.id.iconContainer);
+
+            layoutUsageBadge = itemView.findViewById(R.id.layoutUsageBadge);
+            tvUsageBadgeText = itemView.findViewById(R.id.tvUsageBadgeText);
+            ivUsageBadgeIcon = itemView.findViewById(R.id.ivUsageBadgeIcon);
+            ivUsageBadgeExpand = itemView.findViewById(R.id.ivUsageBadgeExpand);
+            layoutMicroBreakdownContainer = itemView.findViewById(R.id.layoutMicroBreakdownContainer);
         }
     }
 }
