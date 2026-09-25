@@ -1,0 +1,43 @@
+package com.example.myapplication.data.db;
+import com.example.myapplication.data.model.MovementActivity;
+import com.example.myapplication.data.model.Place;
+import com.example.myapplication.data.model.RoutePoint;
+import com.example.myapplication.data.model.StillLocation;
+
+import android.content.Context;
+
+import androidx.room.Database;
+import androidx.room.Room;
+import androidx.room.RoomDatabase;
+import androidx.room.TypeConverters;
+
+@Database(
+        entities = {StillLocation.class, MovementActivity.class, Place.class, RoutePoint.class},
+        version = 4 ,
+        exportSchema = false
+)
+@TypeConverters({Converters.class})
+public abstract class ActivityDatabase extends RoomDatabase {
+
+    public abstract ActivityDao activityDao();
+    public abstract PlaceDao placeDao();
+
+    private static volatile ActivityDatabase INSTANCE;
+
+    public static ActivityDatabase getDatabase(Context context) {
+        if (INSTANCE == null) {
+            synchronized (ActivityDatabase.class) {
+                if (INSTANCE == null) {
+                    INSTANCE = Room.databaseBuilder(
+                                    context.getApplicationContext(),
+                                    ActivityDatabase.class,
+                                    "activity_database"
+                            )
+                            .fallbackToDestructiveMigration(true)
+                            .build();
+                }
+            }
+        }
+        return INSTANCE;
+    }
+}

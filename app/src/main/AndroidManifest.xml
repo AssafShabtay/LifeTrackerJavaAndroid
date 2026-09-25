@@ -36,7 +36,7 @@
             android:value="${GOOGLE_API_KEY}" />
 
         <activity
-            android:name=".mainScreen.homeScreen.MapPickerActivity"
+            android:name=".ui.home.map.MapPickerActivity"
             android:exported="false"
             android:theme="@style/Theme.MyApplication"
             android:label="Pick Location" />
@@ -52,15 +52,15 @@
         </activity>
 
         <receiver
-            android:name=".locationTracking.receiver.ActivityTransitionReceiver"
+            android:name=".tracking.receiver.ActivityTransitionReceiver"
             android:exported="false" />
 
         <receiver
-            android:name=".locationTracking.receiver.GeofenceBroadcastReceiver"
+            android:name=".tracking.receiver.GeofenceBroadcastReceiver"
             android:exported="false" />
 
         <service
-            android:name=".locationTracking.LocationService"
+            android:name=".tracking.location.LocationService"
             android:exported="false"
             android:foregroundServiceType="location" />
 

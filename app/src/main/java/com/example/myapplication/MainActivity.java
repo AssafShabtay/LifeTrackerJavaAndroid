@@ -1,4 +1,5 @@
 package com.example.myapplication;
+import com.example.myapplication.ui.efficiency.EfficiencyFragment;
 
 import android.Manifest;
 import android.app.AlertDialog;
@@ -24,14 +25,14 @@ import androidx.appcompat.app.AppCompatDelegate; // Import AppCompatDelegate
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
-import com.example.myapplication.helpers.ErrorLogger;
-import com.example.myapplication.helpers.Logger;
-import com.example.myapplication.helpers.PermissionManager;
-import com.example.myapplication.mainScreen.homeScreen.HomeFragment;
-import com.example.myapplication.mainScreen.settingsScreen.SettingsFragment;
-import com.example.myapplication.mainScreen.statisticsScreen.StatisticsFragment;
-import com.example.myapplication.locationTracking.receiver.ActivityTransitionReceiver;
-import com.example.myapplication.locationTracking.LocationService;
+import com.example.myapplication.util.ErrorLogger;
+import com.example.myapplication.util.Logger;
+import com.example.myapplication.util.PermissionManager;
+import com.example.myapplication.ui.home.HomeFragment;
+import com.example.myapplication.ui.settings.SettingsFragment;
+import com.example.myapplication.ui.statistics.StatisticsFragment;
+import com.example.myapplication.tracking.receiver.ActivityTransitionReceiver;
+import com.example.myapplication.tracking.location.LocationService;
 import com.google.android.gms.location.ActivityRecognition;
 import com.google.android.gms.location.ActivityTransition;
 import com.google.android.gms.location.ActivityTransitionRequest;
@@ -60,7 +61,7 @@ public class MainActivity extends AppCompatActivity {
     private boolean transitionsRegistered = false;
 
     private HomeFragment homeFragment = new HomeFragment();
-    private com.example.myapplication.mainScreen.efficiencyScreen.EfficiencyFragment efficiencyFragment = new com.example.myapplication.mainScreen.efficiencyScreen.EfficiencyFragment();
+    private com.example.myapplication.ui.efficiency.EfficiencyFragment efficiencyFragment = new com.example.myapplication.ui.efficiency.EfficiencyFragment();
     private StatisticsFragment statisticsFragment = new StatisticsFragment();
     private SettingsFragment settingsFragment = new SettingsFragment();
     private Fragment activeFragment = homeFragment;
@@ -190,7 +191,7 @@ public class MainActivity extends AppCompatActivity {
         } else {
             // Recreation (e.g., theme change): retrieve existing fragments
             homeFragment = (HomeFragment) getSupportFragmentManager().findFragmentByTag("1");
-            efficiencyFragment = (com.example.myapplication.mainScreen.efficiencyScreen.EfficiencyFragment) getSupportFragmentManager().findFragmentByTag("2");
+            efficiencyFragment = (com.example.myapplication.ui.efficiency.EfficiencyFragment) getSupportFragmentManager().findFragmentByTag("2");
             statisticsFragment = (StatisticsFragment) getSupportFragmentManager().findFragmentByTag("3");
             settingsFragment = (SettingsFragment) getSupportFragmentManager().findFragmentByTag("4");
 

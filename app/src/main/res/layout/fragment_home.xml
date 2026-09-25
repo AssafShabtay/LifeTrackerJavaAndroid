@@ -25,129 +25,18 @@
                 app:layout_collapseMode="parallax"
                 app:layout_collapseParallaxMultiplier="0.7">
 
-                <!-- Date Selector Card -->
-                <androidx.cardview.widget.CardView
+                <!-- Empty Material Card where calendar was -->
+                <com.google.android.material.card.MaterialCardView
                     android:id="@+id/date_card"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
+                    android:layout_height="120dp"
                     android:layout_marginHorizontal="16dp"
                     android:layout_marginTop="3dp"
                     app:cardCornerRadius="24dp"
-                    app:cardElevation="4dp"
-                    app:cardBackgroundColor="?attr/colorSurface"
-                    app:cardUseCompatPadding="true"
-                    app:cardPreventCornerOverlap="false">
+                    app:cardElevation="0dp"
+                    app:strokeWidth="1dp"
+                    app:strokeColor="@color/outline_variant" />
 
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical">
-
-                        <RelativeLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:padding="16dp">
-
-                            <LinearLayout
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:orientation="vertical">
-
-                                <TextView
-                                    android:id="@+id/tv_day_name"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="Today"
-                                    android:textSize="20sp"
-                                    android:fontFamily="sans-serif-medium"
-                                    android:textColor="?attr/colorOnSurface"/>
-
-                                <TextView
-                                    android:id="@+id/tv_date_full"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="March 22, 2026"
-                                    android:textSize="13sp"
-                                    android:textColor="?attr/colorOnSurfaceVariant"
-                                    android:paddingTop="1dp"/>
-                            </LinearLayout>
-
-                            <ImageView
-                                android:id="@+id/iv_expand"
-                                android:layout_width="24dp"
-                                android:layout_height="24dp"
-                                android:layout_alignParentEnd="true"
-                                android:layout_centerVertical="true"
-                                android:src="@drawable/ic_expand_more"
-                                app:tint="?attr/colorPrimary"
-                                android:background="?attr/selectableItemBackgroundBorderless"/>
-                        </RelativeLayout>
-
-                        <LinearLayout
-                            android:id="@+id/calendar_container"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="vertical"
-                            android:padding="12dp"
-                            android:visibility="gone">
-
-                            <View
-                                android:layout_width="match_parent"
-                                android:layout_height="1dp"
-                                android:layout_marginHorizontal="8dp"
-                                android:layout_marginBottom="12dp"
-                                android:background="@color/outline_variant" />
-
-                            <LinearLayout
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:gravity="center_vertical"
-                                android:orientation="horizontal"
-                                android:paddingBottom="8dp">
-
-                                <ImageButton
-                                    android:id="@+id/btn_prev_month"
-                                    android:layout_width="40dp"
-                                    android:layout_height="40dp"
-                                    android:background="?attr/selectableItemBackgroundBorderless"
-                                    android:src="@drawable/ic_chevron_left"
-                                    app:tint="?attr/colorOnSurface"/>
-
-                                <TextView
-                                    android:id="@+id/tv_month_year"
-                                    android:layout_width="0dp"
-                                    android:layout_height="wrap_content"
-                                    android:layout_weight="1"
-                                    android:gravity="center"
-                                    android:text="March 2026"
-                                    android:textColor="?attr/colorOnSurface"
-                                    android:textSize="15sp"
-                                    android:fontFamily="sans-serif-medium"/>
-
-                                <ImageButton
-                                    android:id="@+id/btn_next_month"
-                                    android:layout_width="40dp"
-                                    android:layout_height="40dp"
-                                    android:background="?attr/selectableItemBackgroundBorderless"
-                                    android:src="@drawable/ic_chevron_right"
-                                    app:tint="?attr/colorOnSurface"/>
-                            </LinearLayout>
-
-                            <LinearLayout
-                                android:id="@+id/week_header"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:orientation="horizontal" />
-
-                            <GridLayout
-                                android:id="@+id/calendar_grid"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:columnCount="7"
-                                android:rowCount="6" />
-                        </LinearLayout>
-                    </LinearLayout>
-                </androidx.cardview.widget.CardView>
                 <!-- Map Card -->
                 <com.google.android.material.card.MaterialCardView
                     android:layout_width="match_parent"
@@ -187,32 +76,76 @@
                     </FrameLayout>
                 </com.google.android.material.card.MaterialCardView>
 
-                <RelativeLayout
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
                     android:layout_marginBottom="8dp"
-                    android:layout_marginHorizontal="24dp">
-                    
+                    android:layout_marginHorizontal="24dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
                     <TextView
+                        android:id="@+id/tvTimelineTitle"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Timeline"
                         android:textSize="16sp"
                         android:fontFamily="sans-serif-medium"
-                        android:textColor="?attr/colorOnSurface"
-                        android:layout_centerVertical="true"/>
+                        android:textColor="?attr/colorOnSurface"/>
+
+                    <LinearLayout
+                        android:id="@+id/small_calendar_container"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:gravity="center"
+                        android:orientation="horizontal"
+                        android:layout_marginHorizontal="8dp">
+
+                        <ImageButton
+                            android:id="@+id/btn_prev_day"
+                            android:layout_width="32dp"
+                            android:layout_height="32dp"
+                            android:background="?attr/selectableItemBackgroundBorderless"
+                            android:src="@drawable/ic_chevron_left"
+                            android:contentDescription="Previous Day"
+                            app:tint="?attr/colorOnSurface"/>
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btn_open_calendar"
+                            style="@style/Widget.Material3.Button.TextButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="36dp"
+                            android:paddingHorizontal="6dp"
+                            android:paddingVertical="0dp"
+                            android:text="Today"
+                            android:textSize="13sp"
+                            android:textColor="?attr/colorOnSurface"
+                            app:icon="@drawable/ic_calendar_today"
+                            app:iconSize="16dp"
+                            app:iconTint="?attr/colorPrimary"
+                            app:iconGravity="textStart"
+                            app:iconPadding="4dp"/>
+
+                        <ImageButton
+                            android:id="@+id/btn_next_day"
+                            android:layout_width="32dp"
+                            android:layout_height="32dp"
+                            android:background="?attr/selectableItemBackgroundBorderless"
+                            android:src="@drawable/ic_chevron_right"
+                            android:contentDescription="Next Day"
+                            app:tint="?attr/colorOnSurface"/>
+                    </LinearLayout>
 
                     <ImageView
                         android:id="@+id/btnAddCustomActivity"
                         android:layout_width="24dp"
                         android:layout_height="24dp"
-                        android:layout_alignParentEnd="true"
-                        android:layout_centerVertical="true"
                         android:src="@drawable/ic_add"
                         app:tint="?attr/colorPrimary"
                         android:background="?attr/selectableItemBackgroundBorderless"/>
-                </RelativeLayout>
+                </LinearLayout>
 
             </LinearLayout>
 

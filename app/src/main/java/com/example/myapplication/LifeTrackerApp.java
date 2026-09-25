@@ -4,9 +4,9 @@ import android.app.Application;
 import android.content.Intent;
 import java.util.concurrent.ExecutorService;
 
-import com.example.myapplication.helpers.ErrorLogger;
-import com.example.myapplication.helpers.Logger;
-import com.example.myapplication.locationTracking.LocationService;
+import com.example.myapplication.util.ErrorLogger;
+import com.example.myapplication.util.Logger;
+import com.example.myapplication.tracking.location.LocationService;
 
 public class LifeTrackerApp extends Application {
 
