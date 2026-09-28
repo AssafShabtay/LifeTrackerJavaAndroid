@@ -17,8 +17,8 @@
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:paddingStart="16dp"
-            android:paddingEnd="16dp"
             android:paddingTop="16dp"
+            android:paddingEnd="16dp"
             android:paddingBottom="64dp">
 
             <!-- Title Header -->
@@ -49,24 +49,8 @@
                 android:orientation="vertical"
                 android:visibility="visible">
 
-                <!-- Daily Breakdown: Throughout-the-Day Hourly Graph & Top Apps for each day -->
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="24dp"
-                    android:layout_marginBottom="4dp"
-                    android:text="Daily Usage &amp; Top Apps"
-                    android:textAppearance="@style/TextAppearance.Material3.TitleMedium" />
+                <!-- 1. UNIFIED DAILY DIGITAL ACTIVITY CARD -->
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="12dp"
-                    android:text="Hourly activity throughout the day and top used applications"
-                    android:textAppearance="@style/TextAppearance.Material3.BodySmall"
-                    android:textColor="?attr/colorOnSurfaceVariant" />
-
-                <!-- Unified Single Material Card with Day Switch Buttons -->
                 <com.google.android.material.card.MaterialCardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -88,7 +72,6 @@
                             android:gravity="center_vertical"
                             android:orientation="horizontal">
 
-                            <!-- Previous Day Button -->
                             <ImageButton
                                 android:id="@+id/btn_prev_day"
                                 android:layout_width="40dp"
@@ -98,7 +81,6 @@
                                 android:src="@drawable/ic_chevron_left"
                                 app:tint="?attr/colorOnSurface" />
 
-                            <!-- Day Title & Details in Center -->
                             <LinearLayout
                                 android:layout_width="0dp"
                                 android:layout_height="wrap_content"
@@ -125,7 +107,6 @@
                                     tools:text="42 unlocks · Peak 2:00 PM" />
                             </LinearLayout>
 
-                            <!-- Next Day Button -->
                             <ImageButton
                                 android:id="@+id/btn_next_day"
                                 android:layout_width="40dp"
@@ -134,187 +115,24 @@
                                 android:contentDescription="Next Day"
                                 android:src="@drawable/ic_chevron_right"
                                 app:tint="?attr/colorOnSurface" />
-
                         </LinearLayout>
-
-                        <!-- Total Screen Time Badge Banner -->
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="16dp"
-                            android:gravity="center_vertical"
-                            android:orientation="horizontal">
-
-                            <TextView
-                                android:layout_width="0dp"
-                                android:layout_height="wrap_content"
-                                android:layout_weight="1"
-                                android:text="Usage Distribution (24h)"
-                                android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
-                                android:textColor="?attr/colorOnSurfaceVariant" />
-
-                            <com.google.android.material.card.MaterialCardView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                app:cardBackgroundColor="@color/primary_container"
-                                app:cardCornerRadius="14dp"
-                                app:cardElevation="0dp"
-                                app:strokeWidth="0dp">
-
-                                <TextView
-                                    android:id="@+id/tv_daily_card_total_time"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:paddingStart="12dp"
-                                    android:paddingTop="6dp"
-                                    android:paddingEnd="12dp"
-                                    android:paddingBottom="6dp"
-                                    android:textAppearance="@style/TextAppearance.Material3.LabelLarge"
-                                    android:textColor="?attr/colorPrimary"
-                                    tools:text="3h 45m" />
-                            </com.google.android.material.card.MaterialCardView>
-                        </LinearLayout>
-
-                        <!-- 24-Hour Interactive Bar Graph -->
-                        <com.example.myapplication.ui.efficiency.HourlyUsageGraphView
-                            android:id="@+id/graph_daily_hourly_usage"
-                            android:layout_width="match_parent"
-                            android:layout_height="140dp"
-                            android:layout_marginTop="8dp" />
 
                         <View
                             android:layout_width="match_parent"
                             android:layout_height="1dp"
                             android:layout_marginTop="16dp"
-                            android:layout_marginBottom="14dp"
+                            android:layout_marginBottom="16dp"
                             android:background="@color/outline_variant" />
 
-                        <!-- Top Apps for the Selected Day -->
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginBottom="8dp"
-                            android:text="Top Apps for this Day"
-                            android:textAppearance="@style/TextAppearance.Material3.LabelLarge" />
-
-                        <LinearLayout
-                            android:id="@+id/layout_daily_top_apps_list"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="vertical" />
-
-                        <TextView
-                            android:id="@+id/tv_daily_card_no_apps"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:gravity="center"
-                            android:padding="16dp"
-                            android:text="No app usage recorded for this day."
-                            android:textAppearance="@style/TextAppearance.Material3.BodySmall"
-                            android:textColor="?attr/colorOnSurfaceVariant"
-                            android:visibility="gone" />
+                        <!-- Donut Summary + Usage Distribution 24h Graph + Category/Top Apps Breakdown -->
+                        <include
+                            android:id="@+id/card_detailed_phone_usage"
+                            layout="@layout/card_efficiency_detailed_donut" />
 
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 
-                <!-- 2. General Digital Overview Cards (Pickups, Screen Time, Peak Hour) -->
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="10dp"
-                    android:text="General Digital Activity"
-                    android:textAppearance="@style/TextAppearance.Material3.TitleMedium" />
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal">
-
-                    <!-- Pickups / Unlocks Card -->
-                    <com.google.android.material.card.MaterialCardView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginEnd="6dp"
-                        android:layout_weight="1"
-                        app:cardCornerRadius="20dp"
-                        app:cardElevation="0dp"
-                        app:strokeWidth="1dp"
-                        app:strokeColor="@color/outline_variant">
-
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="vertical"
-                            android:padding="16dp">
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="🔓 Pickups"
-                                android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
-                                android:textColor="?attr/colorOnSurfaceVariant" />
-
-                            <TextView
-                                android:id="@+id/tv_device_unlocks"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="4dp"
-                                android:textAppearance="@style/TextAppearance.Material3.TitleLarge"
-                                tools:text="48" />
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="Device unlocks"
-                                android:textAppearance="@style/TextAppearance.Material3.BodySmall"
-                                android:textColor="?attr/colorOnSurfaceVariant" />
-                        </LinearLayout>
-                    </com.google.android.material.card.MaterialCardView>
-
-                    <!-- Peak Usage Hour Card -->
-                    <com.google.android.material.card.MaterialCardView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="6dp"
-                        android:layout_weight="1"
-                        app:cardCornerRadius="20dp"
-                        app:cardElevation="0dp"
-                        app:strokeWidth="1dp"
-                        app:strokeColor="@color/outline_variant">
-
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="vertical"
-                            android:padding="16dp">
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="⏰ Peak Hour"
-                                android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
-                                android:textColor="?attr/colorOnSurfaceVariant" />
-
-                            <TextView
-                                android:id="@+id/tv_peak_usage_hour"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="4dp"
-                                android:textAppearance="@style/TextAppearance.Material3.TitleLarge"
-                                tools:text="2:00 PM" />
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="Busiest digital time"
-                                android:textAppearance="@style/TextAppearance.Material3.BodySmall"
-                                android:textColor="?attr/colorOnSurfaceVariant" />
-                        </LinearLayout>
-                    </com.google.android.material.card.MaterialCardView>
-                </LinearLayout>
-
-
-                <!-- 3. Contextual Insight Cards Carousel -->
+                <!-- 2. CONTEXTUAL INSIGHTS CAROUSEL -->
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -330,36 +148,47 @@
                     android:clipToPadding="false"
                     android:orientation="horizontal" />
 
-                <!-- 4. The Location-Usage Breakdown -->
+                <!-- 3. UNIFIED LOCATION & FOCUS CARD -->
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="24dp"
                     android:layout_marginBottom="4dp"
-                    android:text="Location-Usage Breakdown"
+                    android:text="Location Usage &amp; Focus Drains"
                     android:textAppearance="@style/TextAppearance.Material3.TitleMedium" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="12dp"
-                    android:text="Physical places ranked by phone usage"
+                    android:text="Places ranked by digital time &amp; focus distraction analysis"
                     android:textAppearance="@style/TextAppearance.Material3.BodySmall"
                     android:textColor="?attr/colorOnSurfaceVariant" />
 
                 <com.google.android.material.card.MaterialCardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:layout_marginBottom="16dp"
                     app:cardCornerRadius="24dp"
                     app:cardElevation="0dp"
-                    app:strokeWidth="1dp"
-                    app:strokeColor="@color/outline_variant">
+                    app:strokeColor="@color/outline_variant"
+                    app:strokeWidth="1dp">
 
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="vertical"
                         android:padding="20dp">
+
+                        <!-- Section Header 1: Places Ranked by Usage -->
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="10dp"
+                            android:fontFamily="sans-serif-medium"
+                            android:text="Places Ranked by Phone Usage"
+                            android:textColor="?attr/colorOnSurface"
+                            android:textSize="14sp" />
 
                         <androidx.recyclerview.widget.RecyclerView
                             android:id="@+id/rv_location_usage_ranking"
@@ -371,45 +200,28 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:gravity="center"
-                            android:padding="16dp"
+                            android:padding="12dp"
                             android:text="No place visits recorded yet today."
                             android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
                             android:textColor="?attr/colorOnSurfaceVariant"
                             android:visibility="gone" />
-                    </LinearLayout>
-                </com.google.android.material.card.MaterialCardView>
 
-                <!-- 5. Time-Drain Indicators (Focus locations) -->
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="24dp"
-                    android:layout_marginBottom="4dp"
-                    android:text="Focus Time-Drain Indicators"
-                    android:textAppearance="@style/TextAppearance.Material3.TitleMedium" />
+                        <View
+                            android:layout_width="match_parent"
+                            android:layout_height="1dp"
+                            android:layout_marginTop="16dp"
+                            android:layout_marginBottom="16dp"
+                            android:background="@color/outline_variant" />
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="12dp"
-                    android:text="Apps eating time in focus-designated locations"
-                    android:textAppearance="@style/TextAppearance.Material3.BodySmall"
-                    android:textColor="?attr/colorOnSurfaceVariant" />
-
-                <com.google.android.material.card.MaterialCardView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="16dp"
-                    app:cardCornerRadius="24dp"
-                    app:cardElevation="0dp"
-                    app:strokeWidth="1dp"
-                    app:strokeColor="@color/outline_variant">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:padding="20dp">
+                        <!-- Section Header 2: Focus Time-Drain Indicators -->
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="10dp"
+                            android:fontFamily="sans-serif-medium"
+                            android:text="Focus Location Time-Drains"
+                            android:textColor="?attr/colorOnSurface"
+                            android:textSize="14sp" />
 
                         <LinearLayout
                             android:id="@+id/layout_time_drain_items"
@@ -422,10 +234,11 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:gravity="center"
-                            android:padding="16dp"
+                            android:padding="12dp"
                             android:text="No time drains detected in focus locations today!"
                             android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
                             android:textColor="?attr/colorOnSurfaceVariant" />
+
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 

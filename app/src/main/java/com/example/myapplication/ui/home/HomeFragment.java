@@ -50,6 +50,7 @@ public class HomeFragment extends Fragment {
 
     private MapManager mapManager;
     private CalendarManager calendarManager;
+    private PhoneUsageCardManager phoneUsageCardManager;
 
     private LifeTrackerApp app;
 
@@ -77,6 +78,11 @@ public class HomeFragment extends Fragment {
         ActivityDatabase db = ActivityDatabase.getDatabase(requireContext());
         dao = db.activityDao();
         app = (LifeTrackerApp) requireActivity().getApplication();
+
+        View phoneUsageCard = view.findViewById(R.id.phone_usage_card_content);
+        if (phoneUsageCard != null) {
+            phoneUsageCardManager = new PhoneUsageCardManager(requireContext(), phoneUsageCard);
+        }
 
         if (btnAddCustomActivity != null) {
             btnAddCustomActivity.setOnClickListener(v -> {
@@ -239,6 +245,11 @@ public class HomeFragment extends Fragment {
 
     private void loadTimelineData(Date date) {
         if (date == null) return;
+
+        if (phoneUsageCardManager != null) {
+            phoneUsageCardManager.loadUsageDataForDate(date);
+        }
+
         //get start of the day
         Calendar cal = Calendar.getInstance();
         cal.setTime(date);

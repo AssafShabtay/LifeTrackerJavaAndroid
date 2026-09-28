@@ -1,4 +1,4 @@
-package com.example.myapplication.ui.efficiency;
+package com.example.myapplication.ui.statistics.efficiency;
 
 import android.animation.ValueAnimator;
 import android.content.Context;
@@ -43,7 +43,6 @@ public class HourlyUsageGraphView extends View {
     private final Paint textPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint tooltipBgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint tooltipTextPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint scrubberLinePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
 
     private final RectF barRect = new RectF();
     private final RectF tooltipRect = new RectF();
@@ -98,10 +97,6 @@ public class HourlyUsageGraphView extends View {
         tooltipTextPaint.setFakeBoldText(true);
         tooltipTextPaint.setTextAlign(Paint.Align.CENTER);
         tooltipTextPaint.setAntiAlias(true);
-
-        scrubberLinePaint.setColor(barColorPeak);
-        scrubberLinePaint.setStrokeWidth(dpToPx(1.5f));
-        scrubberLinePaint.setStyle(Paint.Style.STROKE);
 
         setLayerType(LAYER_TYPE_SOFTWARE, null); //  shadow layer
     }
@@ -234,9 +229,6 @@ public class HourlyUsageGraphView extends View {
 
         // Draw Interactive Tooltip if an hour is selected
         if (selectedHour >= 0 && selectedCenterX >= 0) {
-            // Draw subtle vertical scrubber indicator
-            canvas.drawLine(selectedCenterX, paddingTop, selectedCenterX, yBottom, scrubberLinePaint);
-
             int minutes = (int) Math.round((double) selectedDuration / 60000.0);
             int hour12 = selectedHour % 12 == 0 ? 12 : selectedHour % 12;
             String amPm = selectedHour >= 12 ? "PM" : "AM";

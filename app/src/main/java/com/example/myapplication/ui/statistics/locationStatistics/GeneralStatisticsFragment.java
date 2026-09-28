@@ -1,4 +1,4 @@
-package com.example.myapplication.ui.statistics;
+package com.example.myapplication.ui.statistics.locationStatistics;
 
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -23,10 +23,15 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class StatisticsFragment extends Fragment implements HomeAddressPickerBottomSheet.OnHomeAddressSelectedListener, WorkAddressPickerBottomSheet.OnWorkAddressSelectedListener, HomeStatisticsManager.HomeStatisticsListener, WorkStatisticsManager.WorkStatisticsListener, PunctualityStatisticsManager.PunctualityStatisticsListener, LlmInsightsManager.LlmInsightsListener {
+public class GeneralStatisticsFragment extends Fragment implements
+        HomeAddressPickerBottomSheet.OnHomeAddressSelectedListener,
+        WorkAddressPickerBottomSheet.OnWorkAddressSelectedListener,
+        HomeStatisticsManager.HomeStatisticsListener,
+        WorkStatisticsManager.WorkStatisticsListener,
+        PunctualityStatisticsManager.PunctualityStatisticsListener,
+        LlmInsightsManager.LlmInsightsListener {
 
-    private static final String TAG = "StatisticsFragment";
-
+    private static final String TAG = "GeneralStatisticsFragment";
 
     private List<String> topPlaceIds = new ArrayList<>();
     private Map<String, String> placeNamesMap = new HashMap<>();
@@ -36,7 +41,6 @@ public class StatisticsFragment extends Fragment implements HomeAddressPickerBot
 
     private TextView btnPrevPlace;
     private TextView btnNextPlace;
-
 
     private Button btnChangeHomeAddress;
     private Button btnChangeWorkAddress;
@@ -52,6 +56,7 @@ public class StatisticsFragment extends Fragment implements HomeAddressPickerBot
     private LlmInsightsManager llmInsightsManager;
     private SharedPreferences sharedPreferences;
     private SharedPreferences.OnSharedPreferenceChangeListener preferenceChangeListener;
+
     @Override
     public void onHomeAddressSelected(String address) {
         homeStatisticsManager.onHomeAddressSelected(address);
@@ -65,7 +70,7 @@ public class StatisticsFragment extends Fragment implements HomeAddressPickerBot
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        return inflater.inflate(R.layout.fragment_statistics, container, false);
+        return inflater.inflate(R.layout.fragment_general_statistics, container, false);
     }
 
     @Override
@@ -74,7 +79,6 @@ public class StatisticsFragment extends Fragment implements HomeAddressPickerBot
 
         Button btnOpenHomeAddressPicker = view.findViewById(R.id.btnOpenHomeAddressPicker);
         btnChangeHomeAddress = view.findViewById(R.id.btnChangeHomeAddress);
-
 
         Button btnOpenWorkAddressPicker = view.findViewById(R.id.btnOpenWorkAddressPicker);
         btnChangeWorkAddress = view.findViewById(R.id.btnChangeWorkAddress);
@@ -99,11 +103,11 @@ public class StatisticsFragment extends Fragment implements HomeAddressPickerBot
                 punctualityStatisticsManager.setCurrentPlaceIndex(currentPlaceIndex + 1);
             }
         });
+
         btnOpenHomeAddressPicker.setOnClickListener(v -> {
             HomeAddressPickerBottomSheet bottomSheet = HomeAddressPickerBottomSheet.newInstance(this, placeDuration);
             bottomSheet.show(getChildFragmentManager(), bottomSheet.getTag());
         });
-
 
         btnOpenWorkAddressPicker.setOnClickListener(v -> {
             WorkAddressPickerBottomSheet bottomSheet = WorkAddressPickerBottomSheet.newInstance(this, placeDuration);
@@ -135,12 +139,15 @@ public class StatisticsFragment extends Fragment implements HomeAddressPickerBot
         super.onResume();
         loadStatistics();
     }
+
     @Override
-    public void onDestroyView() {super.onDestroyView();
+    public void onDestroyView() {
+        super.onDestroyView();
         if (sharedPreferences != null && preferenceChangeListener != null) {
             sharedPreferences.unregisterOnSharedPreferenceChangeListener(preferenceChangeListener);
         }
     }
+
     private void loadStatistics() {
         if (!isAdded()) return;
 
@@ -148,7 +155,6 @@ public class StatisticsFragment extends Fragment implements HomeAddressPickerBot
         punctualityStatisticsManager.loadArrivalDepartureStats();
         llmInsightsManager.loadLlmInsights();
         workStatisticsManager.loadWorkStatistics();
-
     }
 
     @Override

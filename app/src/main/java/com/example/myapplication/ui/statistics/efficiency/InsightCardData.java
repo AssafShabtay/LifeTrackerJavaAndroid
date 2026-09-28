@@ -1,4 +1,4 @@
-package com.example.myapplication.ui.efficiency;
+package com.example.myapplication.ui.statistics.efficiency;
 
 public class InsightCardData {
     private final String title;

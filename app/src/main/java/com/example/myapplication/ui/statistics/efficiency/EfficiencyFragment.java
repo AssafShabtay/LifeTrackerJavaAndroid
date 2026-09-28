@@ -1,4 +1,4 @@
-package com.example.myapplication.ui.efficiency;
+package com.example.myapplication.ui.statistics.efficiency;
 
 import android.os.Bundle;
 import android.os.Handler;
@@ -12,7 +12,6 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
 import com.example.myapplication.R;
-import com.example.myapplication.ui.efficiency.EfficiencyStatsManager;
 
 public class EfficiencyFragment extends Fragment {
 
@@ -29,7 +28,6 @@ public class EfficiencyFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
         efficiencyStatsManager = new EfficiencyStatsManager(requireContext(), mainHandler, view);
-        efficiencyStatsManager.loadEfficiencyStats();
     }
 
     @Override

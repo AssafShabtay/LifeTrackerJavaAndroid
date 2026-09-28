@@ -1,4 +1,4 @@
-package com.example.myapplication.ui.efficiency;
+package com.example.myapplication.ui.statistics.efficiency;
 import com.example.myapplication.tracking.usage.DailyUsageItem;
 import com.example.myapplication.tracking.usage.UsageStatsHelper;
 
@@ -14,7 +14,6 @@ import android.widget.TextView;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.example.myapplication.LifeTrackerApp;
 import com.example.myapplication.R;
 import com.example.myapplication.data.db.ActivityDao;
 import com.example.myapplication.data.db.ActivityDatabase;
@@ -70,6 +69,8 @@ public class EfficiencyStatsManager {
 
     private List<DailyUsageItem> dailyHistoryList = new ArrayList<>();
     private int currentDayIndex = 0; // 0 = Today, 1 = Yesterday, etc.
+
+    private DetailedPhoneUsageCardManager detailedCardManager;
 
     public EfficiencyStatsManager(Context context, Handler mainHandler, View rootView) {
         this.context = context;
@@ -132,6 +133,11 @@ public class EfficiencyStatsManager {
 
         if (btnGrantUsageAccess != null) {
             btnGrantUsageAccess.setOnClickListener(v -> UsageStatsHelper.openUsageAccessSettings(context));
+        }
+
+        View detailedCard = rootView.findViewById(R.id.card_detailed_phone_usage);
+        if (detailedCard != null) {
+            detailedCardManager = new DetailedPhoneUsageCardManager(context, detailedCard);
         }
     }
 
@@ -221,7 +227,7 @@ public class EfficiencyStatsManager {
                 }
                 agg.totalStayDurationMs += stayDuration;
                 // Query digital usage during this specific stay
-                Map<String, Long> appUsageDuringStay = UsageStatsHelper.getForegroundTimePerPackage(context, sMs, eMs);
+                Map<String, Long> appUsageDuringStay = UsageStatsHelper.getUsageTimePerPackage(context, sMs, eMs);
                 for (Map.Entry<String, Long> entry : appUsageDuringStay.entrySet()) {
                     Long prev = agg.appUsageMap.get(entry.getKey());
                     agg.appUsageMap.put(entry.getKey(), (prev != null ? prev : 0L) + entry.getValue());
@@ -321,6 +327,11 @@ public class EfficiencyStatsManager {
         if (currentDayIndex >= dailyHistoryList.size()) currentDayIndex = dailyHistoryList.size() - 1;
 
         DailyUsageItem item = dailyHistoryList.get(currentDayIndex);
+        if (item == null) return;
+
+        if (detailedCardManager != null) {
+            detailedCardManager.updateForDate(item.getDate());
+        }
 
         // Update button states & opacity for crisp UX
         if (btnPrevDay != null) {
@@ -435,7 +446,7 @@ public class EfficiencyStatsManager {
             long[] hourlyBuckets = UsageStatsHelper.getHourlyUsageBuckets(context, dayStartMs, dayEndMs);
             String peakHour = UsageStatsHelper.getPeakUsageHour(context, dayStartMs, dayEndMs);
 
-            Map<String, Long> appUsageMap = UsageStatsHelper.getForegroundTimePerPackage(context, dayStartMs, dayEndMs);
+            Map<String, Long> appUsageMap = UsageStatsHelper.getUsageTimePerPackage(context, dayStartMs, dayEndMs);
             List<UsageStatsHelper.AppUsageInfo> topApps = UsageStatsHelper.getSortedAppUsageList(context, appUsageMap);
 
             history.add(new DailyUsageItem(

@@ -1,5 +1,4 @@
-package com.example.myapplication.ui.statistics;
-import com.example.myapplication.tracking.location.ActivityTrackingUtils;
+package com.example.myapplication.ui.statistics.locationStatistics;
 
 import static com.example.myapplication.tracking.location.ActivityTrackingUtils.calculateRadiusBox;
 import static com.example.myapplication.tracking.location.ActivityTrackingUtils.getCoordinatesFromAddress;

@@ -1,4 +1,4 @@
-package com.example.myapplication.ui.efficiency;
+package com.example.myapplication.ui.statistics.efficiency;
 import com.example.myapplication.tracking.usage.UsageStatsHelper;
 
 import android.content.Context;

@@ -3,11 +3,13 @@ package com.example.myapplication.tracking.usage;
 import android.app.AppOpsManager;
 import android.app.usage.UsageEvents;
 import android.app.usage.UsageStatsManager;
+import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.graphics.drawable.Drawable;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Process;
 import android.provider.Settings;
@@ -34,10 +36,6 @@ public class UsageStatsHelper {
             this.totalTimeInForegroundMs = totalTimeInForegroundMs;
         }
 
-        public String getPackageName() {
-            return packageName;
-        }
-
         public String getAppName() {
             return appName;
         }
@@ -57,7 +55,7 @@ public class UsageStatsHelper {
         if (appOps == null) return false;
         int mode;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            mode = appOps.unsafeCheckOpNoThrow(
+            mode = appOps.checkOpNoThrow(
                     AppOpsManager.OPSTR_GET_USAGE_STATS,
                     Process.myUid(),
                     context.getPackageName()
@@ -73,16 +71,22 @@ public class UsageStatsHelper {
     }
 
     public static void openUsageAccessSettings(Context context) {
-        Intent intent = new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS);
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        context.startActivity(intent);
+        try {
+            // try to open the usage access for the specific app
+            Intent intent = new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS);
+            intent.setData(Uri.parse("package:" + context.getPackageName()));
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            context.startActivity(intent);
+        } catch (ActivityNotFoundException e) {
+            // open the general Usage Access settings list
+            Intent fallbackIntent = new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS);
+            fallbackIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            context.startActivity(fallbackIntent);
+        }
     }
 
-    /**
-     * Accurately aggregates foreground duration per package between startTime and endTime
-     * using UsageEvents.
-     */
-    public static Map<String, Long> getForegroundTimePerPackage(Context context, long startTime, long endTime) {
+
+    public static Map<String, Long> getUsageTimePerPackage(Context context, long startTime, long endTime) {
         Map<String, Long> usageMap = new HashMap<>();
         if (!hasUsageAccessPermission(context) || startTime >= endTime) {
             return usageMap;
@@ -95,7 +99,7 @@ public class UsageStatsHelper {
         if (usageEvents == null) return usageMap;
 
         UsageEvents.Event currentEvent = new UsageEvents.Event();
-        Map<String, Long> lastForegroundStart = new HashMap<>();
+        Map<String, Long> lastAppStart = new HashMap<>();
 
         while (usageEvents.hasNextEvent()) {
             usageEvents.getNextEvent(currentEvent);
@@ -106,36 +110,32 @@ public class UsageStatsHelper {
             long timestamp = currentEvent.getTimeStamp();
 
             if (eventType == UsageEvents.Event.ACTIVITY_RESUMED) {
-                lastForegroundStart.put(pkg, timestamp);
+                lastAppStart.put(pkg, timestamp);
             } else if (eventType == UsageEvents.Event.ACTIVITY_PAUSED) {
-                Long start = lastForegroundStart.remove(pkg);
+                Long start = lastAppStart.remove(pkg);
                 if (start != null) {
                     long duration = timestamp - start;
                     if (duration > 0) {
-                        Long existing = usageMap.get(pkg);
-                        usageMap.put(pkg, (existing != null ? existing : 0L) + duration);
+                        usageMap.merge(pkg, duration, Long::sum); // add duration to existing or create new entry
                     }
                 }
             }
         }
 
-        // Account for any app still in foreground at endTime
-        for (Map.Entry<String, Long> entry : lastForegroundStart.entrySet()) {
+        // Account for any app that doesn't have an endtime
+        for (Map.Entry<String, Long> entry : lastAppStart.entrySet()) {
             long duration = endTime - entry.getValue();
             if (duration > 0) {
-                Long existing = usageMap.get(entry.getKey());
-                usageMap.put(entry.getKey(), (existing != null ? existing : 0L) + duration);
+                usageMap.merge(entry.getKey(), duration, Long::sum); // add duration to existing or create new entry
             }
         }
 
         return usageMap;
     }
 
-    /**
-     * Calculates total screen time (foreground app time) in milliseconds in the given interval.
-     */
     public static long getTotalScreenTimeMs(Context context, long startTime, long endTime) {
-        Map<String, Long> packageUsage = getForegroundTimePerPackage(context, startTime, endTime);
+        /// Calculates total screen time
+        Map<String, Long> packageUsage = getUsageTimePerPackage(context, startTime, endTime);
         long total = 0;
         for (long duration : packageUsage.values()) {
             total += duration;
@@ -143,9 +143,6 @@ public class UsageStatsHelper {
         return total;
     }
 
-    /**
-     * Counts device unlock / interactive pickups in the given interval.
-     */
     public static int getDeviceUnlockCount(Context context, long startTime, long endTime) {
         if (!hasUsageAccessPermission(context) || startTime >= endTime) return 0;
         UsageStatsManager usageStatsManager = (UsageStatsManager) context.getSystemService(Context.USAGE_STATS_SERVICE);
@@ -160,17 +157,13 @@ public class UsageStatsHelper {
         while (usageEvents.hasNextEvent()) {
             usageEvents.getNextEvent(currentEvent);
             int type = currentEvent.getEventType();
-            // KEYGUARD_HIDDEN is event 18 in API 28+, SCREEN_INTERACTIVE is event 15
-            if (type == 18 || type == 15) {
+            if (type == 18) { // KEYGUARD_HIDDEN is event 18
                 unlockCount++;
             }
         }
         return unlockCount;
     }
 
-    /**
-     * Calculates the 24 hourly buckets (in milliseconds) for usage between startTime and endTime.
-     */
     public static long[] getHourlyUsageBuckets(Context context, long startTime, long endTime) {
         long[] hourlyBucketsMs = new long[24];
         if (!hasUsageAccessPermission(context) || startTime >= endTime) return hourlyBucketsMs;
@@ -181,7 +174,7 @@ public class UsageStatsHelper {
         if (usageEvents == null) return hourlyBucketsMs;
 
         UsageEvents.Event currentEvent = new UsageEvents.Event();
-        Map<String, Long> lastForegroundStart = new HashMap<>();
+        Map<String, Long> lastAppStart = new HashMap<>();
         Calendar cal = Calendar.getInstance();
 
         while (usageEvents.hasNextEvent()) {
@@ -193,16 +186,17 @@ public class UsageStatsHelper {
             long timestamp = currentEvent.getTimeStamp();
 
             if (eventType == UsageEvents.Event.ACTIVITY_RESUMED) {
-                lastForegroundStart.put(pkg, timestamp);
+                lastAppStart.put(pkg, timestamp);
             } else if (eventType == UsageEvents.Event.ACTIVITY_PAUSED) {
-                Long start = lastForegroundStart.remove(pkg);
+                Long start = lastAppStart.remove(pkg);
                 if (start != null && timestamp > start) {
                     addDurationToHourlyBuckets(hourlyBucketsMs, start, timestamp, cal);
                 }
             }
         }
 
-        for (Map.Entry<String, Long> entry : lastForegroundStart.entrySet()) {
+        // Account for any app that doesn't have an endtime
+        for (Map.Entry<String, Long> entry : lastAppStart.entrySet()) {
             if (endTime > entry.getValue()) {
                 addDurationToHourlyBuckets(hourlyBucketsMs, entry.getValue(), endTime, cal);
             }
@@ -249,9 +243,83 @@ public class UsageStatsHelper {
         }
     }
 
-    /**
-     * Calculates peak usage hour formatted string (e.g. "2:00 PM").
-     */
+    public static String getAppCategoryName(PackageManager pm, String pkg) {
+        if (pkg == null) return "Other";
+        String lowerPkg = pkg.toLowerCase(Locale.ROOT);
+
+        // 1. Query ApplicationInfo.category on API 26+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && pm != null) {
+            try {
+                ApplicationInfo appInfo = pm.getApplicationInfo(pkg, 0);
+                int cat = appInfo.category;
+                switch (cat) {
+                    case ApplicationInfo.CATEGORY_GAME:
+                        return "Games";
+                    case ApplicationInfo.CATEGORY_AUDIO:
+                        return "Audio";
+                    case ApplicationInfo.CATEGORY_VIDEO:
+                        return "Video";
+                    case ApplicationInfo.CATEGORY_IMAGE:
+                        return "Photos";
+                    case ApplicationInfo.CATEGORY_SOCIAL:
+                        return "Social";
+                    case ApplicationInfo.CATEGORY_NEWS:
+                        return "News";
+                    case ApplicationInfo.CATEGORY_MAPS:
+                        return "Navigation";
+                    case ApplicationInfo.CATEGORY_PRODUCTIVITY:
+                        return "Productivity";
+                    case ApplicationInfo.CATEGORY_ACCESSIBILITY:
+                        return "Tools";
+                }
+            } catch (Exception ignored) {
+            }
+        }
+
+        // 2. Keyword fallback matching
+        if (lowerPkg.contains("instagram") || lowerPkg.contains("facebook") || lowerPkg.contains("whatsapp") ||
+                lowerPkg.contains("twitter") || lowerPkg.contains("tiktok") || lowerPkg.contains("telegram") ||
+                lowerPkg.contains("snapchat") || lowerPkg.contains("reddit") || lowerPkg.contains("linkedin") ||
+                lowerPkg.contains("pinterest") || lowerPkg.contains("messenger") || lowerPkg.contains("discord") ||
+                lowerPkg.contains("x.android") || lowerPkg.contains("threads")) {
+            return "Social";
+        }
+
+        if (lowerPkg.contains("youtube") || lowerPkg.contains("netflix") || lowerPkg.contains("spotify") ||
+                lowerPkg.contains("twitch") || lowerPkg.contains("hulu") || lowerPkg.contains("disney") ||
+                lowerPkg.contains("vlc") || lowerPkg.contains("music") || lowerPkg.contains("podcast") ||
+                lowerPkg.contains("primevideo") || lowerPkg.contains("hbo")) {
+            return "Entertainment";
+        }
+
+        if (lowerPkg.contains("chrome") || lowerPkg.contains("browser") || lowerPkg.contains("firefox") ||
+                lowerPkg.contains("opera") || lowerPkg.contains("edge") || lowerPkg.contains("duckduckgo")) {
+            return "Browsing";
+        }
+
+        if (lowerPkg.contains("gmail") || lowerPkg.contains("outlook") || lowerPkg.contains("slack") ||
+                lowerPkg.contains("teams") || lowerPkg.contains("docs") || lowerPkg.contains("sheets") ||
+                lowerPkg.contains("calendar") || lowerPkg.contains("notes") || lowerPkg.contains("keep") ||
+                lowerPkg.contains("calculator") || lowerPkg.contains("clock") || lowerPkg.contains("android.studio") ||
+                lowerPkg.contains("drive") || lowerPkg.contains("zoom") || lowerPkg.contains("notion") ||
+                lowerPkg.contains("word") || lowerPkg.contains("excel")) {
+            return "Productivity";
+        }
+
+        if (lowerPkg.contains("game") || lowerPkg.contains("unity") || lowerPkg.contains("supercell") ||
+                lowerPkg.contains("roblox") || lowerPkg.contains("pubg") || lowerPkg.contains("chess") ||
+                lowerPkg.contains("minecraft") || lowerPkg.contains("candycrush")) {
+            return "Games";
+        }
+
+        if (lowerPkg.contains("map") || lowerPkg.contains("moovit") || lowerPkg.contains("waze") || lowerPkg.contains("uber") ||
+                lowerPkg.contains("lyft") || lowerPkg.contains("transit")) {
+            return "Navigation";
+        }
+
+        return "Other";
+    }
+
     public static String getPeakUsageHour(Context context, long startTime, long endTime) {
         long[] hourlyBucketsMs = getHourlyUsageBuckets(context, startTime, endTime);
 
@@ -273,11 +341,6 @@ public class UsageStatsHelper {
         return String.format(Locale.getDefault(), "%d:00 %s", hour12, amPm);
     }
 
-    /**
-     * Returns a sorted list of AppUsageInfo with app names and icons resolved.
-     * If an app name or icon cannot be resolved (system services/hidden daemons),
-     * a clean user-friendly fallback is applied or the item is filtered if irrelevant.
-     */
     public static List<AppUsageInfo> getSortedAppUsageList(Context context, Map<String, Long> packageUsage) {
         PackageManager pm = context.getPackageManager();
         List<AppUsageInfo> result = new ArrayList<>();
@@ -287,10 +350,10 @@ public class UsageStatsHelper {
             long timeMs = entry.getValue();
             if (timeMs <= 0 || pkg == null) continue;
 
-            // Filter internal android system daemons that are not user apps
-            if (pkg.equals("android") || pkg.equals("com.google.android.gms") || pkg.equals("com.google.android.googlequicksearchbox:search")) {
-                continue;
-            }
+            //// Filter internal android system daemons that are not user apps
+            //if (pkg.equals("android") || pkg.equals("com.google.android.gms") || pkg.equals("com.google.android.googlequicksearchbox:search")) {
+            //    continue;
+            //}
 
             String appName = null;
             Drawable icon = null;
@@ -304,7 +367,7 @@ public class UsageStatsHelper {
             } catch (Exception ignored) {
             }
 
-            // If appName is still null or equals the raw package name, format a clean friendly name
+            //  format a clean friendly name
             if (appName == null || appName.equals(pkg) || appName.contains(".")) {
                 appName = cleanPackageNameToAppName(pkg);
             }
@@ -325,7 +388,7 @@ public class UsageStatsHelper {
             return null;
         }
 
-        Map<String, Long> packageUsage = getForegroundTimePerPackage(context, startTime, endTime);
+        Map<String, Long> packageUsage = getUsageTimePerPackage(context, startTime, endTime);
         long totalScreenTimeMs = 0;
         for (long duration : packageUsage.values()) {
             totalScreenTimeMs += duration;

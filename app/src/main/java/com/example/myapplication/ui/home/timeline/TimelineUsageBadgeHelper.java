@@ -16,7 +16,7 @@ import androidx.core.content.ContextCompat;
 import androidx.core.graphics.ColorUtils;
 
 import com.example.myapplication.R;
-import com.example.myapplication.ui.efficiency.EfficiencyStatsManager;
+import com.example.myapplication.ui.statistics.efficiency.EfficiencyStatsManager;
 import com.example.myapplication.tracking.usage.TimelineItemUsageData;
 import com.example.myapplication.tracking.usage.UsageStatsHelper;
 import com.google.android.material.progressindicator.LinearProgressIndicator;
