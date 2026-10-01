@@ -25,7 +25,9 @@ jobs:
       run: chmod +x gradlew
 
     - name: Create secrets.properties
-      run: echo "GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }}" >> secrets.properties
+      run: |
+        echo "GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }}" >> secrets.properties
+        echo "GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }}" >> app/secrets.properties
 
     - name: Build with Gradle
       run: ./gradlew assembleDebug
