@@ -25,8 +25,14 @@ jobs:
       run: chmod +x gradlew
     - name: Inject API Key
       run: |
-        echo "GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }}" > app/secrets.properties
-        echo "MAPS_API_KEY=${{ secrets.GOOGLE_API_KEY }}" >> app/secrets.properties
+        echo "GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }}" > secrets.properties
+        echo "MAPS_API_KEY=${{ secrets.GOOGLE_API_KEY }}" >> secrets.properties
+        cp secrets.properties app/secrets.properties
+        cp secrets.properties local.defaults.properties
+        cp secrets.properties app/local.defaults.properties
+        
+    - name: Build with Gradle
+      run: ./gradlew clean assembleDebug
 
     - name: Build with Gradle
       run: ./gradlew clean assembleDebug
