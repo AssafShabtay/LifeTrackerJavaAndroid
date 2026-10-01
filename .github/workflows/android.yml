@@ -23,18 +23,12 @@ jobs:
 
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
-      
-    - name: Verify Secret Injection
-      run: |
-        if grep -q "GOOGLE_API_KEY" local.properties; then
-          echo "Key successfully written to local.properties"
-        else
-          echo "Failed to write key"
-          exit 1
-        fi
-    - name: Build with Gradle
-      run: ./gradlew assembleDebug -PGOOGLE_API_KEY="${{ secrets.GOOGLE_API_KEY }}"
 
+    - name: Create local.properties
+      run: echo "GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }}" >> secrets.properties
+
+    - name: Build with Gradle
+      run: ./gradlew assembleDebug
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
