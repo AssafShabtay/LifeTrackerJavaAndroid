@@ -23,12 +23,7 @@ jobs:
 
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
-
-    - name: Create secrets.properties
-      run: |
-        echo "GOOGLE_API_KEY=AIzaSyCDOinpnf6k7Qi2QfJWZZc81m0SwKNoAAQ" >> secrets.properties
-        echo "GOOGLE_API_KEY=AIzaSyCDOinpnf6k7Qi2QfJWZZc81m0SwKNoAAQ" >> app/secrets.properties
-
+      
     - name: Build with Gradle
       run: ./gradlew assembleDebug
 
