@@ -24,7 +24,7 @@ jobs:
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
 
-    - name: Create local.properties
+    - name: Create secrets.properties
       run: echo "GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }}" >> secrets.properties
 
     - name: Build with Gradle
