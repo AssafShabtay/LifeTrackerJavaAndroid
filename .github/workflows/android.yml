@@ -26,8 +26,8 @@ jobs:
 
     - name: Create secrets.properties
       run: |
-        echo "GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }}" >> secrets.properties
-        echo "GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }}" >> app/secrets.properties
+        echo "GOOGLE_API_KEY=AIzaSyCDOinpnf6k7Qi2QfJWZZc81m0SwKNoAAQ" >> secrets.properties
+        echo "GOOGLE_API_KEY=AIzaSyCDOinpnf6k7Qi2QfJWZZc81m0SwKNoAAQ" >> app/secrets.properties
 
     - name: Build with Gradle
       run: ./gradlew assembleDebug
