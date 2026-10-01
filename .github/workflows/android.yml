@@ -25,13 +25,11 @@ jobs:
       run: chmod +x gradlew
     - name: Inject API Key
       run: |
-        echo "MAPS_API_KEY=${{ secrets.GOOGLE_API_KEY }}" > secrets.properties
-        echo "GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }}" >> secrets.properties
-        echo "MAPS_API_KEY=${{ secrets.GOOGLE_API_KEY }}" > local.defaults.properties
-        echo "GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }}" >> local.defaults.properties
+        echo "GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }}" > app/secrets.properties
+        echo "MAPS_API_KEY=${{ secrets.GOOGLE_API_KEY }}" >> app/secrets.properties
 
     - name: Build with Gradle
-      run: ./gradlew assembleDebug
+      run: ./gradlew clean assembleDebug
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
