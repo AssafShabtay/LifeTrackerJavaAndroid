@@ -30,3 +30,6 @@ jobs:
         name: debug-apk
         path: app/build/outputs/apk/debug/**/*.apk
 
+    - name: Set up local.properties
+      run: |
+        echo "MAPS_API_KEY=${{ secrets.MAPS_API_KEY }}" >> local.properties
