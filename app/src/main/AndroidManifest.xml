@@ -33,7 +33,7 @@
 
         <meta-data
             android:name="com.google.android.geo.API_KEY"
-            android:value="${GOOGLE_API_KEY}" />
+            android:value="AIzaSyDxjm0YAku75ZCV9-fq1k9dwGH0KeW1AJc />
 
         <activity
             android:name=".ui.home.map.MapPickerActivity"
