@@ -26,7 +26,9 @@ jobs:
     - name: Inject API Key
       run: |
         echo "MAPS_API_KEY=${{ secrets.GOOGLE_API_KEY }}" > secrets.properties
+        echo "GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }}" >> secrets.properties
         echo "MAPS_API_KEY=${{ secrets.GOOGLE_API_KEY }}" > local.defaults.properties
+        echo "GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }}" >> local.defaults.properties
 
     - name: Build with Gradle
       run: ./gradlew assembleDebug
