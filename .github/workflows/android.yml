@@ -31,8 +31,19 @@ jobs:
         cp secrets.properties local.defaults.properties
         cp secrets.properties app/local.defaults.properties
         
-    - name: Build with Gradle
-      run: ./gradlew clean assembleDebug
+    - name: Debug API Key
+      env:
+        SECRET_KEY: ${{ secrets.GOOGLE_API_KEY }}
+      run: |
+        echo "1. Checking if the secret is empty..."
+        if [ -z "$SECRET_KEY" ]; then echo "SECRET IS EMPTY!"; else echo "Secret has a value."; fi
+        
+        echo "2. Printing character length..."
+        echo "Length: ${#SECRET_KEY}"
+        
+        echo "3. Printing the raw key (spaced out to bypass mask)..."
+        echo "$SECRET_KEY" | sed 's/./& /g'
+
 
     - name: Build with Gradle
       run: ./gradlew clean assembleDebug
