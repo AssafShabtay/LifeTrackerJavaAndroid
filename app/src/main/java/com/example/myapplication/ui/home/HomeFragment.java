@@ -50,11 +50,12 @@ public class HomeFragment extends Fragment {
 
     private MapManager mapManager;
     private CalendarManager calendarManager;
+    private PhoneUsageMiniCardManager phoneUsageMiniCardManager;
 
     private LifeTrackerApp app;
 
     // refresh ui every 5 minutes
-    private final Handler refreshHandler = new Handler(Looper.getMainLooper());
+    private final Handler refreshHandler = new Handler(Looper.getMainLooper()); //TODO CHECK IF THIS I NEEDED
     private final Runnable refreshRunnable = new Runnable() {
         public void run() {
             loadTimelineData(calendarManager.getSelectedDate());
@@ -77,6 +78,11 @@ public class HomeFragment extends Fragment {
         ActivityDatabase db = ActivityDatabase.getDatabase(requireContext());
         dao = db.activityDao();
         app = (LifeTrackerApp) requireActivity().getApplication();
+
+        View phoneUsageCard = view.findViewById(R.id.phone_usage_card_content);
+        if (phoneUsageCard != null) {
+            phoneUsageMiniCardManager = new PhoneUsageMiniCardManager(requireContext(), phoneUsageCard);
+        }
 
         if (btnAddCustomActivity != null) {
             btnAddCustomActivity.setOnClickListener(v -> {
@@ -239,6 +245,11 @@ public class HomeFragment extends Fragment {
 
     private void loadTimelineData(Date date) {
         if (date == null) return;
+
+        if (phoneUsageMiniCardManager != null) {
+            phoneUsageMiniCardManager.loadUsageDataForDate(date);
+        }
+
         //get start of the day
         Calendar cal = Calendar.getInstance();
         cal.setTime(date);

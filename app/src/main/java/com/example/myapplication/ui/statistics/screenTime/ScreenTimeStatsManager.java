@@ -1,4 +1,4 @@
-package com.example.myapplication.ui.efficiency;
+package com.example.myapplication.ui.statistics.screenTime;
 import com.example.myapplication.tracking.usage.DailyUsageItem;
 import com.example.myapplication.tracking.usage.UsageStatsHelper;
 
@@ -7,6 +7,7 @@ import android.content.SharedPreferences;
 import android.os.Handler;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -14,13 +15,14 @@ import android.widget.TextView;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.example.myapplication.LifeTrackerApp;
 import com.example.myapplication.R;
 import com.example.myapplication.data.db.ActivityDao;
 import com.example.myapplication.data.db.ActivityDatabase;
 import com.example.myapplication.data.model.MovementActivity;
 import com.example.myapplication.data.model.StillLocation;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -31,7 +33,7 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class EfficiencyStatsManager {
+public class ScreenTimeStatsManager {
 
     private final Context context;
     private final Handler mainHandler;
@@ -41,11 +43,12 @@ public class EfficiencyStatsManager {
     // UI elements
     private View permissionPromptCard;
     private Button btnGrantUsageAccess;
-    private View efficiencyContentLayout;
+    private View screenTimeContentLayout;
 
     // General Digital Activity
     private TextView tvDeviceUnlocks;
     private TextView tvPeakUsageHour;
+    private TextView tvIdleScreenTime;
 
     // Contextual Insights
     private RecyclerView rvInsights;
@@ -59,8 +62,8 @@ public class EfficiencyStatsManager {
     private TextView tvNoTimeDrains;
 
     // Daily Usage Card Views (Interactive Day Switcher + Graph + Top Apps)
-    private android.widget.ImageButton btnPrevDay;
-    private android.widget.ImageButton btnNextDay;
+    private ImageButton btnPrevDay;
+    private ImageButton btnNextDay;
     private TextView tvDailyCardTitle;
     private TextView tvDailyCardUnlocks;
     private TextView tvDailyCardTotalTime;
@@ -71,7 +74,9 @@ public class EfficiencyStatsManager {
     private List<DailyUsageItem> dailyHistoryList = new ArrayList<>();
     private int currentDayIndex = 0; // 0 = Today, 1 = Yesterday, etc.
 
-    public EfficiencyStatsManager(Context context, Handler mainHandler, View rootView) {
+    private DetailedPhoneUsageCardManager detailedCardManager;
+
+    public ScreenTimeStatsManager(Context context, Handler mainHandler, View rootView) {
         this.context = context;
         this.mainHandler = mainHandler;
         this.rootView = rootView;
@@ -82,10 +87,16 @@ public class EfficiencyStatsManager {
     private void initViews() {
         permissionPromptCard = rootView.findViewById(R.id.card_usage_permission);
         btnGrantUsageAccess = rootView.findViewById(R.id.btn_grant_usage_permission);
-        efficiencyContentLayout = rootView.findViewById(R.id.efficiency_content_layout);
+        screenTimeContentLayout = rootView.findViewById(R.id.screen_time_content_layout);
 
         tvDeviceUnlocks = rootView.findViewById(R.id.tv_device_unlocks);
         tvPeakUsageHour = rootView.findViewById(R.id.tv_peak_usage_hour);
+        tvIdleScreenTime = rootView.findViewById(R.id.tv_idle_screen_time);
+
+        View cardIdleTime = rootView.findViewById(R.id.card_idle_time);
+        if (cardIdleTime != null) {
+            cardIdleTime.setOnClickListener(v -> showIdleTimeExplanationDialog());
+        }
 
         // Daily Usage Card Views
         btnPrevDay = rootView.findViewById(R.id.btn_prev_day);
@@ -133,18 +144,23 @@ public class EfficiencyStatsManager {
         if (btnGrantUsageAccess != null) {
             btnGrantUsageAccess.setOnClickListener(v -> UsageStatsHelper.openUsageAccessSettings(context));
         }
+
+        View detailedCard = rootView.findViewById(R.id.card_detailed_phone_usage);
+        if (detailedCard != null) {
+            detailedCardManager = new DetailedPhoneUsageCardManager(context, detailedCard);
+        }
     }
 
-    public void loadEfficiencyStats() {
+    public void loadscreenTimeStats() {
         boolean hasPermission = UsageStatsHelper.hasUsageAccessPermission(context);
         if (!hasPermission) {
             if (permissionPromptCard != null) permissionPromptCard.setVisibility(View.VISIBLE);
-            if (efficiencyContentLayout != null) efficiencyContentLayout.setVisibility(View.GONE);
+            if (screenTimeContentLayout != null) screenTimeContentLayout.setVisibility(View.GONE);
             return;
         }
 
         if (permissionPromptCard != null) permissionPromptCard.setVisibility(View.GONE);
-        if (efficiencyContentLayout != null) efficiencyContentLayout.setVisibility(View.VISIBLE);
+        if (screenTimeContentLayout != null) screenTimeContentLayout.setVisibility(View.VISIBLE);
 
         executorService.execute(() -> {
             ActivityDatabase db = ActivityDatabase.getDatabase(context);
@@ -221,7 +237,7 @@ public class EfficiencyStatsManager {
                 }
                 agg.totalStayDurationMs += stayDuration;
                 // Query digital usage during this specific stay
-                Map<String, Long> appUsageDuringStay = UsageStatsHelper.getForegroundTimePerPackage(context, sMs, eMs);
+                Map<String, Long> appUsageDuringStay = UsageStatsHelper.getUsageTimePerPackage(context, sMs, eMs);
                 for (Map.Entry<String, Long> entry : appUsageDuringStay.entrySet()) {
                     Long prev = agg.appUsageMap.get(entry.getKey());
                     agg.appUsageMap.put(entry.getKey(), (prev != null ? prev : 0L) + entry.getValue());
@@ -321,6 +337,11 @@ public class EfficiencyStatsManager {
         if (currentDayIndex >= dailyHistoryList.size()) currentDayIndex = dailyHistoryList.size() - 1;
 
         DailyUsageItem item = dailyHistoryList.get(currentDayIndex);
+        if (item == null) return;
+
+        if (detailedCardManager != null) {
+            detailedCardManager.updateForDate(item.getDate());
+        }
 
         // Update button states & opacity for crisp UX
         if (btnPrevDay != null) {
@@ -345,6 +366,9 @@ public class EfficiencyStatsManager {
             String peak = item.getPeakHour() != null && !item.getPeakHour().equals("N/A") && !item.getPeakHour().equals("--")
                     ? " · Peak " + item.getPeakHour() : "";
             tvDailyCardUnlocks.setText(String.format(Locale.getDefault(), "%d unlocks%s", item.getUnlockCount(), peak));
+        }
+        if (tvIdleScreenTime != null) {
+            tvIdleScreenTime.setText(formatDuration(item.getIdleScreenTimeMs()));
         }
 
         // Graph data
@@ -396,7 +420,7 @@ public class EfficiencyStatsManager {
 
     private List<DailyUsageItem> loadDailyUsageHistory() {
         List<DailyUsageItem> history = new ArrayList<>();
-        java.text.SimpleDateFormat dayFormat = new java.text.SimpleDateFormat("EEE, MMM d", Locale.getDefault());
+        SimpleDateFormat dayFormat = new SimpleDateFormat("EEE, MMM d", Locale.getDefault());
 
         // Process last 7 days starting from today down to 6 days ago
         for (int dayOffset = 0; dayOffset < 7; dayOffset++) {
@@ -434,8 +458,9 @@ public class EfficiencyStatsManager {
             int unlockCount = UsageStatsHelper.getDeviceUnlockCount(context, dayStartMs, dayEndMs);
             long[] hourlyBuckets = UsageStatsHelper.getHourlyUsageBuckets(context, dayStartMs, dayEndMs);
             String peakHour = UsageStatsHelper.getPeakUsageHour(context, dayStartMs, dayEndMs);
+            long idleScreenTimeMs = UsageStatsHelper.getIdleHomeScreenTimeMs(context, dayStartMs, dayEndMs);
 
-            Map<String, Long> appUsageMap = UsageStatsHelper.getForegroundTimePerPackage(context, dayStartMs, dayEndMs);
+            Map<String, Long> appUsageMap = UsageStatsHelper.getUsageTimePerPackage(context, dayStartMs, dayEndMs);
             List<UsageStatsHelper.AppUsageInfo> topApps = UsageStatsHelper.getSortedAppUsageList(context, appUsageMap);
 
             history.add(new DailyUsageItem(
@@ -445,7 +470,8 @@ public class EfficiencyStatsManager {
                     unlockCount,
                     hourlyBuckets,
                     topApps,
-                    peakHour
+                    peakHour,
+                    idleScreenTimeMs
             ));
         }
         return history;
@@ -480,7 +506,7 @@ public class EfficiencyStatsManager {
 
         if (activeTimeMs > digitalTimeMs && activeTimeMs > 60 * 60 * 1000) {
             list.add(new InsightCardData(
-                    "Daily Efficiency Win",
+                    "Daily screenTime Win",
                     "You spent more time moving and exploring than on your screen today! Keep up the momentum.",
                     "win"
             ));
@@ -554,6 +580,15 @@ public class EfficiencyStatsManager {
 
             layoutTimeDrainContainer.addView(itemView);
         }
+    }
+
+    private void showIdleTimeExplanationDialog() {
+        if (context == null) return;
+        new MaterialAlertDialogBuilder(context)
+                .setTitle("Home / Idle Screen Time")
+                .setMessage("This tracks the time your phone screen was on or unlocked—such as when looking at the home screen or lock screen—without actively using any app.")
+                .setPositiveButton("Got it", (dialog, which) -> dialog.dismiss())
+                .show();
     }
 
     public static String formatDuration(long durationMs) {

@@ -1,4 +1,4 @@
-package com.example.myapplication.ui.efficiency;
+package com.example.myapplication.ui.statistics.screenTime;
 
 public class InsightCardData {
     private final String title;

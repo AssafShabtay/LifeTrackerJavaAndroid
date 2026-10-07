@@ -1,4 +1,4 @@
-package com.example.myapplication.ui.efficiency;
+package com.example.myapplication.ui.statistics.screenTime;
 
 import android.view.LayoutInflater;
 import android.view.View;

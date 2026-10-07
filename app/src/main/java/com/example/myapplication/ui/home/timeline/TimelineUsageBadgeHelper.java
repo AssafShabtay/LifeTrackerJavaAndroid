@@ -16,7 +16,7 @@ import androidx.core.content.ContextCompat;
 import androidx.core.graphics.ColorUtils;
 
 import com.example.myapplication.R;
-import com.example.myapplication.ui.efficiency.EfficiencyStatsManager;
+import com.example.myapplication.ui.statistics.screenTime.ScreenTimeStatsManager;
 import com.example.myapplication.tracking.usage.TimelineItemUsageData;
 import com.example.myapplication.tracking.usage.UsageStatsHelper;
 import com.google.android.material.progressindicator.LinearProgressIndicator;
@@ -54,7 +54,11 @@ public class TimelineUsageBadgeHelper {
     ) {
         if (layoutUsageBadge == null || layoutMicroBreakdownContainer == null) return;
 
-        if (startDate == null || endDate == null || !UsageStatsHelper.hasUsageAccessPermission(context)) {
+        if (endDate == null){
+            endDate = new Date();
+        }
+
+        if (startDate == null || !UsageStatsHelper.hasUsageAccessPermission(context)) {
             layoutUsageBadge.setVisibility(View.GONE);
             layoutMicroBreakdownContainer.setVisibility(View.GONE);
             return;
@@ -138,7 +142,7 @@ public class TimelineUsageBadgeHelper {
 
         layoutUsageBadge.setVisibility(View.VISIBLE);
         ivUsageBadgeExpand.setVisibility(View.VISIBLE);
-        String formattedScreenTime = EfficiencyStatsManager.formatDuration(data.getScreenTimeMs());
+        String formattedScreenTime = ScreenTimeStatsManager.formatDuration(data.getScreenTimeMs());
         int percentage = data.getPercentage();
         tvUsageBadgeText.setText(String.format(Locale.getDefault(), "%s (%d%%)", formattedScreenTime, percentage));
 
@@ -191,7 +195,7 @@ public class TimelineUsageBadgeHelper {
         LinearLayout appsContainer = breakdownView.findViewById(R.id.breakdownAppsContainer);
         TextView tvNoApps = breakdownView.findViewById(R.id.tvBreakdownNoApps);
 
-        String screenTime = EfficiencyStatsManager.formatDuration(data.getScreenTimeMs());
+        String screenTime = ScreenTimeStatsManager.formatDuration(data.getScreenTimeMs());
         int pct = data.getPercentage();
         tvPercent.setText(String.format(Locale.getDefault(), "%s · %d%% of visit", screenTime, pct));
         progress.setProgress(pct);
@@ -223,7 +227,7 @@ public class TimelineUsageBadgeHelper {
                 }
 
                 if (tvDuration != null) {
-                    tvDuration.setText(EfficiencyStatsManager.formatDuration(app.getTotalTimeInForegroundMs()));
+                    tvDuration.setText(ScreenTimeStatsManager.formatDuration(app.getTotalTimeInForegroundMs()));
                     tvDuration.setTextColor(ContextCompat.getColor(context, R.color.primary));
                 }
 

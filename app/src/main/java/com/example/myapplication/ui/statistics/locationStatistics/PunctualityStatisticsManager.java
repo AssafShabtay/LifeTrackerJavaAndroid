@@ -1,4 +1,4 @@
-package com.example.myapplication.ui.statistics;
+package com.example.myapplication.ui.statistics.locationStatistics;
 
 import android.content.Context;
 import android.graphics.Color;

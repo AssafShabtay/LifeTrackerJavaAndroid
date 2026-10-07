@@ -1,4 +1,4 @@
-package com.example.myapplication.ui.statistics;
+package com.example.myapplication.ui.statistics.locationStatistics;
 
 public class PrecisionResult {
     public int mean;

@@ -11,9 +11,11 @@ public class DailyUsageItem {
     private final List<UsageStatsHelper.AppUsageInfo> topApps;
 
     private final String peakHour;
+    private final long idleScreenTimeMs;
 
     public DailyUsageItem(String dayLabel, Date date, long totalScreenTimeMs, int unlockCount,
-                          long[] hourlyUsageMs, List<UsageStatsHelper.AppUsageInfo> topApps, String peakHour) {
+                          long[] hourlyUsageMs, List<UsageStatsHelper.AppUsageInfo> topApps, String peakHour,
+                          long idleScreenTimeMs) {
         this.dayLabel = dayLabel;
         this.date = date;
         this.totalScreenTimeMs = totalScreenTimeMs;
@@ -21,6 +23,10 @@ public class DailyUsageItem {
         this.hourlyUsageMs = hourlyUsageMs != null ? hourlyUsageMs : new long[24];
         this.topApps = topApps;
         this.peakHour = peakHour;
+        this.idleScreenTimeMs = idleScreenTimeMs;
+    }
+    public long getIdleScreenTimeMs() {
+        return idleScreenTimeMs;
     }
 
     public String getPeakHour() {

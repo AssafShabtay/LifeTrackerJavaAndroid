@@ -1,4 +1,4 @@
-package com.example.myapplication.ui.efficiency;
+package com.example.myapplication.ui.statistics.screenTime;
 import com.example.myapplication.tracking.usage.UsageStatsHelper;
 
 import java.util.ArrayList;

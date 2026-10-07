@@ -1,4 +1,4 @@
-package com.example.myapplication.ui.efficiency;
+package com.example.myapplication.ui.statistics.screenTime;
 import com.example.myapplication.tracking.usage.UsageStatsHelper;
 
 import android.content.Context;
@@ -44,8 +44,8 @@ public class LocationUsageAdapter extends RecyclerView.Adapter<LocationUsageAdap
         LocationUsageStats item = items.get(position);
 
         holder.tvLocationName.setText(item.getLocationName());
-        holder.tvStayTime.setText(String.format("Visit: %s", EfficiencyStatsManager.formatDuration(item.getTotalStayDurationMs())));
-        holder.tvScreenTime.setText(String.format("%s phone", EfficiencyStatsManager.formatDuration(item.getTotalScreenTimeMs())));
+        holder.tvStayTime.setText(String.format("Visit: %s", ScreenTimeStatsManager.formatDuration(item.getTotalStayDurationMs())));
+        holder.tvScreenTime.setText(String.format("%s phone", ScreenTimeStatsManager.formatDuration(item.getTotalScreenTimeMs())));
         holder.tvPercentage.setText(String.format(Locale.getDefault(), "%d%% of visit", item.getUsagePercentage()));
         holder.progressUsage.setProgress(item.getUsagePercentage());
 
@@ -70,7 +70,7 @@ public class LocationUsageAdapter extends RecyclerView.Adapter<LocationUsageAdap
                 UsageStatsHelper.AppUsageInfo appInfo = topApps.get(i);
                 sb.append(appInfo.getAppName())
                         .append(" (")
-                        .append(EfficiencyStatsManager.formatDuration(appInfo.getTotalTimeInForegroundMs()))
+                        .append(ScreenTimeStatsManager.formatDuration(appInfo.getTotalTimeInForegroundMs()))
                         .append(")");
                 if (i < limit - 1) {
                     sb.append(", ");

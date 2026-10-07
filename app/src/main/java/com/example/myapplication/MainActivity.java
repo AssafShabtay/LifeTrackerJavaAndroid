@@ -1,5 +1,4 @@
 package com.example.myapplication;
-import com.example.myapplication.ui.efficiency.EfficiencyFragment;
 
 import android.Manifest;
 import android.app.AlertDialog;
@@ -30,7 +29,7 @@ import com.example.myapplication.util.Logger;
 import com.example.myapplication.util.PermissionManager;
 import com.example.myapplication.ui.home.HomeFragment;
 import com.example.myapplication.ui.settings.SettingsFragment;
-import com.example.myapplication.ui.statistics.StatisticsFragment;
+import com.example.myapplication.ui.statistics.locationStatistics.StatisticsFragment;
 import com.example.myapplication.tracking.receiver.ActivityTransitionReceiver;
 import com.example.myapplication.tracking.location.LocationService;
 import com.google.android.gms.location.ActivityRecognition;
@@ -61,7 +60,6 @@ public class MainActivity extends AppCompatActivity {
     private boolean transitionsRegistered = false;
 
     private HomeFragment homeFragment = new HomeFragment();
-    private com.example.myapplication.ui.efficiency.EfficiencyFragment efficiencyFragment = new com.example.myapplication.ui.efficiency.EfficiencyFragment();
     private StatisticsFragment statisticsFragment = new StatisticsFragment();
     private SettingsFragment settingsFragment = new SettingsFragment();
     private Fragment activeFragment = homeFragment;
@@ -183,24 +181,20 @@ public class MainActivity extends AppCompatActivity {
 
         if (savedInstanceState == null) {
             // Initial load: add new fragments
-            getSupportFragmentManager().beginTransaction().add(R.id.fragment_container, settingsFragment, "4").hide(settingsFragment).commit();
-            getSupportFragmentManager().beginTransaction().add(R.id.fragment_container, statisticsFragment, "3").hide(statisticsFragment).commit();
-            getSupportFragmentManager().beginTransaction().add(R.id.fragment_container, efficiencyFragment, "2").hide(efficiencyFragment).commit();
+            getSupportFragmentManager().beginTransaction().add(R.id.fragment_container, settingsFragment, "3").hide(settingsFragment).commit();
+            getSupportFragmentManager().beginTransaction().add(R.id.fragment_container, statisticsFragment, "2").hide(statisticsFragment).commit();
             getSupportFragmentManager().beginTransaction().add(R.id.fragment_container, homeFragment, "1").commit();
             activeFragment = homeFragment;
         } else {
             // Recreation (e.g., theme change): retrieve existing fragments
             homeFragment = (HomeFragment) getSupportFragmentManager().findFragmentByTag("1");
-            efficiencyFragment = (com.example.myapplication.ui.efficiency.EfficiencyFragment) getSupportFragmentManager().findFragmentByTag("2");
-            statisticsFragment = (StatisticsFragment) getSupportFragmentManager().findFragmentByTag("3");
-            settingsFragment = (SettingsFragment) getSupportFragmentManager().findFragmentByTag("4");
+            statisticsFragment = (StatisticsFragment) getSupportFragmentManager().findFragmentByTag("2");
+            settingsFragment = (SettingsFragment) getSupportFragmentManager().findFragmentByTag("3");
 
             // Pull the manually saved tab ID from the bundle, defaulting to nav_home
             int selectedId = savedInstanceState.getInt("selected_nav_id", R.id.nav_home);
 
-            if (selectedId == R.id.nav_efficiency) {
-                activeFragment = efficiencyFragment;
-            } else if (selectedId == R.id.nav_statistics) {
+            if (selectedId == R.id.nav_statistics) {
                 activeFragment = statisticsFragment;
             } else if (selectedId == R.id.nav_settings) {
                 activeFragment = settingsFragment;
@@ -266,9 +260,6 @@ public class MainActivity extends AppCompatActivity {
                 if (itemId == R.id.nav_home) {
                     getSupportFragmentManager().beginTransaction().hide(activeFragment).show(homeFragment).commit();
                     activeFragment = homeFragment;
-                } else if (itemId == R.id.nav_efficiency) {
-                    getSupportFragmentManager().beginTransaction().hide(activeFragment).show(efficiencyFragment).commit();
-                    activeFragment = efficiencyFragment;
                 } else if (itemId == R.id.nav_statistics) {
                     getSupportFragmentManager().beginTransaction().hide(activeFragment).show(statisticsFragment).commit();
                     activeFragment = statisticsFragment;
@@ -320,7 +311,6 @@ public class MainActivity extends AppCompatActivity {
         }
 
         // Step 1: Notifications & Activity Recognition
-// Step 1: Notifications & Activity Recognition
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !permissionManager.hasPermission(Manifest.permission.POST_NOTIFICATIONS)) {
             setupStep(1, totalSteps, "Notifications",
                     "We need notifications to keep you updated on your timeline status.",
@@ -431,7 +421,6 @@ public class MainActivity extends AppCompatActivity {
             transitionsRegistered = false;
             Logger.saveLog(this, TAG + ": Missing permission for transitions: " + e.getMessage());
             Intent PermIntent = new Intent("com.example.myapplication.PERMISSION_REVOKED").setPackage(getPackageName());
-            ;
             sendBroadcast(PermIntent);
         }
     }
