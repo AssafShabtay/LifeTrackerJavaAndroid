@@ -1,4 +1,4 @@
-package com.example.myapplication.ui.home;
+package com.example.myapplication.ui.home.phoneUsage;
 
 import android.content.Context;
 import android.content.pm.PackageManager;

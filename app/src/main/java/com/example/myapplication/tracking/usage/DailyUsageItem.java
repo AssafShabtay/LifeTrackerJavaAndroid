@@ -12,10 +12,11 @@ public class DailyUsageItem {
 
     private final String peakHour;
     private final long idleScreenTimeMs;
+    private final UsageStatsHelper.DoomscrollStats doomscrollStats;
 
     public DailyUsageItem(String dayLabel, Date date, long totalScreenTimeMs, int unlockCount,
                           long[] hourlyUsageMs, List<UsageStatsHelper.AppUsageInfo> topApps, String peakHour,
-                          long idleScreenTimeMs) {
+                          long idleScreenTimeMs, UsageStatsHelper.DoomscrollStats doomscrollStats) {
         this.dayLabel = dayLabel;
         this.date = date;
         this.totalScreenTimeMs = totalScreenTimeMs;
@@ -24,7 +25,13 @@ public class DailyUsageItem {
         this.topApps = topApps;
         this.peakHour = peakHour;
         this.idleScreenTimeMs = idleScreenTimeMs;
+        this.doomscrollStats = doomscrollStats;
     }
+
+    public UsageStatsHelper.DoomscrollStats getDoomscrollStats() {
+        return doomscrollStats;
+    }
+
     public long getIdleScreenTimeMs() {
         return idleScreenTimeMs;
     }

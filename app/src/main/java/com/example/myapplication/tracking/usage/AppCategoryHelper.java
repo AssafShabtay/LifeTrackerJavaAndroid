@@ -86,4 +86,22 @@ public class AppCategoryHelper {
 
         return "Other";
     }
+
+    public static boolean isDoomscrollApp(PackageManager pm, String pkg) {
+        if (pkg == null || pkg.isEmpty()) return false;
+
+        String category = getCategoryName(pm, pkg);
+        if ("Social".equalsIgnoreCase(category) || "News & Reading".equalsIgnoreCase(category)) {
+            return true;
+        }
+
+        String lowerPkg = pkg.toLowerCase(Locale.ROOT);
+        return lowerPkg.contains("instagram") || lowerPkg.contains("tiktok") || lowerPkg.contains("reddit") ||
+                lowerPkg.contains("twitter") || lowerPkg.contains("x.android") || lowerPkg.contains("facebook") ||
+                lowerPkg.contains("snapchat") || lowerPkg.contains("threads") || lowerPkg.contains("tumblr") ||
+                lowerPkg.contains("pinterest") ||
+                lowerPkg.contains("buzzfeed") || lowerPkg.contains("youtube") || lowerPkg.contains("twitch") ||
+                lowerPkg.contains("news") || lowerPkg.contains("shorts") || lowerPkg.contains("reels") ||
+                lowerPkg.contains("feedly") || lowerPkg.contains("dailymail") || lowerPkg.contains("boredpanda");
+    }
 }

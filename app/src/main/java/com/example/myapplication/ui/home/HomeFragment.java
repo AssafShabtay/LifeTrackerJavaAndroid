@@ -1,6 +1,7 @@
 package com.example.myapplication.ui.home;
 import com.example.myapplication.ui.home.calendar.CalendarManager;
 import com.example.myapplication.ui.home.map.MapManager;
+import com.example.myapplication.ui.home.phoneUsage.PhoneUsageMiniCardManager;
 import com.example.myapplication.ui.home.sheet.AddCustomActivitySheet;
 import com.example.myapplication.ui.home.sheet.AddCustomMovementActivitySheet;
 import com.example.myapplication.ui.home.sheet.EditMovementActivitySheet;

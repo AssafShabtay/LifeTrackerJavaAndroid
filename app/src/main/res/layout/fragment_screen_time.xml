@@ -21,23 +21,6 @@
             android:paddingEnd="16dp"
             android:paddingBottom="64dp">
 
-            <!-- Title Header -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:layout_marginBottom="4dp"
-                android:text="Digital Screen Time"
-                android:textAppearance="@style/TextAppearance.Material3.HeadlineMedium" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
-                android:text="Where does your time actually go today?"
-                android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
-                android:textColor="?attr/colorOnSurfaceVariant" />
-
             <!-- Permission prompt if usage access is not granted -->
             <include layout="@layout/layout_usage_permission_card" />
 
@@ -48,6 +31,90 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:visibility="visible">
+                <!-- Day Navigation Header: Prev Day Button, Date Info, Next Day Button -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="1dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <ImageButton
+                        android:id="@+id/btn_prev_day"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="Previous Day"
+                        android:src="@drawable/ic_chevron_left"
+                        app:tint="?attr/colorOnSurface" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="4dp"
+                        android:layout_marginEnd="4dp"
+                        android:layout_weight="1"
+                        android:gravity="center"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:id="@+id/tv_daily_card_title"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+                            tools:text="Today, Sep 18" />
+
+                        <TextView
+                            android:id="@+id/tv_daily_card_unlocks"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:textAppearance="@style/TextAppearance.Material3.BodySmall"
+                            android:textColor="?attr/colorOnSurfaceVariant"
+                            tools:text="42 unlocks · Peak 2:00 PM" />
+                    </LinearLayout>
+
+                    <ImageButton
+                        android:id="@+id/btn_next_day"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="Next Day"
+                        android:src="@drawable/ic_chevron_right"
+                        app:tint="?attr/colorOnSurface" />
+                </LinearLayout>
+                <!-- Period Selector: Daily vs Weekly -->
+                <com.google.android.material.tabs.TabLayout
+                    android:id="@+id/tab_layout_period"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    android:background="@android:color/transparent"
+                    app:tabGravity="fill"
+                    app:tabIndicatorFullWidth="false"
+                    app:tabMode="fixed">
+
+                    <com.google.android.material.tabs.TabItem
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Daily" />
+
+                    <com.google.android.material.tabs.TabItem
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Weekly" />
+
+                </com.google.android.material.tabs.TabLayout>
+
+                <com.google.android.material.progressindicator.LinearProgressIndicator
+                    android:id="@+id/screen_time_loading"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    android:indeterminate="true"
+                    android:visibility="gone" />
+
+
 
                 <!-- 1. UNIFIED DAILY DIGITAL ACTIVITY CARD -->
 
@@ -65,65 +132,6 @@
                         android:orientation="vertical"
                         android:padding="20dp">
 
-                        <!-- Day Navigation Header: Prev Day Button, Date Info, Next Day Button -->
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:gravity="center_vertical"
-                            android:orientation="horizontal">
-
-                            <ImageButton
-                                android:id="@+id/btn_prev_day"
-                                android:layout_width="40dp"
-                                android:layout_height="40dp"
-                                android:background="?attr/selectableItemBackgroundBorderless"
-                                android:contentDescription="Previous Day"
-                                android:src="@drawable/ic_chevron_left"
-                                app:tint="?attr/colorOnSurface" />
-
-                            <LinearLayout
-                                android:layout_width="0dp"
-                                android:layout_height="wrap_content"
-                                android:layout_marginStart="4dp"
-                                android:layout_marginEnd="4dp"
-                                android:layout_weight="1"
-                                android:gravity="center"
-                                android:orientation="vertical">
-
-                                <TextView
-                                    android:id="@+id/tv_daily_card_title"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
-                                    tools:text="Today, Sep 18" />
-
-                                <TextView
-                                    android:id="@+id/tv_daily_card_unlocks"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:layout_marginTop="2dp"
-                                    android:textAppearance="@style/TextAppearance.Material3.BodySmall"
-                                    android:textColor="?attr/colorOnSurfaceVariant"
-                                    tools:text="42 unlocks · Peak 2:00 PM" />
-                            </LinearLayout>
-
-                            <ImageButton
-                                android:id="@+id/btn_next_day"
-                                android:layout_width="40dp"
-                                android:layout_height="40dp"
-                                android:background="?attr/selectableItemBackgroundBorderless"
-                                android:contentDescription="Next Day"
-                                android:src="@drawable/ic_chevron_right"
-                                app:tint="?attr/colorOnSurface" />
-                        </LinearLayout>
-
-                        <View
-                            android:layout_width="match_parent"
-                            android:layout_height="1dp"
-                            android:layout_marginTop="16dp"
-                            android:layout_marginBottom="16dp"
-                            android:background="@color/outline_variant" />
-
                         <!-- Donut Summary + Usage Distribution 24h Graph + Category/Top Apps Breakdown -->
                         <include
                             android:id="@+id/card_detailed_phone_usage"
@@ -132,7 +140,15 @@
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 
-                <!-- 2. CONTEXTUAL INSIGHTS CAROUSEL -->
+                <!-- 2. DOOMSCROLLING RADAR CARD -->
+                <include
+                    android:id="@+id/card_doomscrolling_stats"
+                    layout="@layout/card_doomscrolling_stats"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp" />
+
+                <!-- 3. CONTEXTUAL INSIGHTS CAROUSEL -->
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -147,100 +163,6 @@
                     android:layout_height="wrap_content"
                     android:clipToPadding="false"
                     android:orientation="horizontal" />
-
-                <!-- 3. UNIFIED LOCATION & FOCUS CARD -->
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="24dp"
-                    android:layout_marginBottom="4dp"
-                    android:text="Location Usage &amp; Focus Drains"
-                    android:textAppearance="@style/TextAppearance.Material3.TitleMedium" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="12dp"
-                    android:text="Places ranked by digital time &amp; focus distraction analysis"
-                    android:textAppearance="@style/TextAppearance.Material3.BodySmall"
-                    android:textColor="?attr/colorOnSurfaceVariant" />
-
-                <com.google.android.material.card.MaterialCardView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="16dp"
-                    app:cardCornerRadius="24dp"
-                    app:cardElevation="0dp"
-                    app:strokeColor="@color/outline_variant"
-                    app:strokeWidth="1dp">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:padding="20dp">
-
-                        <!-- Section Header 1: Places Ranked by Usage -->
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginBottom="10dp"
-                            android:fontFamily="sans-serif-medium"
-                            android:text="Places Ranked by Phone Usage"
-                            android:textColor="?attr/colorOnSurface"
-                            android:textSize="14sp" />
-
-                        <androidx.recyclerview.widget.RecyclerView
-                            android:id="@+id/rv_location_usage_ranking"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content" />
-
-                        <TextView
-                            android:id="@+id/tv_no_location_usage"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:gravity="center"
-                            android:padding="12dp"
-                            android:text="No place visits recorded yet today."
-                            android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
-                            android:textColor="?attr/colorOnSurfaceVariant"
-                            android:visibility="gone" />
-
-                        <View
-                            android:layout_width="match_parent"
-                            android:layout_height="1dp"
-                            android:layout_marginTop="16dp"
-                            android:layout_marginBottom="16dp"
-                            android:background="@color/outline_variant" />
-
-                        <!-- Section Header 2: Focus Time-Drain Indicators -->
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginBottom="10dp"
-                            android:fontFamily="sans-serif-medium"
-                            android:text="Focus Location Time-Drains"
-                            android:textColor="?attr/colorOnSurface"
-                            android:textSize="14sp" />
-
-                        <LinearLayout
-                            android:id="@+id/layout_time_drain_items"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="vertical" />
-
-                        <TextView
-                            android:id="@+id/tv_no_time_drains"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:gravity="center"
-                            android:padding="12dp"
-                            android:text="No time drains detected in focus locations today!"
-                            android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
-                            android:textColor="?attr/colorOnSurfaceVariant" />
-
-                    </LinearLayout>
-                </com.google.android.material.card.MaterialCardView>
 
             </LinearLayout>
         </LinearLayout>

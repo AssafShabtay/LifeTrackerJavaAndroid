@@ -22,7 +22,7 @@
             android:layout_height="80dp"
             android:layout_marginEnd="12dp">
 
-            <com.example.myapplication.ui.home.PhoneUsageDonutView
+            <com.example.myapplication.ui.home.phoneUsage.PhoneUsageDonutView
                 android:id="@+id/phone_usage_donut_view"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent" />

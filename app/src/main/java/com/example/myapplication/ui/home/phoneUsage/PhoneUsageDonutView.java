@@ -1,4 +1,4 @@
-package com.example.myapplication.ui.home;
+package com.example.myapplication.ui.home.phoneUsage;
 
 import android.animation.ValueAnimator;
 import android.content.Context;

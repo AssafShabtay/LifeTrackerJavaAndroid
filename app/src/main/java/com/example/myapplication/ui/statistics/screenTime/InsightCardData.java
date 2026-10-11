@@ -3,7 +3,7 @@ package com.example.myapplication.ui.statistics.screenTime;
 public class InsightCardData {
     private final String title;
     private final String message;
-    private final String iconType; // e.g. "win", "alert", "trend"
+    private final String iconType;
 
     public InsightCardData(String title, String message, String iconType) {
         this.title = title;

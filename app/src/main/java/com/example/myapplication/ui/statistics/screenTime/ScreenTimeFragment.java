@@ -37,4 +37,13 @@ public class ScreenTimeFragment extends Fragment {
             ScreenTimeStatsManager.loadscreenTimeStats();
         }
     }
+
+    @Override
+    public void onDestroyView() {
+        if (ScreenTimeStatsManager != null) {
+            ScreenTimeStatsManager.destroy();
+            ScreenTimeStatsManager = null;
+        }
+        super.onDestroyView();
+    }
 }

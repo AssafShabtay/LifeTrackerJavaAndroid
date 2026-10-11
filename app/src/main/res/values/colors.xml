@@ -30,6 +30,7 @@
 
     <color name="background">#f6f4eb</color>
     <color name="surface">#fefdfa</color>
+    <color name="category_breakdown_surface">#F7F8F4</color>
     <color name="on_surface">#202124</color>
     <color name="on_surface_variant">#5F6368</color>
     <color name="outline">#DADCE0</color>
