@@ -46,21 +46,16 @@ public class ScreenTimeStatsManager {
     private final View rootView;
     private final ExecutorService executorService = Executors.newSingleThreadExecutor();
 
-    // UI elements
     private View permissionPromptCard;
     private Button btnGrantUsageAccess;
     private View screenTimeContentLayout;
     private TabLayout tabLayoutPeriod;
 
-    // General Digital Activity
     private TextView tvDeviceUnlocks;
     private TextView tvPeakUsageHour;
     private TextView tvIdleScreenTime;
 
-    // Contextual Insights
-    private RecyclerView rvInsights;
 
-    // Usage Card Views (Interactive Day/Week Switcher + Graph + Top Apps)
     private ImageButton btnPrevDay;
     private ImageButton btnNextDay;
     private TextView tvDailyCardTitle;
@@ -105,7 +100,7 @@ public class ScreenTimeStatsManager {
 
     private final SharedPreferences.OnSharedPreferenceChangeListener prefListener = (sharedPreferences, key) -> {
         if ("week_start_day".equals(key)) {
-            loadscreenTimeStats();
+            loadScreenTimeStats();
         }
     };
 
@@ -196,11 +191,6 @@ public class ScreenTimeStatsManager {
             });
         }
 
-        rvInsights = rootView.findViewById(R.id.rv_insight_cards);
-        if (rvInsights != null) {
-            rvInsights.setLayoutManager(new LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false));
-        }
-
         if (btnGrantUsageAccess != null) {
             btnGrantUsageAccess.setOnClickListener(v -> UsageStatsHelper.openUsageAccessSettings(context));
         }
@@ -229,7 +219,7 @@ public class ScreenTimeStatsManager {
         }
     }
 
-    public void loadscreenTimeStats() {
+    public void loadScreenTimeStats() {
         if (destroyed) return;
         cancelPendingLoad();
         boolean hasPermission = UsageStatsHelper.hasUsageAccessPermission(context);
@@ -332,8 +322,7 @@ public class ScreenTimeStatsManager {
         // Render Doomscrolling Radar Card
         renderDoomscrollCard(item.getDoomscrollStats(), item.getTotalScreenTimeMs(), false);
 
-        // Render Insights
-        updateInsights(generateInsights(item.getTotalScreenTimeMs()));
+
 
         // Top Apps list
         if (layoutDailyTopAppsList != null) {
@@ -426,8 +415,6 @@ public class ScreenTimeStatsManager {
         // Doomscrolling Card
         renderDoomscrollCard(item.getDoomscrollStats(), item.getTotalScreenTimeMs(), true);
 
-        // Insights
-        updateInsights(generateWeeklyInsights(item));
 
         // Top Apps list for the week
         if (layoutDailyTopAppsList != null) {
@@ -881,11 +868,7 @@ public class ScreenTimeStatsManager {
                     }
 
                     if (tvDuration != null) {
-                        String scrollText = app.getLongestScrollMs() > 0
-                                ? String.format(Locale.getDefault(), "%s (peak %s scroll)",
-                                formatDuration(app.getTotalDoomscrollTimeMs()),
-                                formatDuration(app.getLongestScrollMs()))
-                                : formatDuration(app.getTotalDoomscrollTimeMs());
+                        String scrollText = formatDuration(app.getTotalDoomscrollTimeMs());
                         tvDuration.setText(scrollText);
                         tvDuration.setTextColor(context.getColor(R.color.orange));
                     }
@@ -908,11 +891,6 @@ public class ScreenTimeStatsManager {
                 .show();
     }
 
-    private void updateInsights(List<InsightCardData> insights) {
-        if (rvInsights != null) {
-            rvInsights.setAdapter(new InsightCardAdapter(insights));
-        }
-    }
 
     private void showIdleTimeExplanationDialog() {
         if (context == null) return;

@@ -4,14 +4,12 @@ import android.content.Context;
 import android.content.pm.PackageManager;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
-import android.graphics.drawable.GradientDrawable;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import androidx.core.content.ContextCompat;
@@ -29,7 +27,6 @@ import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.progressindicator.LinearProgressIndicator;
 
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
@@ -40,9 +37,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-/**
- * Manages binding and rendering data for the Detailed Category Screen Time Card in Screen Time tab.
- */
 public class DetailedPhoneUsageCardManager {
 
     private final Context context;
@@ -73,8 +67,6 @@ public class DetailedPhoneUsageCardManager {
     private int loadVersion;
     private Future<?> pendingLoad;
     private Future<?> pendingLocations;
-
-
 
     public DetailedPhoneUsageCardManager(Context context, View cardView) {
         this.context = context;
@@ -126,7 +118,7 @@ public class DetailedPhoneUsageCardManager {
             if (layoutTopAppsContainer != null) layoutTopAppsContainer.setVisibility(View.GONE);
             if (layoutLocationsContainer != null) layoutLocationsContainer.setVisibility(View.VISIBLE);
             if (tvHeaderTitle != null) tvHeaderTitle.setText("Locations Ranked by Phone Usage");
-            loadLocationsIfNeeded();
+            loadPhoneUsagePerLocation();
         } else {
             if (layoutCategoriesContainer != null) layoutCategoriesContainer.setVisibility(View.GONE);
             if (layoutTopAppsContainer != null) layoutTopAppsContainer.setVisibility(View.VISIBLE);
@@ -149,42 +141,6 @@ public class DetailedPhoneUsageCardManager {
         }
     }
 
-    public void updateForDate(Date date) {
-        if (cardView == null) return;
-
-        Date selectedDate = date != null ? date : new Date();
-
-        Calendar cal = Calendar.getInstance();
-        cal.setTime(selectedDate);
-        cal.set(Calendar.HOUR_OF_DAY, 0);
-        cal.set(Calendar.MINUTE, 0);
-        cal.set(Calendar.SECOND, 0);
-        cal.set(Calendar.MILLISECOND, 0);
-        long startTime = cal.getTimeInMillis();
-
-        cal.set(Calendar.HOUR_OF_DAY, 23);
-        cal.set(Calendar.MINUTE, 59);
-        cal.set(Calendar.SECOND, 59);
-        cal.set(Calendar.MILLISECOND, 999);
-        long endTime = Math.min(cal.getTimeInMillis(), System.currentTimeMillis());
-
-        updateForDateRange(startTime, endTime, null);
-    }
-
-    public void updateForDateRange(long startTime, long endTime, String customTotalText) {
-        if (cardView == null || destroyed) return;
-        cancelPendingLoad();
-        final int version = loadVersion;
-        pendingLoad = executorService.submit(() -> {
-            Map<String, Long> packageUsage = UsageStatsHelper.getUsageTimePerPackage(context, startTime, endTime);
-            mainHandler.post(() -> {
-                if (!destroyed && version == loadVersion) {
-                    updateForUsageData(startTime, endTime, packageUsage, customTotalText);
-                }
-            });
-        });
-    }
-
     public void updateForUsageData(long startTime, long endTime, Map<String, Long> packageUsage, String customTotalText) {
         if (cardView == null || destroyed) return;
         cancelPendingLoad();
@@ -196,10 +152,10 @@ public class DetailedPhoneUsageCardManager {
         pendingLoad = executorService.submit(() -> {
             processAndBindUsageData(packageUsage, null, customTotalText, version);
         });
-        loadLocationsIfNeeded();
+        loadPhoneUsagePerLocation();
     }
 
-    private void loadLocationsIfNeeded() {
+    private void loadPhoneUsagePerLocation() {
         if (destroyed || !hasSelectedRange || selectedMode != R.id.btn_toggle_locations
                 || locationsLoaded || pendingLocations != null) return;
         final int version = loadVersion;
@@ -353,14 +309,6 @@ public class DetailedPhoneUsageCardManager {
         return result;
     }
 
-    public void processAndBindUsageData(Map<String, Long> packageUsage, List<LocationUsageRankItem> locationRanks) {
-        processAndBindUsageData(packageUsage, locationRanks, null);
-    }
-
-    public void processAndBindUsageData(Map<String, Long> packageUsage, List<LocationUsageRankItem> locationRanks, String customTotalText) {
-        processAndBindUsageData(packageUsage, locationRanks, customTotalText, loadVersion);
-    }
-
     private void processAndBindUsageData(Map<String, Long> packageUsage, List<LocationUsageRankItem> locationRanks,
                                         String customTotalText, int version) {
         if (packageUsage == null) packageUsage = new HashMap<>();
@@ -403,14 +351,14 @@ public class DetailedPhoneUsageCardManager {
 
         List<CategoryUsage> displayCategories = new ArrayList<>();
 
-        if (specificCategories.size() > 3) {
-            // Keep top 3 specific categories
-            for (int i = 0; i < 3; i++) {
+        if (specificCategories.size() > 5) {
+            // Keep top 5 specific categories
+            for (int i = 0; i < 5; i++) {
                 displayCategories.add(specificCategories.get(i));
             }
 
             // Combine all leftover specific categories into otherCategory
-            for (int i = 3; i < specificCategories.size(); i++) {
+            for (int i = 5; i < specificCategories.size(); i++) {
                 CategoryUsage cat = specificCategories.get(i);
                 otherCategory.totalMs += cat.totalMs;
                 for (Map.Entry<String, Long> appEntry : cat.appMap.entrySet()) {
@@ -484,25 +432,48 @@ public class DetailedPhoneUsageCardManager {
 
                     View rowView = inflater.inflate(R.layout.item_category_breakdown_row, layoutCategoriesContainer, false);
 
-                    View dotView = rowView.findViewById(R.id.dot_category_color);
+                    MaterialCardView cardIconBg = rowView.findViewById(R.id.card_category_icon_bg);
+                    ImageView ivIcon = rowView.findViewById(R.id.iv_category_icon);
                     TextView tvName = rowView.findViewById(R.id.tv_category_name);
                     TextView tvTime = rowView.findViewById(R.id.tv_category_time);
-                    ProgressBar progressBar = rowView.findViewById(R.id.pb_category_progress);
+                    TextView tvPercentage = rowView.findViewById(R.id.tv_category_percentage);
+                    LinearProgressIndicator progressBar = rowView.findViewById(R.id.progress_category_bar);
                     TextView tvTopApp = rowView.findViewById(R.id.tv_category_top_app);
 
-                    if (dotView != null) {
-                        GradientDrawable drawable = new GradientDrawable();
-                        drawable.setShape(GradientDrawable.OVAL);
-                        drawable.setColor(color);
-                        dotView.setBackground(drawable);
+                    if (cardIconBg != null) {
+                        cardIconBg.setCardBackgroundColor(ColorUtils.setAlphaComponent(color, 40));
+                    }
+                    if (ivIcon != null) {
+                        ivIcon.setImageResource(AppCategoryHelper.getCategoryIconRes(cat.name));
+                        ivIcon.setColorFilter(color);
+                    }
+                    if (tvName != null) {
+                        tvName.setText(cat.name);
+                    }
+
+                    int pct = totalMs > 0 ? (int) Math.round((double) cat.totalMs * 100 / totalMs) : 0;
+                    pct = Math.min(100, Math.max(0, pct));
+
+                    if (tvTime != null) {
+                        tvTime.setText(formatDuration(cat.totalMs));
+                    }
+                    if (tvPercentage != null) {
+                        tvPercentage.setText(pct + "% of total");
                     }
                     if (progressBar != null) {
-                        progressBar.setProgressTintList(ColorStateList.valueOf(color));
+                        progressBar.setProgress(pct);
+                        progressBar.setIndicatorColor(color);
                     }
 
-                    if (tvName != null) tvName.setText(cat.name);
-
-                    bindCategoryRow(cat.totalMs, totalMs, tvTime, progressBar, tvTopApp, getTopAppText(cat.appMap));
+                    if (tvTopApp != null) {
+                        String topAppText = getTopAppsTextForCategory(cat.appMap);
+                        if (cat.totalMs > 0 && topAppText != null && !topAppText.isEmpty()) {
+                            tvTopApp.setText("Top apps: " + topAppText);
+                            tvTopApp.setVisibility(View.VISIBLE);
+                        } else {
+                            tvTopApp.setVisibility(View.GONE);
+                        }
+                    }
 
                     layoutCategoriesContainer.addView(rowView);
                 }
@@ -640,34 +611,23 @@ public class DetailedPhoneUsageCardManager {
         }
     }
 
-    private void bindCategoryRow(long durationMs, long totalMs, TextView tvTime, ProgressBar pb, TextView tvTopApp, String topAppText) {
-        int pct = totalMs > 0 ? (int) (durationMs * 100 / totalMs) : 0;
-
-        if (tvTime != null) {
-            tvTime.setText(String.format(Locale.getDefault(), "%s · %d%%", formatDuration(durationMs), pct));
-        }
-        if (pb != null) {
-            pb.setProgress(pct);
-        }
-        if (tvTopApp != null) {
-            if (durationMs > 0 && topAppText != null) {
-                tvTopApp.setText("Top App: " + topAppText);
-                tvTopApp.setVisibility(View.VISIBLE);
-            } else {
-                tvTopApp.setText("No usage recorded");
-                tvTopApp.setVisibility(View.VISIBLE);
-            }
-        }
-    }
-
-    private String getTopAppText(Map<String, Long> categoryAppMap) {
+    private String getTopAppsTextForCategory(Map<String, Long> categoryAppMap) {
         if (categoryAppMap == null || categoryAppMap.isEmpty()) return null;
 
         List<UsageStatsHelper.AppUsageInfo> sortedList = UsageStatsHelper.getSortedAppUsageList(context, categoryAppMap);
         if (sortedList.isEmpty()) return null;
 
-        UsageStatsHelper.AppUsageInfo topApp = sortedList.get(0);
-        return String.format(Locale.getDefault(), "%s (%s)", topApp.getAppName(), formatDuration(topApp.getTotalTimeInForegroundMs()));
+        StringBuilder sb = new StringBuilder();
+        int limit = Math.min(2, sortedList.size());
+        for (int i = 0; i < limit; i++) {
+            UsageStatsHelper.AppUsageInfo app = sortedList.get(i);
+            if (i > 0) sb.append(", ");
+            sb.append(app.getAppName())
+              .append(" (")
+              .append(formatDuration(app.getTotalTimeInForegroundMs()))
+              .append(")");
+        }
+        return sb.toString();
     }
 
     private String formatDuration(long durationMs) {

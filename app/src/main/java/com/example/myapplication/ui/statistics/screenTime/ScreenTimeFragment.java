@@ -34,7 +34,7 @@ public class ScreenTimeFragment extends Fragment {
     public void onResume() {
         super.onResume();
         if (ScreenTimeStatsManager != null) {
-            ScreenTimeStatsManager.loadscreenTimeStats();
+            ScreenTimeStatsManager.loadScreenTimeStats();
         }
     }
 

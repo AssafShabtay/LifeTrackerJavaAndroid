@@ -1,10 +1,1 @@
-<resources>
-    <string name="category_breakdown_empty">No screen time recorded for this period.</string>
-    <string name="category_share">%1$d%% of total</string>
-    <string name="category_share_under_one">&lt;1%% of total</string>
-    <string name="category_most_used">Most used: %1$s</string>
-    <plurals name="category_app_count">
-        <item quantity="one">%d app</item>
-        <item quantity="other">%d apps</item>
-    </plurals>
-</resources>
+<resources></resources>
