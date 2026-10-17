@@ -107,14 +107,14 @@ public class LocationService extends Service {
 
         geofenceUtilsManager = new GeofenceUtilsManager(placeDao, this, placesClient, geofenceManager);
 
-        locationProvider = new LocationProvider(this, fusedLocationClient, dao, app.getDatabaseWriteExecutor(), geofenceUtilsManager, this);
+        locationProvider = new LocationProvider(this, fusedLocationClient, dao, app.getLocationTrackingExecutor(), geofenceUtilsManager, this);
         activityMergeManager = new ActivityMergeManager(dao, this, locationProvider);
         createNotificationChannel();
 
         // Schedule the service restart alarm
         scheduleServiceRestartAlarm();
 
-        app.getDatabaseWriteExecutor().execute(() -> {
+        app.getLocationTrackingExecutor().execute(() -> {
             // Recover previous activity state after restart in background thread
 
             // Recover still activity
@@ -195,15 +195,15 @@ public class LocationService extends Service {
                     int transitionType = intent.getIntExtra(ActivityTransitionReceiver.EXTRA_TRANSITION_TYPE, -1);
                     long timestampMs = intent.getLongExtra(ActivityTransitionReceiver.EXTRA_TIMESTAMP_MS, System.currentTimeMillis());
                     // calling handleActivityUpdate in background
-                    app.getDatabaseWriteExecutor().execute(() -> {
-                        handleActivityUpdate(activityType, transitionType, timestampMs);;
+                    app.getLocationTrackingExecutor().execute(() -> {
+                        handleActivityUpdate(activityType, transitionType, timestampMs);
                     });
 //TODO                } else if (GeofenceBroadcastReceiver.ACTION_GEOFENCE_UPDATE.equals(action)) { // checks if the intent came from geofence
 //TODO                    // Extracts the geofence data
 //TODO                    String geofenceId = intent.getStringExtra(GeofenceBroadcastReceiver.EXTRA_GEOFENCE_ID);
 //TODO                    int transitionType = intent.getIntExtra(GeofenceBroadcastReceiver.EXTRA_TRANSITION_TYPE, -1);
 //TODO                    // calling handleGeofenceUpdate in background
-//TODO                    app.getDatabaseWriteExecutor().execute(() -> handleGeofenceUpdate(geofenceId, transitionType));
+//TODO                    app.getLocationTrackingExecutor().execute(() -> handleGeofenceUpdate(geofenceId, transitionType));
 //TODO
                 }
             }
@@ -348,6 +348,7 @@ public class LocationService extends Service {
     }
 
     void startStillTracking(Date startTime) {
+        // Call only on the shared tracking queue: the check and insert span blocking lookups.
         // If there's already an active still, prevent creating a duplicate
         if (currentStillTrackingId != null) {
             Log.w(TAG, "Attempted to start new still tracking while one is already active (ID: " + currentStillTrackingId + "). Aborting new still creation.");

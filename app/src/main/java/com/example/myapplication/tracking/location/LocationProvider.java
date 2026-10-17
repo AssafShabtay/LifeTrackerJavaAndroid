@@ -42,7 +42,7 @@ public class LocationProvider {
     private final Context context;
     private final FusedLocationProviderClient fusedLocationClient;
     private final ActivityDao dao;
-    private final ExecutorService databaseWriteExecutor;
+    private final ExecutorService locationTrackingExecutor;
     private final GeofenceUtilsManager geofenceUtilsManager;
 
     private LocationCallback routeLocationCallback;
@@ -57,13 +57,13 @@ public class LocationProvider {
     public LocationProvider(Context context,
                                 FusedLocationProviderClient fusedLocationClient,
                                 ActivityDao dao,
-                                ExecutorService databaseWriteExecutor,
+                                ExecutorService locationTrackingExecutor,
                                 GeofenceUtilsManager geofenceUtilsManager,
     LocationService locationService) {
         this.context = context;
         this.fusedLocationClient = fusedLocationClient;
         this.dao = dao;
-        this.databaseWriteExecutor = databaseWriteExecutor;
+        this.locationTrackingExecutor = locationTrackingExecutor;
         this.geofenceUtilsManager = geofenceUtilsManager;
         this.locationService = locationService;
     }
@@ -106,7 +106,7 @@ public class LocationProvider {
                                 Logger.saveLog(context, "User lingered for over 10 minutes. Stopping tracking.");
 
                                 Date endTime = new Date(currentTime);
-                                databaseWriteExecutor.execute(() -> {
+                                locationTrackingExecutor.execute(() -> {
                                     Set<Integer> activeMovementTypes = new HashSet<>(LocationService.currentMovementTrackingIds.keySet());
                                     for (Integer activityType : activeMovementTypes) {
                                         locationService.endMovementTracking(activityType, endTime);
@@ -125,7 +125,7 @@ public class LocationProvider {
                         }
                     }
                 }
-                databaseWriteExecutor.execute(() -> {
+                locationTrackingExecutor.execute(() -> {
                     // Insert the route point
                     for (Location location : locationResult.getLocations()) {
                         for (Long movementId : LocationService.currentMovementTrackingIds.values()) {
@@ -179,10 +179,13 @@ public class LocationProvider {
         stillLocationCallback = new LocationCallback() {
             @Override
             public void onLocationResult(@NonNull LocationResult locationResult) {
-                databaseWriteExecutor.execute(() -> {
+                locationTrackingExecutor.execute(() -> {
+                    // The still may have ended while this callback was waiting in the queue.
+                    Long stillId = LocationService.currentStillTrackingId;
+                    if (stillId == null) return;
                     for (Location location : locationResult.getLocations()) {
                         if (location.hasAccuracy() && location.getAccuracy() <= STILL_RADIUS_THRESHOLD) {
-                            StillLocation still = dao.getStillLocationById(LocationService.currentStillTrackingId);
+                            StillLocation still = dao.getStillLocationById(stillId);
                             if (still != null && (still.getLat() == null || still.getLng() == null)) {
                                 still.setLat(location.getLatitude());
                                 still.setLng(location.getLongitude());

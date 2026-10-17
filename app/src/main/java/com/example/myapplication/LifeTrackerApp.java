@@ -11,6 +11,7 @@ import com.example.myapplication.tracking.location.LocationService;
 public class LifeTrackerApp extends Application {
 
     private final ExecutorService databaseWriteExecutor = java.util.concurrent.Executors.newFixedThreadPool(4);
+    private final ExecutorService locationTrackingExecutor = java.util.concurrent.Executors.newSingleThreadExecutor();
     @Override
     public void onCreate() {
         super.onCreate();
@@ -30,5 +31,9 @@ public class LifeTrackerApp extends Application {
     }
     public ExecutorService getDatabaseWriteExecutor() {
         return databaseWriteExecutor;
+    }
+
+    public ExecutorService getLocationTrackingExecutor() {
+        return locationTrackingExecutor;
     }
 }
