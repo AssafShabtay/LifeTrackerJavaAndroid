@@ -15,9 +15,6 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
-
 import com.example.myapplication.R;
 import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
@@ -63,7 +60,7 @@ public class ScreenTimeStatsManager {
     private TextView tvDailyCardUnlocks;
     private TextView tvDailyCardTotalTime;
     private TextView tvGraphSectionTitle;
-    private HourlyUsageGraphView graphDailyHourlyUsage;
+    private DailyUsageGraphView graphDailyHourlyUsage;
     private WeeklyUsageGraphView graphWeeklyDailyUsage;
     private LinearLayout layoutDailyTopAppsList;
     private TextView tvDailyCardNoApps;

@@ -62,10 +62,10 @@ public class DetailedPhoneUsageCardManager {
     private long selectedEndTime;
     private boolean hasSelectedRange;
     private boolean locationsLoaded;
-    private boolean destroyed;
-    private int loadVersion;
-    private Future<?> pendingLoad;
-    private Future<?> pendingLocations;
+    private int usageCalcVersion;
+    // lets you cancel the pending calculation
+    private Future<?> pendingUsageCalc;
+    private Future<?> pendingLocationsCalc;
 
     public DetailedPhoneUsageCardManager(Context context, View cardView) {
         this.context = context;
@@ -142,23 +142,23 @@ public class DetailedPhoneUsageCardManager {
     }
 
     public void updateForUsageData(long startTime, long endTime, Map<String, Long> packageUsage, String customTotalText) {
-        if (cardView == null || destroyed) return;
+        if (cardView == null) return;
         cancelPendingLoad();
         selectedStartTime = startTime;
         selectedEndTime = endTime;
         hasSelectedRange = true;
         locationsLoaded = false;
-        final int version = loadVersion;
-        pendingLoad = app.getBackgroundWriteExecutor().submit(() -> {
-            processAndBindUsageData(packageUsage, null, customTotalText, version);
+        final int version = usageCalcVersion;
+        pendingUsageCalc = app.getBackgroundWriteExecutor().submit(() -> {
+            processAndBindUsageData(packageUsage,  customTotalText, version);
         });
         loadPhoneUsagePerLocation();
     }
 
     private void loadPhoneUsagePerLocation() {
-        if (destroyed || !hasSelectedRange || selectedMode != R.id.btn_toggle_locations
-                || locationsLoaded || pendingLocations != null) return;
-        final int version = loadVersion;
+        if (!hasSelectedRange || selectedMode != R.id.btn_toggle_locations
+                || locationsLoaded || pendingLocationsCalc != null) return;
+        final int version = usageCalcVersion;
         final long startTime = selectedStartTime;
         final long endTime = selectedEndTime;
         if (layoutDailyLocationsList != null) layoutDailyLocationsList.removeAllViews();
@@ -166,11 +166,11 @@ public class DetailedPhoneUsageCardManager {
             tvDailyCardNoLocations.setText("Loading locations…");
             tvDailyCardNoLocations.setVisibility(View.VISIBLE);
         }
-        pendingLocations = app.getBackgroundWriteExecutor().submit(() -> {
+        pendingLocationsCalc = app.getBackgroundWriteExecutor().submit(() -> {
             List<LocationUsageRankItem> ranks = calculateLocationUsageRanks(startTime, endTime);
             mainHandler.post(() -> {
-                if (destroyed || version != loadVersion) return;
-                pendingLocations = null;
+                if (version != usageCalcVersion) return;
+                pendingLocationsCalc = null;
                 locationsLoaded = true;
                 if (tvDailyCardNoLocations != null) tvDailyCardNoLocations.setText("No location data for this period.");
                 renderLocationRanks(ranks, layoutDailyLocationsList, tvDailyCardNoLocations);
@@ -179,16 +179,15 @@ public class DetailedPhoneUsageCardManager {
     }
 
     public void cancelPendingLoad() {
-        loadVersion++;
+        usageCalcVersion++;
         hasSelectedRange = false;
-        if (pendingLoad != null) pendingLoad.cancel(true);
-        if (pendingLocations != null) pendingLocations.cancel(true);
-        pendingLoad = null;
-        pendingLocations = null;
+        if (pendingUsageCalc != null) pendingUsageCalc.cancel(true);
+        if (pendingLocationsCalc != null) pendingLocationsCalc.cancel(true);
+        pendingUsageCalc = null;
+        pendingLocationsCalc = null;
     }
 
     public void destroy() {
-        destroyed = true;
         cancelPendingLoad();
     }
 
@@ -235,10 +234,12 @@ public class DetailedPhoneUsageCardManager {
 
             Map<String, LocationUsageRankItem> locationMap = new HashMap<>();
 
+            // Process each still
             for (StillLocation still : stills) {
                 if (Thread.currentThread().isInterrupted()) return result;
                 if (still == null || still.getStartTimeDate() == null) continue;
 
+                //extract start and end time
                 long stayStart = Math.max(still.getStartTimeDate().getTime(), startTime);
                 long stayEnd = Math.min(
                         still.getEndTimeDate() != null ? still.getEndTimeDate().getTime() : System.currentTimeMillis(),
@@ -249,12 +250,14 @@ public class DetailedPhoneUsageCardManager {
 
                 long stayDurationMs = stayEnd - stayStart;
 
+                //extract package usage in the stay time
                 Map<String, Long> pkgUsage = UsageStatsHelper.getUsageTimePerPackage(context, stayStart, stayEnd);
                 long stayScreenTimeMs = 0;
                 for (long duration : pkgUsage.values()) {
                     stayScreenTimeMs += duration;
                 }
 
+                // finds the most suitable unique identifier for the location place(Id, placeName, placeAddress, or lat/lng)
                 String key;
                 if (still.getPlaceId() != null) {
                     key = "place_" + still.getPlaceId();
@@ -308,8 +311,7 @@ public class DetailedPhoneUsageCardManager {
         return result;
     }
 
-    private void processAndBindUsageData(Map<String, Long> packageUsage, List<LocationUsageRankItem> locationRanks,
-                                        String customTotalText, int version) {
+    private void processAndBindUsageData(Map<String, Long> packageUsage, String customTotalText, int version) {
         if (packageUsage == null) packageUsage = new HashMap<>();
 
         PackageManager pm = context.getPackageManager();
@@ -322,18 +324,18 @@ public class DetailedPhoneUsageCardManager {
             long duration = entry.getValue();
             if (duration <= 0 || pkg == null) continue;
 
-            String catName = AppCategoryHelper.getCategoryName(pm, pkg);
-            CategoryUsage catUsage = categoryMap.get(catName);
-            if (catUsage == null) {
-                catUsage = new CategoryUsage(catName);
-                categoryMap.put(catName, catUsage);
+            String category = AppCategoryHelper.getCategoryName(pm, pkg);
+            CategoryUsage categoryUsage = categoryMap.get(category);
+            if (categoryUsage == null) {
+                categoryUsage = new CategoryUsage(category);
+                categoryMap.put(category, categoryUsage);
             }
-            catUsage.totalMs += duration;
-            catUsage.appMap.put(pkg, duration);
+            categoryUsage.totalMs += duration;
+            categoryUsage.appMap.put(pkg, duration);
             totalMs += duration;
         }
 
-        // Separate "Other" (unrecognized apps) from specific named categories
+        // Hold the unrecognized Other category aside while ranking named categories
         CategoryUsage otherCategory = categoryMap.remove("Other");
         if (otherCategory == null) {
             otherCategory = new CategoryUsage("Other");
@@ -341,9 +343,9 @@ public class DetailedPhoneUsageCardManager {
 
         // Collect and sort specific named categories
         List<CategoryUsage> specificCategories = new ArrayList<>();
-        for (CategoryUsage cat : categoryMap.values()) {
-            if (cat.totalMs > 0) {
-                specificCategories.add(cat);
+        for (CategoryUsage category : categoryMap.values()) {
+            if (category.totalMs > 0) {
+                specificCategories.add(category);
             }
         }
         Collections.sort(specificCategories);
@@ -358,12 +360,11 @@ public class DetailedPhoneUsageCardManager {
 
             // Combine all leftover specific categories into otherCategory
             for (int i = 5; i < specificCategories.size(); i++) {
-                CategoryUsage cat = specificCategories.get(i);
-                otherCategory.totalMs += cat.totalMs;
-                for (Map.Entry<String, Long> appEntry : cat.appMap.entrySet()) {
-                    Long currentVal = otherCategory.appMap.get(appEntry.getKey());
-                    long newVal = (currentVal == null ? 0L : currentVal) + appEntry.getValue();
-                    otherCategory.appMap.put(appEntry.getKey(), newVal);
+                CategoryUsage category = specificCategories.get(i);
+                otherCategory.totalMs += category.totalMs;
+
+                for (Map.Entry<String, Long> entry : category.appMap.entrySet()) {
+                    otherCategory.appMap.merge(entry.getKey(), entry.getValue(), Long::sum);
                 }
             }
         } else {
@@ -375,13 +376,12 @@ public class DetailedPhoneUsageCardManager {
             displayCategories.add(otherCategory);
         }
 
-        final long fTotalMs = totalMs;
-        final List<CategoryUsage> fCategories = displayCategories;
+        final long finalTotalMs = totalMs;
+        final List<CategoryUsage> finalCategories = displayCategories;
 
         mainHandler.post(() -> {
-            if (destroyed || version != loadVersion) return;
-            renderUi(fTotalMs, fCategories, customTotalText);
-            if (locationRanks != null) renderLocationRanks(locationRanks, layoutDailyLocationsList, tvDailyCardNoLocations);
+            if (version != usageCalcVersion) return;
+            renderUi(finalTotalMs, finalCategories, customTotalText);
         });
     }
 
@@ -394,23 +394,23 @@ public class DetailedPhoneUsageCardManager {
             }
         }
 
-        // Determine Peak Category
+        // Extract peak category
         String peakName = "None";
-        int peakPct = 0;
+        int peakPrecentage = 0;
         if (totalMs > 0 && !categories.isEmpty() && categories.get(0).totalMs > 0) {
             peakName = categories.get(0).name;
-            peakPct = (int) (categories.get(0).totalMs * 100 / totalMs);
+            peakPrecentage = (int) (categories.get(0).totalMs * 100 / totalMs);
         }
 
         if (tvPeakCategory != null) {
             if (totalMs > 0 && !categories.isEmpty()) {
-                tvPeakCategory.setText(String.format(Locale.getDefault(), "Top Category: %s (%d%%)", peakName, peakPct));
+                tvPeakCategory.setText(String.format(Locale.getDefault(), "Top Category: %s (%d%%)", peakName, peakPrecentage));
             } else {
                 tvPeakCategory.setText("No Usage Recorded");
             }
         }
 
-        // Render Dynamic Category Rows
+        // Render category rows
         if (layoutCategoriesContainer != null) {
             layoutCategoriesContainer.removeAllViews();
 

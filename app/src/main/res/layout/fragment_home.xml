@@ -159,7 +159,7 @@
                                     android:contentDescription="Zoom out"
                                     android:padding="6dp"
                                     android:scaleType="fitCenter"
-                                    android:src="@drawable/ic_remove"
+                                    android:src="@drawable/ic_minus"
                                     app:tint="?attr/colorOnSurface" />
 
                             </LinearLayout>

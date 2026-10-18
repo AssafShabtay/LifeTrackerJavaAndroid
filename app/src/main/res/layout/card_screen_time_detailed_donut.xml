@@ -119,7 +119,7 @@
         </com.google.android.material.card.MaterialCardView>
     </LinearLayout>
 
-    <com.example.myapplication.ui.statistics.screenTime.HourlyUsageGraphView
+    <com.example.myapplication.ui.statistics.screenTime.DailyUsageGraphView
         android:id="@+id/graph_daily_hourly_usage"
         android:layout_width="match_parent"
         android:layout_height="130dp"

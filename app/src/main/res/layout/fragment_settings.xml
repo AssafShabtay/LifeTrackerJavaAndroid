@@ -343,7 +343,7 @@
                 <ImageView
                     android:layout_width="24dp"
                     android:layout_height="24dp"
-                    android:src="@drawable/ic_remove"
+                    android:src="@drawable/delete_24px"
                     app:tint="?attr/colorError"
                     android:contentDescription="Delete Icon"/>
 

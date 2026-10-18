@@ -39,6 +39,7 @@ public class StillLocation implements TimelineItem {
     private String wasSupposedToBeActivity;
 
     @ColumnInfo(index = true)
+    // correlates to the place table
     private Long placeId;
 
     private String placeName;

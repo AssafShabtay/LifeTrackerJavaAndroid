@@ -4,12 +4,8 @@ import android.animation.ValueAnimator;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
-import android.graphics.CornerPathEffect;
-import android.graphics.LinearGradient;
 import android.graphics.Paint;
-import android.graphics.Path;
 import android.graphics.RectF;
-import android.graphics.Shader;
 import android.util.AttributeSet;
 import android.util.TypedValue;
 import android.view.MotionEvent;
@@ -24,7 +20,7 @@ import com.example.myapplication.R;
 
 import java.util.Locale;
 
-public class HourlyUsageGraphView extends View {
+public class DailyUsageGraphView extends View {
 
     private long[] hourlyBucketsMs = new long[24];
     private float animationFraction = 0f;
@@ -53,17 +49,17 @@ public class HourlyUsageGraphView extends View {
         void onHourSelected(int hour, long durationMs);
     }
 
-    public HourlyUsageGraphView(Context context) {
+    public DailyUsageGraphView(Context context) {
         super(context);
         init(context, null);
     }
 
-    public HourlyUsageGraphView(Context context, @Nullable AttributeSet attrs) {
+    public DailyUsageGraphView(Context context, @Nullable AttributeSet attrs) {
         super(context, attrs);
         init(context, attrs);
     }
 
-    public HourlyUsageGraphView(Context context, @Nullable AttributeSet attrs, int defStyleAttr) {
+    public DailyUsageGraphView(Context context, @Nullable AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
         init(context, attrs);
     }
