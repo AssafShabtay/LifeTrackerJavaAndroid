@@ -2,7 +2,6 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.ksp)
-    alias(libs.plugins.compose.compiler)
     id("com.google.android.libraries.mapsplatform.secrets-gradle-plugin")
     id("com.google.gms.google-services")
 }
@@ -54,9 +53,6 @@ dependencies {
     implementation("com.google.firebase:firebase-appcheck-debug")
     implementation(platform("com.google.firebase:firebase-bom:34.16.0"))
     implementation("com.google.firebase:firebase-analytics")
-    implementation (libs.ui)
-    implementation(libs.androidx.compose.material3)
-    implementation (libs.androidx.runtime)
     implementation(libs.appcompat)
     implementation(libs.material)
     implementation(libs.play.services.location)

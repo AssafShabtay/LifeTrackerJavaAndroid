@@ -46,7 +46,7 @@ public class EditMovementActivitySheet extends BottomSheetDialogFragment {
     private MovementActivity movement;
     private OnVisitInteractionListener listener;
     private PlacesClient placesClient;
-    private PlaceDao placeDao;
+
 
     private Button btnStartTime, btnEndTime;
     private MaterialButton btnDelete;
@@ -83,8 +83,6 @@ public class EditMovementActivitySheet extends BottomSheetDialogFragment {
         }
         placesClient = Places.createClient(requireContext());
 
-        // Initialize PlaceDao
-        placeDao = ActivityDatabase.getDatabase(requireContext()).placeDao();
 
         btnStartTime = view.findViewById(R.id.btnStartTime);
         btnEndTime = view.findViewById(R.id.btnEndTime);
@@ -126,8 +124,9 @@ public class EditMovementActivitySheet extends BottomSheetDialogFragment {
         updateTimeButtons();
 
         btnSave.setOnClickListener(v -> {
-
-            movement.setActivityTypeName(actvActivityType.getText().toString()); // Ensure activity type is saved
+            movement.setActivityTypeName(actvActivityType.getText().toString());
+            movement.setStartTimeDate(editedStartTime);
+            movement.setEndTimeDate(editedEndTime);
             if (listener != null) {
                 listener.onUpdate(movement);
             }

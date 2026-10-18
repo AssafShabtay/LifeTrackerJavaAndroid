@@ -8,9 +8,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 import android.widget.Toast;
-import android.app.AlertDialog;
-import android.widget.RadioGroup;
-import android.widget.RadioButton;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -20,8 +17,10 @@ import androidx.fragment.app.Fragment;
 import com.example.myapplication.LifeTrackerApp;
 import com.example.myapplication.R;
 import com.example.myapplication.data.db.ActivityDatabase;
-import com.example.myapplication.data.db.PlaceDao;
+import com.example.myapplication.tracking.usage.UsageStatsHelper;
+import com.example.myapplication.util.PermissionManager;
 import com.google.android.material.button.MaterialButtonToggleGroup;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.util.Calendar;
 
@@ -31,9 +30,8 @@ public class SettingsFragment extends Fragment {
     private static final String KEY_WEEK_START_DAY = "week_start_day";
     private LifeTrackerApp app;
 
-    private RadioGroup weekStartDayRadioGroup;
-    private RadioButton radioMonday;
-    private RadioButton radioSunday;
+    private TextView tvLocationPermissionStatus;
+    private TextView tvUsagePermissionStatus;
 
     @Nullable
     @Override
@@ -45,45 +43,56 @@ public class SettingsFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        MaterialButtonToggleGroup themeToggleGroup = view.findViewById(R.id.themeToggleGroup);
-        TextView btnExportData = view.findViewById(R.id.btn_export_data);
-        TextView btnDeleteHistory = view.findViewById(R.id.btn_delete_history);
-
-        weekStartDayRadioGroup = view.findViewById(R.id.weekStartDayRadioGroup);
-        radioMonday = view.findViewById(R.id.radio_monday);
-        radioSunday = view.findViewById(R.id.radio_sunday);
-
         app = (LifeTrackerApp) requireActivity().getApplication();
 
+        MaterialButtonToggleGroup themeToggleGroup = view.findViewById(R.id.themeToggleGroup);
+        MaterialButtonToggleGroup weekStartToggleGroup = view.findViewById(R.id.weekStartToggleGroup);
+        View itemLocationPermission = view.findViewById(R.id.item_location_permission);
+        View itemUsagePermission = view.findViewById(R.id.item_usage_permission);
+        tvLocationPermissionStatus = view.findViewById(R.id.tv_location_permission_status);
+        tvUsagePermissionStatus = view.findViewById(R.id.tv_usage_permission_status);
+        View btnDeleteHistory = view.findViewById(R.id.btn_delete_history);
+
         setupThemePreferences(themeToggleGroup);
-        setupWeekStartDayPreference(weekStartDayRadioGroup);
-        setupDataPrivacyListeners(btnExportData, btnDeleteHistory);
+        setupWeekStartDayPreference(weekStartToggleGroup);
+        setupPermissionsSection(itemLocationPermission, itemUsagePermission);
+        setupDataPrivacyListeners(btnDeleteHistory);
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        updatePermissionStatuses();
     }
 
     private void setupThemePreferences(MaterialButtonToggleGroup themeToggleGroup) {
         SharedPreferences preferences = requireContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         int currentMode = preferences.getInt("theme_mode", AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
 
-        if (currentMode == AppCompatDelegate.MODE_NIGHT_YES) {
-            themeToggleGroup.check(R.id.btn_theme_dark);
-        } else if (currentMode == AppCompatDelegate.MODE_NIGHT_NO) {
-            themeToggleGroup.check(R.id.btn_theme_light);
-        } else {
-            themeToggleGroup.check(R.id.btn_theme_system);
+        switch (currentMode) {
+            case AppCompatDelegate.MODE_NIGHT_YES:
+                themeToggleGroup.check(R.id.btn_theme_dark);
+                break;
+            case AppCompatDelegate.MODE_NIGHT_NO:
+                themeToggleGroup.check(R.id.btn_theme_light);
+                break;
+            default:
+                themeToggleGroup.check(R.id.btn_theme_system);
+                break;
         }
 
         themeToggleGroup.addOnButtonCheckedListener((group, checkedId, isChecked) -> {
             if (isChecked) {
-                int selectedMode = AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM;
-
+                int selectedMode;
                 if (checkedId == R.id.btn_theme_dark) {
                     selectedMode = AppCompatDelegate.MODE_NIGHT_YES;
                 } else if (checkedId == R.id.btn_theme_light) {
                     selectedMode = AppCompatDelegate.MODE_NIGHT_NO;
+                } else {
+                    selectedMode = AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM;
                 }
 
-                // Apply and save only if it's not the same
-                if (AppCompatDelegate.getDefaultNightMode() != selectedMode) {
+                if (preferences.getInt("theme_mode", AppCompatDelegate.MODE_NIGHT_NO) != selectedMode) {
                     preferences.edit().putInt("theme_mode", selectedMode).apply();
                     AppCompatDelegate.setDefaultNightMode(selectedMode);
                 }
@@ -91,19 +100,19 @@ public class SettingsFragment extends Fragment {
         });
     }
 
-    private void setupWeekStartDayPreference(RadioGroup radioGroup) {
-        //TODO fetch system first day of the week
+    private void setupWeekStartDayPreference(MaterialButtonToggleGroup toggleGroup) {
         int savedWeekStartDay = getWeekStartDayPreference();
         if (savedWeekStartDay == Calendar.MONDAY) {
-            radioMonday.setChecked(true);
+            toggleGroup.check(R.id.btn_week_monday);
         } else {
-            radioSunday.setChecked(true);
+            toggleGroup.check(R.id.btn_week_sunday);
         }
 
-        radioGroup.setOnCheckedChangeListener((group, checkedId) -> {
-            int weekStartDay = (checkedId == R.id.radio_monday) ? Calendar.MONDAY : Calendar.SUNDAY;
-            saveWeekStartDayPreference(weekStartDay);
-            // TODO: Potentially trigger a reload of statistics if the user is on the statistics screen
+        toggleGroup.addOnButtonCheckedListener((group, checkedId, isChecked) -> {
+            if (isChecked) {
+                int weekStartDay = (checkedId == R.id.btn_week_monday) ? Calendar.MONDAY : Calendar.SUNDAY;
+                saveWeekStartDayPreference(weekStartDay);
+            }
         });
     }
 
@@ -114,41 +123,73 @@ public class SettingsFragment extends Fragment {
 
     private int getWeekStartDayPreference() {
         SharedPreferences preferences = requireContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-        // Default to Monday if no preference is set
-        return preferences.getInt(KEY_WEEK_START_DAY, Calendar.MONDAY);
+        return preferences.getInt(KEY_WEEK_START_DAY, getSystemFirstDayOfWeek());
     }
 
-    private void setupDataPrivacyListeners(TextView btnExportData, TextView btnDeleteHistory) {
-        btnExportData.setOnClickListener(v -> handleExportData());
+    private int getSystemFirstDayOfWeek() {
+        int systemFirstDay = Calendar.getInstance().getFirstDayOfWeek();
+        return (systemFirstDay == Calendar.SUNDAY) ? Calendar.SUNDAY : Calendar.MONDAY;
+    }
+
+    private void setupPermissionsSection(View itemLocation, View itemUsage) {
+        itemLocation.setOnClickListener(v -> {
+            PermissionManager permissionManager = new PermissionManager(requireActivity());
+            if (!permissionManager.hasAllPermissions()) {
+                permissionManager.openAppSettings();
+            } else {
+                Toast.makeText(getContext(), "Location permissions are granted", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        itemUsage.setOnClickListener(v -> {
+            if (!UsageStatsHelper.hasUsageAccessPermission(requireContext())) {
+                UsageStatsHelper.openUsageAccessSettings(requireContext());
+            } else {
+                Toast.makeText(getContext(), "App usage stats access is granted", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void updatePermissionStatuses() {
+        if (getContext() == null || getActivity() == null) return;
+
+        PermissionManager permissionManager = new PermissionManager(requireActivity());
+        boolean hasLocation = permissionManager.hasAllPermissions();
+        if (tvLocationPermissionStatus != null) {
+            tvLocationPermissionStatus.setText(hasLocation ? "Granted" : "Not Granted — Tap to manage in settings");
+        }
+
+        boolean hasUsage = UsageStatsHelper.hasUsageAccessPermission(requireContext());
+        if (tvUsagePermissionStatus != null) {
+            tvUsagePermissionStatus.setText(hasUsage ? "Granted" : "Not Granted — Tap to allow access");
+        }
+    }
+
+    private void setupDataPrivacyListeners(View btnDeleteHistory) {
         btnDeleteHistory.setOnClickListener(v -> handleDeleteHistory());
     }
 
-    private void handleExportData() {
-        // TODO: Implement actual export logic
-        Toast.makeText(getContext(), "Exporting data...", Toast.LENGTH_SHORT).show();
-    }
-
     private void handleDeleteHistory() {
-        new AlertDialog.Builder(requireContext())
+        new MaterialAlertDialogBuilder(requireContext())
                 .setTitle("Delete Location History")
-                .setMessage("Are you sure you want to delete all your location history? This action cannot be undone.")
+                .setMessage("Are you sure you want to delete all your location history and saved places? This action cannot be undone.")
                 .setPositiveButton("Delete", (dialog, which) -> {
-                    app.getDatabaseWriteExecutor().execute(() -> {
+                    app.getBackgroundWriteExecutor().execute(() -> {
                         ActivityDatabase db = ActivityDatabase.getDatabase(requireContext());
-                        PlaceDao placeDao = db.placeDao();
                         db.activityDao().deleteAllActivities();
-                        placeDao.deleteAllPlaces();
+                        db.placeDao().deleteAllPlaces();
+
+                        SharedPreferences llmPrefs = requireContext().getSharedPreferences("llm_insights_prefs", Context.MODE_PRIVATE);
+                        llmPrefs.edit().clear().apply();
+
                         if (getActivity() != null) {
-                            getActivity().runOnUiThread(() -> {
-                                Toast.makeText(getContext(), "Location history deleted", Toast.LENGTH_SHORT).show();
-                            });
+                            getActivity().runOnUiThread(() ->
+                                    Toast.makeText(getContext(), "All location history deleted", Toast.LENGTH_SHORT).show()
+                            );
                         }
                     });
                 })
-                .setNegativeButton("Cancel", (dialog, which) -> {
-                    Toast.makeText(getContext(), "Deletion cancelled", Toast.LENGTH_SHORT).show();
-                    dialog.dismiss();
-                })
+                .setNegativeButton("Cancel", (dialog, which) -> dialog.dismiss())
                 .show();
     }
 }

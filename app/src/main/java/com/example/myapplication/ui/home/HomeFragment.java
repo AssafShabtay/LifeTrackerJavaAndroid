@@ -9,8 +9,6 @@ import com.example.myapplication.ui.home.sheet.EditStillActivitySheet;
 import com.example.myapplication.ui.home.timeline.TimelineAdapter;
 
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
@@ -55,14 +53,6 @@ public class HomeFragment extends Fragment {
 
     private LifeTrackerApp app;
 
-    // refresh ui every 5 minutes
-    private final Handler refreshHandler = new Handler(Looper.getMainLooper()); //TODO CHECK IF THIS I NEEDED
-    private final Runnable refreshRunnable = new Runnable() {
-        public void run() {
-            loadTimelineData(calendarManager.getSelectedDate());
-            refreshHandler.postDelayed(this, UPDATE_INTERVAL_MS);
-        }
-    };
 
     @Nullable
     @Override
@@ -90,10 +80,10 @@ public class HomeFragment extends Fragment {
                 PopupMenu popup = new PopupMenu(requireContext(), btnAddCustomActivity);
                 popup.getMenu().add(0, 1, 0, "Add Visit");
                 popup.getMenu().add(0, 2, 0, "Add Movement");
-                
+
                 popup.setOnMenuItemClickListener(item -> {
                     Date date = calendarManager != null ? calendarManager.getSelectedDate() : new Date();
-                    
+
                     if (item.getItemId() == 1) {
                         AddCustomActivitySheet sheet = AddCustomActivitySheet.newInstance(date, () -> {
                             loadTimelineData(calendarManager.getSelectedDate());
@@ -162,7 +152,7 @@ public class HomeFragment extends Fragment {
         // ---------------- initialize calendar -----------------
         calendarManager = new CalendarManager(view, date -> {
             loadTimelineData(date);
-        }, app.getDatabaseWriteExecutor());
+        }, app.getBackgroundWriteExecutor());
 
         // ----------------- initialize timeline --------------------
         timelineAdapter = new TimelineAdapter(item -> {
@@ -187,28 +177,30 @@ public class HomeFragment extends Fragment {
     }
 
     private void showStillEditSheet(StillLocation still) {
-        EditStillActivitySheet sheet = EditStillActivitySheet.newInstance(still, new EditStillActivitySheet.OnVisitInteractionListener() {
+        EditStillActivitySheet sheet = EditStillActivitySheet.newInstance(still.copy(), new EditStillActivitySheet.OnVisitInteractionListener() {
             @Override
             public void onUpdate(StillLocation updatedStill) {
-                app.getDatabaseWriteExecutor().execute(() -> {
-                    dao.updateStillAndSyncPlace(updatedStill);
-                    if (isAdded()) {
-                        requireActivity().runOnUiThread(() -> {
-                            loadTimelineData(calendarManager.getSelectedDate());
-                        });
-                    }}
+                app.getBackgroundWriteExecutor().execute(() -> {
+                            dao.updateStillAndSyncPlace(updatedStill);
+                            if (isAdded()) {
+                                requireActivity().runOnUiThread(() -> {
+                                    loadTimelineData(calendarManager.getSelectedDate());
+                                });
+                            }
+                        }
                 );
             }
 
             @Override
             public void onDelete(StillLocation stillToDelete) {
-                app.getDatabaseWriteExecutor().execute(() -> {
-                    dao.deleteStillLocation(stillToDelete.getId());
-                    if (isAdded()) {
-                        requireActivity().runOnUiThread(() -> {
-                            loadTimelineData(calendarManager.getSelectedDate());
-                        });
-                    }}
+                app.getBackgroundWriteExecutor().execute(() -> {
+                            dao.deleteStillLocation(stillToDelete.getId());
+                            if (isAdded()) {
+                                requireActivity().runOnUiThread(() -> {
+                                    loadTimelineData(calendarManager.getSelectedDate());
+                                });
+                            }
+                        }
                 );
             }
         });
@@ -216,28 +208,30 @@ public class HomeFragment extends Fragment {
     }
 
     private void showMovementEditSheet(MovementActivity movement) {
-        EditMovementActivitySheet sheet = EditMovementActivitySheet.newInstance(movement, new EditMovementActivitySheet.OnVisitInteractionListener() {
+        EditMovementActivitySheet sheet = EditMovementActivitySheet.newInstance(movement.copy(), new EditMovementActivitySheet.OnVisitInteractionListener() {
             @Override
             public void onUpdate(MovementActivity movement) {
-                app.getDatabaseWriteExecutor().execute(() -> {
-                    dao.updateMovementActivity(movement);
-                    if (isAdded()) {
-                        requireActivity().runOnUiThread(() -> {
-                            loadTimelineData(calendarManager.getSelectedDate());
-                        });
-                    }}
+                app.getBackgroundWriteExecutor().execute(() -> {
+                            dao.updateMovementActivity(movement);
+                            if (isAdded()) {
+                                requireActivity().runOnUiThread(() -> {
+                                    loadTimelineData(calendarManager.getSelectedDate());
+                                });
+                            }
+                        }
                 );
             }
 
             @Override
             public void onDelete(MovementActivity movement) {
-                app.getDatabaseWriteExecutor().execute(() -> {
-                    dao.deleteMovementActivity(movement.getId());
-                    if (isAdded()) {
-                        requireActivity().runOnUiThread(() -> {
-                            loadTimelineData(calendarManager.getSelectedDate());
-                        });
-                    }}
+                app.getBackgroundWriteExecutor().execute(() -> {
+                            dao.deleteMovementActivity(movement.getId());
+                            if (isAdded()) {
+                                requireActivity().runOnUiThread(() -> {
+                                    loadTimelineData(calendarManager.getSelectedDate());
+                                });
+                            }
+                        }
                 );
             }
         });
@@ -266,7 +260,7 @@ public class HomeFragment extends Fragment {
         cal.set(Calendar.MILLISECOND, 999);
         Date end = cal.getTime();
 
-        app.getDatabaseWriteExecutor().execute(() -> {
+        app.getBackgroundWriteExecutor().execute(() -> {
             List<StillLocation> stills = dao.getStillsFromRange(start, end);
             List<MovementActivity> movements = dao.getMovementsFromRange(start, end);
 
@@ -318,29 +312,20 @@ public class HomeFragment extends Fragment {
         if (mapManager != null) {
             mapManager.onResume();
         }
-        startPeriodicRefresh();
     }
 
     @Override
     public void onPause() {
         super.onPause();
-        stopPeriodicRefresh();
     }
 
     @Override
     public void onDestroy() {
         super.onDestroy();
+        if (phoneUsageMiniCardManager != null) {
+            phoneUsageMiniCardManager.destroy();
+        }
         calendarManager.destroy();
-    }
-
-
-    private void startPeriodicRefresh() {
-        refreshHandler.removeCallbacks(refreshRunnable);
-        refreshHandler.postDelayed(refreshRunnable, UPDATE_INTERVAL_MS);
-    }
-
-    private void stopPeriodicRefresh() {
-        refreshHandler.removeCallbacks(refreshRunnable);
     }
 
 

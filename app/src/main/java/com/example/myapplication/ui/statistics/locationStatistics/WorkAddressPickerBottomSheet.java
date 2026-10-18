@@ -153,7 +153,7 @@ public class WorkAddressPickerBottomSheet extends BottomSheetDialogFragment {
 
     private void performAddressValidation(String address) {
         LifeTrackerApp app = (LifeTrackerApp) requireActivity().getApplication();
-        app.getDatabaseWriteExecutor().execute(() -> {
+        app.getBackgroundWriteExecutor().execute(() -> {
             if (getContext() == null) return;
             Geocoder geocoder = new Geocoder(requireContext());
             try {
@@ -186,7 +186,7 @@ public class WorkAddressPickerBottomSheet extends BottomSheetDialogFragment {
     private void validateAndSave(String address) {
         btnSaveWorkAddress.setEnabled(false);
         LifeTrackerApp app = (LifeTrackerApp) requireActivity().getApplication();
-        app.getDatabaseWriteExecutor().execute(() -> {
+        app.getBackgroundWriteExecutor().execute(() -> {
             if (getContext() == null) return;
             Geocoder geocoder = new Geocoder(requireContext());
             try {

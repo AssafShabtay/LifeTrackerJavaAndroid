@@ -31,6 +31,8 @@ import com.example.myapplication.data.model.StillLocation;
 import com.example.myapplication.data.model.TimelineItem;
 import com.example.myapplication.util.ErrorLogger;
 import com.example.myapplication.util.Logger;
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -45,20 +47,19 @@ import com.google.android.gms.maps.model.PolylineOptions;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import com.example.myapplication.LifeTrackerApp;
 
-@SuppressWarnings("ALL")
 public class MapManager implements OnMapReadyCallback {
     private static final String TAG = "MapManager";
     private final Fragment fragment;
     private final int fragmentId;
+    private final LifeTrackerApp app;
     private GoogleMap mMap;
-    private final ExecutorService io = Executors.newSingleThreadExecutor();
 
     public MapManager(Fragment fragment, int fragmentId) {
         this.fragment = fragment;
         this.fragmentId = fragmentId;
+        this.app = (LifeTrackerApp) fragment.requireContext().getApplicationContext();
     }
 
     public void init() {
@@ -90,6 +91,43 @@ public class MapManager implements OnMapReadyCallback {
                 return false;
             });
         }
+
+        View view = fragment.getView();
+        if (view != null) {
+            View btnZoomIn = view.findViewById(R.id.btn_zoom_in);
+            View btnZoomOut = view.findViewById(R.id.btn_zoom_out);
+            View btnMyLocation = view.findViewById(R.id.btn_my_location);
+
+            if (btnZoomIn != null) {
+                btnZoomIn.setOnClickListener(v -> {
+                    if (mMap != null) {
+                        mMap.animateCamera(CameraUpdateFactory.zoomIn());
+                    }
+                });
+            }
+
+            if (btnZoomOut != null) {
+                btnZoomOut.setOnClickListener(v -> {
+                    if (mMap != null) {
+                        mMap.animateCamera(CameraUpdateFactory.zoomOut());
+                    }
+                });
+            }
+
+            if (btnMyLocation != null) {
+                btnMyLocation.setOnClickListener(v -> {
+                    if (mMap != null && ContextCompat.checkSelfPermission(fragment.requireContext(), Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                        FusedLocationProviderClient fusedClient = LocationServices.getFusedLocationProviderClient(fragment.requireContext());
+                        fusedClient.getLastLocation().addOnSuccessListener(location -> {
+                            if (location != null) {
+                                mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(
+                                        new LatLng(location.getLatitude(), location.getLongitude()), 16f));
+                            }
+                        });
+                    }
+                });
+            }
+        }
     }
 
     @Override
@@ -97,7 +135,8 @@ public class MapManager implements OnMapReadyCallback {
         mMap = googleMap;
 
         mMap.getUiSettings().setAllGesturesEnabled(true);
-        mMap.getUiSettings().setZoomControlsEnabled(true);
+        mMap.getUiSettings().setZoomControlsEnabled(false);
+        mMap.getUiSettings().setMyLocationButtonEnabled(false);
         mMap.getUiSettings().setScrollGesturesEnabled(true);
         mMap.getUiSettings().setZoomGesturesEnabled(true);
         mMap.getUiSettings().setTiltGesturesEnabled(true);
@@ -151,7 +190,7 @@ public class MapManager implements OnMapReadyCallback {
         } else if (item instanceof MovementActivity) {
             MovementActivity movement = (MovementActivity) item;
 
-            io.execute(() -> {
+            app.getBackgroundWriteExecutor().execute(() -> {
                 ActivityDao dao = ActivityDatabase.getDatabase(fragment.requireContext()).activityDao();
                 List<RoutePoint> points = dao.getRoutePointsForMovement(movement.getId());
 
@@ -287,7 +326,7 @@ public class MapManager implements OnMapReadyCallback {
 
         LatLngBounds.Builder totalBounds = new LatLngBounds.Builder();
 
-        io.execute(() -> {
+        app.getBackgroundWriteExecutor().execute(() -> {
             ActivityDao dao = ActivityDatabase.getDatabase(fragment.requireContext()).activityDao();
 
             for (int i = 0; i < items.size(); i++) {

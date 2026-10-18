@@ -296,11 +296,6 @@ public class HourlyUsageGraphView extends View {
         return super.onTouchEvent(event);
     }
 
-    @Override
-    public boolean performClick() {
-        return super.performClick();
-    }
-
     private float dpToPx(float dp) {
         return TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, dp, getResources().getDisplayMetrics());
     }

@@ -114,7 +114,7 @@ public class AddCustomMovementActivitySheet extends BottomSheetDialogFragment {
 
             final String activityNameToSave = finalActivityName;
             
-            app.getDatabaseWriteExecutor().execute(() -> {
+            app.getBackgroundWriteExecutor().execute(() -> {
                 MovementActivity newMovement = new MovementActivity();
                 newMovement.setActivityTypeName(activityNameToSave);
                 newMovement.setStartTimeDate(editedStartTime);

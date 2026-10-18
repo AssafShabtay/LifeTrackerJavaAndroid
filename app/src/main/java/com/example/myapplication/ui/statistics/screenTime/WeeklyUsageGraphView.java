@@ -110,9 +110,7 @@ public class WeeklyUsageGraphView extends View {
         startAnimation();
     }
 
-    public void setOnDaySelectedListener(OnDaySelectedListener listener) {
-        this.onDaySelectedListener = listener;
-    }
+
 
     private void startAnimation() {
         ValueAnimator animator = ValueAnimator.ofFloat(0f, 1f);
@@ -280,11 +278,6 @@ public class WeeklyUsageGraphView extends View {
                 return true;
         }
         return super.onTouchEvent(event);
-    }
-
-    @Override
-    public boolean performClick() {
-        return super.performClick();
     }
 
     private float dpToPx(float dp) {

@@ -41,9 +41,15 @@ public class StatisticsFragment extends Fragment {
             if (position == 0) {
                 tab.setText("Screen Time");
             } else {
-                tab.setText("Statistics");
+                tab.setText("Location Statistics");
             }
         }).attach();
+    }
+
+    public void selectScreenTimeTab() {
+        if (viewPager != null) {
+            viewPager.setCurrentItem(0, true);
+        }
     }
 
     private static class StatisticsPagerAdapter extends FragmentStateAdapter {
@@ -58,7 +64,7 @@ public class StatisticsFragment extends Fragment {
             if (position == 0) {
                 return new ScreenTimeFragment();
             } else {
-                return new GeneralStatisticsFragment();
+                return new LocationStatisticsFragment();
             }
         }
 

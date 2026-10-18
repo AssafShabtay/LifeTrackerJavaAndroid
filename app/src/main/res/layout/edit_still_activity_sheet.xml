@@ -34,6 +34,7 @@
                 android:fontFamily="sans-serif-medium"
                 android:textColor="?attr/colorOnSurface"
                 android:layout_alignParentStart="true"
+                android:layout_toStartOf="@id/btnDelete"
                 android:layout_centerVertical="true"/>
 
             <com.google.android.material.button.MaterialButton
@@ -90,6 +91,8 @@
                     android:id="@+id/actvName"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:paddingHorizontal="16dp"
+                    android:paddingVertical="12dp"
                     android:inputType="textCapWords" />
 
             </com.google.android.material.textfield.TextInputLayout>
@@ -102,6 +105,7 @@
             android:layout_height="wrap_content"
             android:hint="Address"
             android:layout_marginBottom="24dp"
+            app:startIconDrawable="@drawable/ic_location_on"
             app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.MediumComponent"
             app:endIconMode="clear_text">
 
@@ -109,6 +113,8 @@
                 android:id="@+id/etAddress"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="12dp"
                 android:inputType="textPostalAddress" />
 
         </com.google.android.material.textfield.TextInputLayout>
@@ -167,6 +173,8 @@
                 android:id="@+id/actvCategory"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="12dp"
                 android:inputType="textCapWords"
                 android:dropDownHeight="180dp" />
 

@@ -15,6 +15,7 @@ import android.widget.TextView;
 import androidx.core.content.ContextCompat;
 import androidx.core.graphics.ColorUtils;
 
+import com.example.myapplication.LifeTrackerApp;
 import com.example.myapplication.R;
 import com.example.myapplication.ui.statistics.screenTime.ScreenTimeStatsManager;
 import com.example.myapplication.tracking.usage.TimelineItemUsageData;
@@ -29,8 +30,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 
 public class TimelineUsageBadgeHelper {
@@ -38,7 +37,6 @@ public class TimelineUsageBadgeHelper {
     private final Set<String> expandedItemKeys = new HashSet<>();
     private final Map<String, TimelineItemUsageData> usageCache = new HashMap<>();
 
-    private final ExecutorService backgroundExecutor = Executors.newFixedThreadPool(2); //TODO FIX
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
     public void bindUsageBadgeAndBreakdown(
@@ -93,7 +91,8 @@ public class TimelineUsageBadgeHelper {
             layoutUsageBadge.setVisibility(View.GONE);
             layoutMicroBreakdownContainer.setVisibility(View.GONE);
 
-            backgroundExecutor.execute(() -> {
+            LifeTrackerApp app = (LifeTrackerApp) context.getApplicationContext();
+            app.getBackgroundWriteExecutor().execute(() -> {
                 TimelineItemUsageData data = UsageStatsHelper.getUsageDataForPeriod(context, startDateTime, endDateTime);
                 if (data != null) {
                     usageCache.put(itemKey, data);

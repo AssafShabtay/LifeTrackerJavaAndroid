@@ -26,6 +26,26 @@ public class MovementActivity implements TimelineItem {
     @Ignore
     private List<StillLocation> stops = new ArrayList<>();
 
+    public MovementActivity copy() {
+        MovementActivity copy = new MovementActivity();
+        copy.id = this.id;
+        copy.activityTypeName = this.activityTypeName;
+        copy.startLat = this.startLat;
+        copy.startLng = this.startLng;
+        copy.endLat = this.endLat;
+        copy.endLng = this.endLng;
+        copy.startTimeDate = this.startTimeDate != null ? new Date(this.startTimeDate.getTime()) : null;
+        copy.endTimeDate = this.endTimeDate != null ? new Date(this.endTimeDate.getTime()) : null;
+        if (this.stops != null) {
+            List<StillLocation> copiedStops = new ArrayList<>();
+            for (StillLocation stop : this.stops) {
+                copiedStops.add(stop.copy());
+            }
+            copy.stops = copiedStops;
+        }
+        return copy;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (o == null || getClass() != o.getClass()) return false;

@@ -77,6 +77,8 @@
                     android:id="@+id/actvName"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:paddingHorizontal="16dp"
+                    android:paddingVertical="12dp"
                     android:inputType="textCapWords" />
 
             </com.google.android.material.textfield.TextInputLayout>
@@ -89,6 +91,7 @@
             android:layout_height="wrap_content"
             android:hint="Address (Optional)"
             android:layout_marginBottom="4dp"
+            app:startIconDrawable="@drawable/ic_location_on"
             app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.MediumComponent"
             app:endIconMode="clear_text">
 
@@ -96,6 +99,8 @@
                 android:id="@+id/etAddress"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="12dp"
                 android:inputType="textPostalAddress" />
 
         </com.google.android.material.textfield.TextInputLayout>
@@ -153,6 +158,8 @@
                 android:id="@+id/actvCategory"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="12dp"
                 android:inputType="textCapWords"
                 android:dropDownHeight="180dp" />
 

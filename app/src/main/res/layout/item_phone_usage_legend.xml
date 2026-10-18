@@ -3,7 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginBottom="3dp"
+    android:layout_marginBottom="2dp"
     android:gravity="center_vertical"
     android:orientation="horizontal">
 
@@ -11,7 +11,7 @@
         android:id="@+id/dot_legend_color"
         android:layout_width="8dp"
         android:layout_height="8dp"
-        android:layout_marginEnd="8dp"
+        android:layout_marginEnd="6dp"
         android:background="@drawable/day_indicator_dot" />
 
     <TextView
@@ -30,15 +30,10 @@
         android:id="@+id/tv_legend_time"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginStart="6dp"
         android:fontFamily="sans-serif-bold"
         android:textColor="?attr/colorOnSurfaceVariant"
         android:textSize="11sp"
         tools:text="1h 45m" />
-
-    <TextView
-        android:id="@+id/tv_legend_text"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:visibility="gone" />
 
 </LinearLayout>

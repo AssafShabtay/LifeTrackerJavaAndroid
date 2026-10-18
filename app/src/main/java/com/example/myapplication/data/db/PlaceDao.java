@@ -20,8 +20,7 @@ public interface PlaceDao {
     @Update
     void updatePlace(Place place);
 
-    @Delete
-    void deletePlace(Place place);
+
 
     @Query("DELETE FROM places")
     void deleteAllPlaces();

@@ -199,7 +199,7 @@ public class AddCustomActivitySheet extends BottomSheetDialogFragment {
                     return;
                 }
 
-                app.getDatabaseWriteExecutor().execute(() -> {
+                app.getBackgroundWriteExecutor().execute(() -> {
                     if (getContext() == null) return;
                     Geocoder geocoder = new Geocoder(requireContext());
                     try {
@@ -346,7 +346,7 @@ public class AddCustomActivitySheet extends BottomSheetDialogFragment {
             final String finalName = name;
             final String address = etAddress.getText().toString().trim();
 
-            app.getDatabaseWriteExecutor().execute(() -> {
+            app.getBackgroundWriteExecutor().execute(() -> {
                 StillLocation newStill = new StillLocation();
                 newStill.setPlaceName(finalName);
                 newStill.setPlaceAddressAndUpdateCoordinates(address, requireContext());

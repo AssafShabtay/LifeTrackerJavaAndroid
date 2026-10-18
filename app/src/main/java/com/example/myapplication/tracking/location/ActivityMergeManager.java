@@ -21,8 +21,8 @@ public class ActivityMergeManager {
     private final LocationService locationService;
     private final LocationProvider locationProvider;
     public static float DISTANCE_THRESHOLD_FOR_STILL_MERGE_METERS = 75f;
-    public static float MAX_GAP_THRESHOLD_FOR_STILL_MERGE_MS = 180000f; // 3 minutes
-    public static float MIN_GAP_THRESHOLD_FOR_STILL_MERGE_MS = -20000f;
+
+
     public ActivityMergeManager(ActivityDao dao, LocationService locationService, LocationProvider locationProvider) {
         this.dao = dao;
         this.locationService = locationService;
@@ -30,7 +30,7 @@ public class ActivityMergeManager {
     }
 
     boolean attemptMergeWithOngoingStill(Long currentStillTrackingId, Date startTime, Location currentLocation, GeofenceUtilsManager geofenceUtilsManager){
-        // fun that tries to merge a new still activity with an ongoing still activity
+        // tries to merge a new still activity with an ongoing still activity
         // If successful returns true else false
 
         if (currentStillTrackingId != null) {
@@ -43,7 +43,7 @@ public class ActivityMergeManager {
                     Logger.saveLog(locationService, msg);
                     dao.updateStillEndTime(activeStill.getId(), null);
                     Log.d(TAG, "STILL already active at similar location: ID=" + currentStillTrackingId);
-                    // If we successfully merged and the unactive still already has a location, stop any frequent updates.
+                    // If we successfully merged and the unactive still already has a location, stop any frequent updates
                     if (locationProvider.isRequestingStillLocationUpdates() && activeStill.getLat() != null) {
                         locationProvider.stopFrequentStillLocationUpdates();
                     }
@@ -103,7 +103,7 @@ public class ActivityMergeManager {
             else if (lastStill.getEndTimeDate() != null) {
                 long gapMs = startTime.getTime() - lastStill.getEndTimeDate().getTime();
                 // If the gap is less than the max threshold, merge
-                if (gapMs >= MIN_GAP_THRESHOLD_FOR_STILL_MERGE_MS && gapMs < MAX_GAP_THRESHOLD_FOR_STILL_MERGE_MS) {
+                if (gapMs >= -20000f && gapMs < 180000f) { // 180000f = 3 minutes
                     shouldMerge = true;
                 }
             }
@@ -113,7 +113,7 @@ public class ActivityMergeManager {
                 // Check for intervening movement activities
                 if (lastStill.getEndTimeDate() != null && startTime != null && dao.countMovementActivitiesBetween(lastStill.getEndTimeDate(), startTime) > 0) {
                     String msg = String.format(Locale.US, "Not merging with last still %d due to intervening movement activity between %s and %s",
-                            lastStill.getId(), lastStill.getEndTimeDate().toString(), startTime.toString());
+                            lastStill.getId(), lastStill.getEndTimeDate().toString(), startTime);
                     Log.d(TAG, msg);
                     Logger.saveLog(locationService, msg);
                     return false; // Do not merge if there was movement

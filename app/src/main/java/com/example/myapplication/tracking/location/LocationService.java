@@ -1,5 +1,4 @@
 package com.example.myapplication.tracking.location;
-import com.example.myapplication.R;
 import com.example.myapplication.tracking.geofence.GeofenceManager;
 import com.example.myapplication.tracking.geofence.GeofenceUtilsManager;
 
@@ -21,9 +20,6 @@ import android.location.Location;
 import android.os.Build;
 import android.os.IBinder;
 import android.util.Log;
-import android.app.ActivityManager;
-import android.app.AlarmManager;
-import android.os.SystemClock;
 
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
@@ -41,7 +37,6 @@ import com.example.myapplication.data.model.StillLocation;
 import com.example.myapplication.util.ErrorLogger;
 import com.example.myapplication.util.Logger;
 import com.example.myapplication.tracking.receiver.ActivityTransitionReceiver;
-import com.example.myapplication.tracking.receiver.LocationServiceRestartReceiver;
 import com.google.android.gms.location.ActivityTransition;
 import com.google.android.gms.location.DetectedActivity;
 import com.google.android.gms.location.FusedLocationProviderClient;
@@ -75,7 +70,7 @@ public class LocationService extends Service {
     private ActivityMergeManager activityMergeManager;
     private LocationProvider locationProvider;
     private LifeTrackerApp app;
-    private PlacesClient placesClient; // Added PlacesClient member variable
+    private PlacesClient placesClient;
     public static final int NOTIFICATION_ID = 101;
     public static final String CHANNEL_ID = "LocationServiceChannel";
     public static final String TAG = "LocationService";
@@ -107,14 +102,12 @@ public class LocationService extends Service {
 
         geofenceUtilsManager = new GeofenceUtilsManager(placeDao, this, placesClient, geofenceManager);
 
-        locationProvider = new LocationProvider(this, fusedLocationClient, dao, app.getLocationTrackingExecutor(), geofenceUtilsManager, this);
+        locationProvider = new LocationProvider(this, fusedLocationClient, dao, app.getBackgroundWriteExecutor(), geofenceUtilsManager, this);
         activityMergeManager = new ActivityMergeManager(dao, this, locationProvider);
         createNotificationChannel();
 
-        // Schedule the service restart alarm
-        scheduleServiceRestartAlarm();
 
-        app.getLocationTrackingExecutor().execute(() -> {
+        app.getBackgroundWriteExecutor().execute(() -> {
             // Recover previous activity state after restart in background thread
 
             // Recover still activity
@@ -173,11 +166,7 @@ public class LocationService extends Service {
         Logger.saveLog(this, "LocationService onDestroy");
         locationProvider.stopRouteUpdates();
         locationProvider.stopFrequentStillLocationUpdates();
-        // Cancel the service restart alarm
-        cancelServiceRestartAlarm();
         if (placesClient != null) {
-            // There is no explicit shutdown method for PlacesClient.
-            // Setting it to null allows for garbage collection.
             placesClient = null;
         }
     }
@@ -195,15 +184,15 @@ public class LocationService extends Service {
                     int transitionType = intent.getIntExtra(ActivityTransitionReceiver.EXTRA_TRANSITION_TYPE, -1);
                     long timestampMs = intent.getLongExtra(ActivityTransitionReceiver.EXTRA_TIMESTAMP_MS, System.currentTimeMillis());
                     // calling handleActivityUpdate in background
-                    app.getLocationTrackingExecutor().execute(() -> {
-                        handleActivityUpdate(activityType, transitionType, timestampMs);
+                    app.getBackgroundWriteExecutor().execute(() -> {
+                        handleActivityUpdate(activityType, transitionType, timestampMs);;
                     });
 //TODO                } else if (GeofenceBroadcastReceiver.ACTION_GEOFENCE_UPDATE.equals(action)) { // checks if the intent came from geofence
 //TODO                    // Extracts the geofence data
 //TODO                    String geofenceId = intent.getStringExtra(GeofenceBroadcastReceiver.EXTRA_GEOFENCE_ID);
 //TODO                    int transitionType = intent.getIntExtra(GeofenceBroadcastReceiver.EXTRA_TRANSITION_TYPE, -1);
 //TODO                    // calling handleGeofenceUpdate in background
-//TODO                    app.getLocationTrackingExecutor().execute(() -> handleGeofenceUpdate(geofenceId, transitionType));
+//TODO                    app.getBackgroundWriteExecutor().execute(() -> handleGeofenceUpdate(geofenceId, transitionType));
 //TODO
                 }
             }
@@ -348,7 +337,6 @@ public class LocationService extends Service {
     }
 
     void startStillTracking(Date startTime) {
-        // Call only on the shared tracking queue: the check and insert span blocking lookups.
         // If there's already an active still, prevent creating a duplicate
         if (currentStillTrackingId != null) {
             Log.w(TAG, "Attempted to start new still tracking while one is already active (ID: " + currentStillTrackingId + "). Aborting new still creation.");
@@ -706,42 +694,5 @@ public class LocationService extends Service {
             stopSelf();
             Log.e(TAG, "Notification permission revoked: " + e.getMessage(), e);
         }
-    }
-
-    public static boolean isServiceRunning(Context context) {
-        ActivityManager manager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
-        if (manager != null) {
-            for (ActivityManager.RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {
-                if (LocationService.class.getName().equals(service.service.getClassName())) {
-                    return service.foreground;
-                }
-            }
-        }
-        return false;
-    }
-
-    private void scheduleServiceRestartAlarm() {
-        Log.d(TAG, "Scheduling service restart alarm.");
-        AlarmManager alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
-        Intent intent = new Intent(this, LocationServiceRestartReceiver.class);
-        intent.setAction(LocationServiceRestartReceiver.ACTION_RESTART_SERVICE);
-        PendingIntent pendingIntent = PendingIntent.getBroadcast(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-
-        // Repeat every 5 minutes (300 * 1000 milliseconds)
-        alarmManager.setRepeating(
-                AlarmManager.ELAPSED_REALTIME_WAKEUP,
-                SystemClock.elapsedRealtime() + 5 * 60 * 1000, // Initial trigger after 5 minutes
-                5 * 60 * 1000, // Repeat every 5 minutes
-                pendingIntent
-        );
-    }
-
-    private void cancelServiceRestartAlarm() {
-        Log.d(TAG, "Cancelling service restart alarm.");
-        AlarmManager alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
-        Intent intent = new Intent(this, LocationServiceRestartReceiver.class);
-        intent.setAction(LocationServiceRestartReceiver.ACTION_RESTART_SERVICE);
-        PendingIntent pendingIntent = PendingIntent.getBroadcast(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-        alarmManager.cancel(pendingIntent);
     }
 }

@@ -73,7 +73,7 @@ public class WorkStatisticsManager {
             return;
         }
 
-        app.getDatabaseWriteExecutor().execute(() -> {
+        app.getBackgroundWriteExecutor().execute(() -> {
             if (!listener.isFragmentAdded()) return;
             double[] coords = getCoordinatesFromAddress(address, context);
 
@@ -111,7 +111,7 @@ public class WorkStatisticsManager {
     }
 
     public void loadWorkStatistics() {
-        app.getDatabaseWriteExecutor().execute(() -> {
+        app.getBackgroundWriteExecutor().execute(() -> {
             if (!listener.isFragmentAdded()) return;
             ActivityDatabase db = ActivityDatabase.getDatabase(context);
             PlaceDao placeDao = db.placeDao();
@@ -270,7 +270,9 @@ public class WorkStatisticsManager {
 
     private int getWeekStartDayPreference() {
         SharedPreferences preferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-        return preferences.getInt(KEY_WEEK_START_DAY, Calendar.SUNDAY);
+        int systemFirstDay = Calendar.getInstance().getFirstDayOfWeek();
+        int defaultFirstDay = (systemFirstDay == Calendar.SUNDAY) ? Calendar.SUNDAY : Calendar.MONDAY;
+        return preferences.getInt(KEY_WEEK_START_DAY, defaultFirstDay);
     }
 
     private void drawWorkHoursBarChart(List<Double> dailyHours) {

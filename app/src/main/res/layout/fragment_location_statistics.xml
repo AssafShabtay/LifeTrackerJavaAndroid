@@ -21,13 +21,13 @@
             android:paddingTop="16dp"
             android:paddingBottom="64dp">
 
-            <!-- Anomaly & Habit Detection Card -->
+            <!-- Anomaly & Habit Detection Card Header -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="24dp"
                 android:layout_marginBottom="12dp"
-                android:text="Did you know?"
+                android:text="AI Insights &amp; Habits"
                 android:textAppearance="@style/TextAppearance.Material3.TitleMedium" />
 
             <com.google.android.material.card.MaterialCardView
@@ -48,7 +48,7 @@
                         android:id="@+id/tv_habit_text"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginBottom="8dp"
+                        android:layout_marginBottom="12dp"
                         android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
                         tools:text="Habit: Every time you go to the Cafe, you usually stay for exactly 45 minutes." />
 
@@ -97,6 +97,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_alignParentStart="true"
+                            android:layout_toStartOf="@id/btnChangeHomeAddress"
                             android:layout_centerVertical="true"
                             android:text="Cabin Fever Index"
                             android:textAppearance="@style/TextAppearance.Material3.TitleMedium" />
@@ -303,6 +304,7 @@
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:layout_alignParentStart="true"
+                                    android:layout_toStartOf="@id/tv_arrival_avg"
                                     android:textColor="#5C5CD6"
                                     android:textSize="10sp"
                                     tools:text="8:00" />
@@ -322,6 +324,7 @@
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:layout_alignParentEnd="true"
+                                    android:layout_toEndOf="@id/tv_arrival_avg"
                                     android:textColor="#5C5CD6"
                                     android:textSize="10sp"
                                     tools:text="8:30" />
@@ -366,6 +369,7 @@
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:layout_alignParentStart="true"
+                                    android:layout_toStartOf="@id/tv_departure_avg"
                                     android:textColor="#009688"
                                     android:textSize="10sp"
                                     tools:text="3:00" />
@@ -385,6 +389,7 @@
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:layout_alignParentEnd="true"
+                                    android:layout_toEndOf="@id/tv_departure_avg"
                                     android:textColor="#009688"
                                     android:textSize="10sp"
                                     tools:text="3:45" />
@@ -422,6 +427,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_alignParentStart="true"
+                            android:layout_toStartOf="@id/btnChangeWorkAddress"
                             android:layout_centerVertical="true"
                             android:gravity="center_vertical"
                             android:orientation="horizontal">

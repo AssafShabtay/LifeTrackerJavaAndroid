@@ -50,6 +50,25 @@ public class StillLocation implements TimelineItem {
     private String geofencePlaceId;
 
 
+    public StillLocation copy() {
+        StillLocation copy = new StillLocation();
+        copy.id = this.id;
+        copy.lat = this.lat;
+        copy.lng = this.lng;
+        copy.startTimeDate = this.startTimeDate != null ? new Date(this.startTimeDate.getTime()) : null;
+        copy.endTimeDate = this.endTimeDate != null ? new Date(this.endTimeDate.getTime()) : null;
+        copy.wasSupposedToBeActivity = this.wasSupposedToBeActivity;
+        copy.placeId = this.placeId;
+        copy.placeName = this.placeName;
+        copy.category = this.category;
+        copy.icon = this.icon;
+        copy.color = this.color;
+        copy.isStop = this.isStop;
+        copy.placeAddress = this.placeAddress;
+        copy.geofencePlaceId = this.geofencePlaceId;
+        return copy;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (o == null || getClass() != o.getClass()) return false;

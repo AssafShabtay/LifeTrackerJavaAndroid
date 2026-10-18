@@ -23,7 +23,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class GeneralStatisticsFragment extends Fragment implements
+public class LocationStatisticsFragment extends Fragment implements
         HomeAddressPickerBottomSheet.OnHomeAddressSelectedListener,
         WorkAddressPickerBottomSheet.OnWorkAddressSelectedListener,
         HomeStatisticsManager.HomeStatisticsListener,
@@ -31,7 +31,7 @@ public class GeneralStatisticsFragment extends Fragment implements
         PunctualityStatisticsManager.PunctualityStatisticsListener,
         LlmInsightsManager.LlmInsightsListener {
 
-    private static final String TAG = "GeneralStatisticsFragment";
+    private static final String TAG = "LocationStatisticsFragment";
 
     private List<String> topPlaceIds = new ArrayList<>();
     private Map<String, String> placeNamesMap = new HashMap<>();
@@ -70,7 +70,7 @@ public class GeneralStatisticsFragment extends Fragment implements
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        return inflater.inflate(R.layout.fragment_general_statistics, container, false);
+        return inflater.inflate(R.layout.fragment_location_statistics, container, false);
     }
 
     @Override

@@ -59,7 +59,7 @@ public class HomeStatisticsManager {
             return;
         }
 
-        app.getDatabaseWriteExecutor().execute(() -> {
+        app.getBackgroundWriteExecutor().execute(() -> {
             if (!listener.isFragmentAdded()) return;
             double[] coords = getCoordinatesFromAddress(address, context);
 
@@ -115,7 +115,7 @@ public class HomeStatisticsManager {
         final long finalNow = System.currentTimeMillis();
         final long finalSevenDaysAgo = finalNow - (7L * 24 * 60 * 60 * 1000);
 
-        app.getDatabaseWriteExecutor().execute(() -> {
+        app.getBackgroundWriteExecutor().execute(() -> {
             if (!listener.isFragmentAdded()) return;
             ActivityDatabase db = ActivityDatabase.getDatabase(context);
             Place homePlace = db.placeDao().getHomePlace();

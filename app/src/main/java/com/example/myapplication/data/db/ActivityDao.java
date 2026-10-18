@@ -56,8 +56,7 @@ public interface ActivityDao {
     @Query("UPDATE movement_activities SET endLat = :endLatitude, endLng = :endLongitude, endTimeDate = :endTimeDate WHERE id = :id")
     void endMovementActivity(long id, Double endLatitude, Double endLongitude, Date endTimeDate);
 
-    @Query("UPDATE movement_activities SET endTimeDate = :endTimeDate WHERE id = :id")
-    void updateMovementEndTime(long id, Date endTimeDate);
+
     @NonNull
     @Query("SELECT * FROM still_locations WHERE placeId = :placeId AND startTimeDate <= :end AND (endTimeDate IS NULL OR endTimeDate >= :start)")
     List<StillLocation> getStillsFromRangeAndPlace(long placeId, Date start, Date end);
@@ -77,9 +76,6 @@ public interface ActivityDao {
     @Query("SELECT * FROM movement_activities WHERE activityTypeName = :type AND endTimeDate IS NOT NULL ORDER BY endTimeDate DESC LIMIT 1")
     MovementActivity getLastCompletedMovementActivity(String type);
 
-    @NonNull
-    @Query("SELECT * FROM still_locations")
-    List<StillLocation> getAllStillLocations();
 
     @NonNull
     @Query("SELECT * FROM still_locations WHERE startTimeDate <= :end AND (endTimeDate IS NULL OR endTimeDate >= :start)")

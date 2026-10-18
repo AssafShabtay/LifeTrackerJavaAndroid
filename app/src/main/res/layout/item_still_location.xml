@@ -190,6 +190,8 @@
                         android:id="@+id/itemTimeRange"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:layout_alignParentStart="true"
+                        android:layout_toStartOf="@id/editBtn"
                         android:layout_centerVertical="true"
                         android:textColor="?attr/colorOnSurfaceVariant"
                         android:textSize="12sp"

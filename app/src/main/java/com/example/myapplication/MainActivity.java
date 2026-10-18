@@ -1,7 +1,6 @@
 package com.example.myapplication;
 
 import android.Manifest;
-import android.app.AlertDialog;
 import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -38,6 +37,7 @@ import com.google.android.gms.location.ActivityTransitionRequest;
 import com.google.android.gms.location.DetectedActivity;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.card.MaterialCardView;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.progressindicator.LinearProgressIndicator;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.appcheck.FirebaseAppCheck;
@@ -51,7 +51,6 @@ public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MainActivity";
     private PermissionManager permissionManager;
     private String[] foregroundPermissions;
-    private OnHomeAddressChangedListener onHomeAddressChangedListener;
     private boolean isShowingRationaleDialog = false;
 
     private View permissionBlocker;
@@ -70,11 +69,6 @@ public class MainActivity extends AppCompatActivity {
     private VideoView permissionVideo;
     private BottomNavigationView bottomNav;
     private static final String PREFS_NAME = "MyPrefs";
-    private static final String THEME_KEY = "theme_preference";
-
-    public interface OnHomeAddressChangedListener {
-        void onHomeAddressChanged();
-    }
 
     private final ActivityResultLauncher<String[]> foregroundPermissionLauncher =
             registerForActivityResult(new ActivityResultContracts.RequestMultiplePermissions(), result -> {
@@ -245,7 +239,7 @@ public class MainActivity extends AppCompatActivity {
             if ("com.example.myapplication.PERMISSION_REVOKED".equals(intent.getAction())) {
                 refreshPermissionUi(permissionManager.hasAllPermissions());
 
-                new AlertDialog.Builder(MainActivity.this)
+                new MaterialAlertDialogBuilder(MainActivity.this)
                         .setTitle("Tracking Paused")
                         .setMessage("Background location access was revoked. Please grant it in settings to resume timeline tracking.")
                         .show();
@@ -438,6 +432,15 @@ public class MainActivity extends AppCompatActivity {
         } catch (Throwable t) {
             ErrorLogger.logError(this, TAG, "Error", t);
             Logger.saveLog(this, TAG + ": Failed to start tracking service: " + t.getMessage());
+        }
+    }
+
+    public void navigateToScreenTimeStatistics() {
+        if (bottomNav != null) {
+            bottomNav.setSelectedItemId(R.id.nav_statistics);
+        }
+        if (statisticsFragment != null) {
+            statisticsFragment.selectScreenTimeTab();
         }
     }
 }

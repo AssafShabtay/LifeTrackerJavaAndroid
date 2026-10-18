@@ -1,6 +1,8 @@
 package com.example.myapplication.ui.home.phoneUsage;
 
+import android.app.Activity;
 import android.content.Context;
+import android.content.ContextWrapper;
 import android.content.pm.PackageManager;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Handler;
@@ -13,6 +15,8 @@ import android.widget.TextView;
 
 import androidx.core.content.ContextCompat;
 
+import com.example.myapplication.LifeTrackerApp;
+import com.example.myapplication.MainActivity;
 import com.example.myapplication.R;
 import com.example.myapplication.tracking.usage.AppCategoryHelper;
 import com.example.myapplication.tracking.usage.UsageStatsHelper;
@@ -26,15 +30,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.Objects;
 
 public class PhoneUsageMiniCardManager {
 
     private final Context context;
     private final View cardView;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
-    private final ExecutorService executorService = Executors.newSingleThreadExecutor();
+    private final LifeTrackerApp app;
 
     private View layoutUsageContent;
     private View layoutPermissionPrompt;
@@ -43,9 +46,13 @@ public class PhoneUsageMiniCardManager {
     private PhoneUsageDonutView donutView;
     private TextView tvTotalScreenTime;
 
+    private int loadVersion = 0;
+    private boolean isDestroyed = false;
+
     public PhoneUsageMiniCardManager(Context context, View cardView) {
         this.context = context;
         this.cardView = cardView;
+        this.app = (LifeTrackerApp) context.getApplicationContext();
 
         initViews();
     }
@@ -63,6 +70,29 @@ public class PhoneUsageMiniCardManager {
         if (btnGrantPermission != null) {
             btnGrantPermission.setOnClickListener(v -> UsageStatsHelper.openUsageAccessSettings(context));
         }
+
+        View.OnClickListener navigateToStatsListener = v -> {
+            Activity activity = getActivityFromContext(context);
+            if (activity instanceof MainActivity) {
+                ((MainActivity) activity).navigateToScreenTimeStatistics();
+            }
+        };
+
+        if (layoutUsageContent != null) {
+            layoutUsageContent.setOnClickListener(navigateToStatsListener);
+        }
+        cardView.setOnClickListener(navigateToStatsListener);
+    }
+
+    private Activity getActivityFromContext(Context context) {
+        Context current = context;
+        while (current instanceof ContextWrapper) {
+            if (current instanceof Activity) {
+                return (Activity) current;
+            }
+            current = ((ContextWrapper) current).getBaseContext();
+        }
+        return null;
     }
 
     private void setDotColor(View dotView, int color) {
@@ -75,7 +105,7 @@ public class PhoneUsageMiniCardManager {
     }
 
     public void loadUsageDataForDate(Date date) {
-        if (cardView == null) return;
+        if (cardView == null || isDestroyed) return;
 
         boolean hasPermission = UsageStatsHelper.hasUsageAccessPermission(context);
         if (!hasPermission) {
@@ -87,7 +117,7 @@ public class PhoneUsageMiniCardManager {
         if (layoutUsageContent != null) layoutUsageContent.setVisibility(View.VISIBLE);
         if (layoutPermissionPrompt != null) layoutPermissionPrompt.setVisibility(View.GONE);
 
-        Date selectedDate = date != null ? date : new Date();
+        Date selectedDate = Objects.requireNonNullElseGet(date, Date::new);
 
         Calendar cal = Calendar.getInstance();
         cal.setTime(selectedDate);
@@ -103,8 +133,12 @@ public class PhoneUsageMiniCardManager {
         cal.set(Calendar.MILLISECOND, 999);
         long endTime = Math.min(cal.getTimeInMillis(), System.currentTimeMillis());
 
-        executorService.execute(() -> {
+        final int currentVersion = ++loadVersion;
+
+        app.getBackgroundWriteExecutor().execute(() -> {
             Map<String, Long> packageUsage = UsageStatsHelper.getUsageTimePerPackage(context, startTime, endTime);
+
+            if (isDestroyed || currentVersion != loadVersion) return;
 
             PackageManager pm = context.getPackageManager();
             Map<String, DetailedPhoneUsageCardManager.CategoryUsage> categoryMap = new HashMap<>();
@@ -117,11 +151,7 @@ public class PhoneUsageMiniCardManager {
                 if (duration <= 0 || pkg == null) continue;
 
                 String catName = AppCategoryHelper.getCategoryName(pm, pkg);
-                DetailedPhoneUsageCardManager.CategoryUsage catUsage = categoryMap.get(catName);
-                if (catUsage == null) {
-                    catUsage = new DetailedPhoneUsageCardManager.CategoryUsage(catName);
-                    categoryMap.put(catName, catUsage);
-                }
+                DetailedPhoneUsageCardManager.CategoryUsage catUsage = categoryMap.computeIfAbsent(catName, DetailedPhoneUsageCardManager.CategoryUsage::new);
                 catUsage.totalMs += duration;
                 totalMs += duration;
             }
@@ -161,7 +191,10 @@ public class PhoneUsageMiniCardManager {
             final long finalTotalMs = totalMs;
             final List<DetailedPhoneUsageCardManager.CategoryUsage> finalCategories = displayCategories;
 
-            mainHandler.post(() -> updateUi(finalTotalMs, finalCategories));
+            mainHandler.post(() -> {
+                if (isDestroyed || currentVersion != loadVersion) return;
+                updateUi(finalTotalMs, finalCategories);
+            });
         });
     }
 
@@ -184,11 +217,15 @@ public class PhoneUsageMiniCardManager {
 
                     View legendView = inflater.inflate(R.layout.item_phone_usage_legend, legendContainer, false);
                     View dotView = legendView.findViewById(R.id.dot_legend_color);
-                    TextView tvText = legendView.findViewById(R.id.tv_legend_text);
+                    TextView tvCategory = legendView.findViewById(R.id.tv_legend_category);
+                    TextView tvTime = legendView.findViewById(R.id.tv_legend_time);
 
                     setDotColor(dotView, color);
-                    if (tvText != null) {
-                        tvText.setText(String.format(Locale.getDefault(), "%s: %s", cat.name, formatDuration(cat.totalMs)));
+                    if (tvCategory != null) {
+                        tvCategory.setText(cat.name);
+                    }
+                    if (tvTime != null) {
+                        tvTime.setText(formatDuration(cat.totalMs));
                     }
 
                     legendContainer.addView(legendView);
@@ -211,6 +248,10 @@ public class PhoneUsageMiniCardManager {
         if (donutView != null) {
             donutView.setSegments(segments, true);
         }
+    }
+
+    public void destroy() {
+        isDestroyed = true;
     }
 
     private String formatDuration(long durationMs) {

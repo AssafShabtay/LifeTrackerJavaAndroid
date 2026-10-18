@@ -4,7 +4,6 @@ import static androidx.core.app.ActivityCompat.shouldShowRequestPermissionRation
 
 import android.Manifest;
 import android.app.Activity;
-import android.app.AlertDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -14,6 +13,8 @@ import android.os.Build;
 import android.provider.Settings;
 
 import androidx.core.content.ContextCompat;
+
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.util.ArrayList;
 
@@ -33,7 +34,6 @@ public class PermissionManager {
         perms.add(Manifest.permission.ACCESS_COARSE_LOCATION);
         perms.add(Manifest.permission.ACCESS_FINE_LOCATION);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            //perms.add(Manifest.permission.ACCESS_BACKGROUND_LOCATION);
             perms.add(Manifest.permission.ACTIVITY_RECOGNITION);
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -105,7 +105,7 @@ public class PermissionManager {
     }
 
     public void showPermissionRationaleDialog(Runnable onRetry, Runnable onCancel) {
-        new AlertDialog.Builder(activity)
+        new MaterialAlertDialogBuilder(activity)
                 .setTitle("Permissions Required")
                 .setMessage("This app needs location, activity recognition, and notification permissions to track your timeline automatically.")
                 .setPositiveButton("Allow", (d, w) -> onRetry.run())
@@ -114,7 +114,7 @@ public class PermissionManager {
     }
 
     public void showGoToSettingsDialog(Runnable onOpenSettings, Runnable onCancel) {
-        new AlertDialog.Builder(activity)
+        new MaterialAlertDialogBuilder(activity)
                 .setTitle("Permissions Denied")
                 .setMessage("Some essential permissions were permanently denied. Please enable them in Settings to use the app's tracking features.")
                 .setPositiveButton("Open Settings", (d, w) -> onOpenSettings.run())

@@ -22,6 +22,7 @@ import com.example.myapplication.tracking.usage.AppCategoryHelper;
 import com.example.myapplication.tracking.usage.UsageStatsHelper;
 import com.example.myapplication.ui.general.ColorAndIcons;
 import com.example.myapplication.ui.home.phoneUsage.PhoneUsageDonutView;
+import com.example.myapplication.LifeTrackerApp;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.progressindicator.LinearProgressIndicator;
@@ -33,8 +34,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 public class DetailedPhoneUsageCardManager {
@@ -42,7 +41,7 @@ public class DetailedPhoneUsageCardManager {
     private final Context context;
     private final View cardView;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
-    private final ExecutorService executorService = Executors.newSingleThreadExecutor();
+    private final LifeTrackerApp app;
 
     private PhoneUsageDonutView donutView;
     private TextView tvTotalTime;
@@ -71,6 +70,7 @@ public class DetailedPhoneUsageCardManager {
     public DetailedPhoneUsageCardManager(Context context, View cardView) {
         this.context = context;
         this.cardView = cardView;
+        this.app = (LifeTrackerApp) context.getApplicationContext();
         initViews();
     }
 
@@ -149,7 +149,7 @@ public class DetailedPhoneUsageCardManager {
         hasSelectedRange = true;
         locationsLoaded = false;
         final int version = loadVersion;
-        pendingLoad = executorService.submit(() -> {
+        pendingLoad = app.getBackgroundWriteExecutor().submit(() -> {
             processAndBindUsageData(packageUsage, null, customTotalText, version);
         });
         loadPhoneUsagePerLocation();
@@ -166,7 +166,7 @@ public class DetailedPhoneUsageCardManager {
             tvDailyCardNoLocations.setText("Loading locations…");
             tvDailyCardNoLocations.setVisibility(View.VISIBLE);
         }
-        pendingLocations = executorService.submit(() -> {
+        pendingLocations = app.getBackgroundWriteExecutor().submit(() -> {
             List<LocationUsageRankItem> ranks = calculateLocationUsageRanks(startTime, endTime);
             mainHandler.post(() -> {
                 if (destroyed || version != loadVersion) return;
@@ -190,7 +190,6 @@ public class DetailedPhoneUsageCardManager {
     public void destroy() {
         destroyed = true;
         cancelPendingLoad();
-        executorService.shutdownNow();
     }
 
     public static class CategoryUsage implements Comparable<CategoryUsage> {

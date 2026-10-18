@@ -7,6 +7,7 @@ import com.example.myapplication.tracking.usage.WeeklyUsageItem;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Handler;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageButton;
@@ -31,8 +32,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import com.example.myapplication.LifeTrackerApp;
+
 import java.util.concurrent.Future;
 import java.util.concurrent.CancellationException;
 
@@ -44,7 +45,7 @@ public class ScreenTimeStatsManager {
     private final Context context;
     private final Handler mainHandler;
     private final View rootView;
-    private final ExecutorService executorService = Executors.newSingleThreadExecutor();
+    private final LifeTrackerApp app;
 
     private View permissionPromptCard;
     private Button btnGrantUsageAccess;
@@ -108,6 +109,7 @@ public class ScreenTimeStatsManager {
         this.context = context;
         this.mainHandler = mainHandler;
         this.rootView = rootView;
+        this.app = (LifeTrackerApp) context.getApplicationContext();
 
         initViews();
     }
@@ -481,7 +483,7 @@ public class ScreenTimeStatsManager {
         final int period = selectedPeriod;
         final int index = period == PERIOD_DAILY ? currentDayIndex : currentWeekIndex;
         setLoading(true);
-        pendingLoad = executorService.submit(() -> {
+        pendingLoad = app.getBackgroundWriteExecutor().submit(() -> {
             Map<String, Long> packageUsage = new HashMap<>();
             try {
                 DailyUsageItem day = period == PERIOD_DAILY ? loadDailyUsage(index, packageUsage) : null;
@@ -503,7 +505,7 @@ public class ScreenTimeStatsManager {
             } catch (CancellationException ignored) {
                 // A different period was selected or the view was destroyed.
             } catch (RuntimeException error) {
-                android.util.Log.e("ScreenTimeStats", "Unable to load usage", error);
+                Log.e("ScreenTimeStats", "Unable to load usage", error);
                 mainHandler.post(() -> {
                     if (destroyed || version != loadVersion) return;
                     pendingLoad = null;
@@ -521,7 +523,6 @@ public class ScreenTimeStatsManager {
         cancelPendingLoad();
         context.getSharedPreferences("MyPrefs", Context.MODE_PRIVATE)
                 .unregisterOnSharedPreferenceChangeListener(prefListener);
-        executorService.shutdownNow();
         if (detailedCardManager != null) detailedCardManager.destroy();
     }
 
@@ -584,8 +585,10 @@ public class ScreenTimeStatsManager {
         SimpleDateFormat monthDayFormat = new SimpleDateFormat("MMM d", Locale.getDefault());
         SimpleDateFormat dayAbbrevFormat = new SimpleDateFormat("EEE", Locale.getDefault());
 
+        int systemFirstDay = Calendar.getInstance().getFirstDayOfWeek();
+        int defaultFirstDay = (systemFirstDay == Calendar.SUNDAY) ? Calendar.SUNDAY : Calendar.MONDAY;
         int firstDayOfWeek = context.getSharedPreferences("MyPrefs", Context.MODE_PRIVATE)
-                .getInt("week_start_day", Calendar.MONDAY);
+                .getInt("week_start_day", defaultFirstDay);
 
         Calendar cal = Calendar.getInstance();
         cal.setFirstDayOfWeek(firstDayOfWeek);

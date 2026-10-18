@@ -292,9 +292,7 @@ public class  UsageStatsHelper {
                 lower.contains("quickstep") || (lower.contains("home") && lower.contains("android"));
     }
 
-    public static long getIdleHomeScreenTimeMs(Context context, long startTime, long endTime) {
-        return getIdleHomeScreenTimeMs(context, getUsageTimePerPackage(context, startTime, endTime));
-    }
+
 
     public static long getIdleHomeScreenTimeMs(Context context, Map<String, Long> packageUsage) {
         long idleMs = 0;
@@ -316,7 +314,7 @@ public class  UsageStatsHelper {
             long timeMs = entry.getValue();
             if (timeMs <= 0 || pkg == null) continue;
 
-            // Filter internal android system daemons that are not user apps
+            // Filter internal system apps
             if (pkg.equals("android") || pkg.equals("com.google.android.gms") || pkg.equals("com.google.android.googlequicksearchbox:search")) {
                 continue;
             }
@@ -333,12 +331,12 @@ public class  UsageStatsHelper {
             } catch (Exception ignored) {
             }
 
-            //  format a clean friendly name
+            //  format a package to a name
             if (appName == null || appName.equals(pkg) || appName.contains(".")) {
                 appName = cleanPackageNameToAppName(pkg);
             }
 
-            // Fallback icon if null
+            // Fallback icon
             if (icon == null) {
                 icon = pm.getDefaultActivityIcon();
             }

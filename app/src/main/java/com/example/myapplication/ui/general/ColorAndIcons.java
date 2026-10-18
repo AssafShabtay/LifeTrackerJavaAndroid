@@ -66,8 +66,8 @@ public class ColorAndIcons {
         if (still.getColor() != null) {
             return still.getColor();
         } else if (still.getIsStop()) { // If it's a stop, use activity_stop
-            return ContextCompat.getColor(context, R.color.activity_stop); //TODO CHANGE ACTIVITY STOP
-        } else if("gym".equals(still.getCategory())){ //TODO ADD MORE CATEGORIES
+            return ContextCompat.getColor(context, R.color.activity_stop);
+        } else if("gym".equals(still.getCategory())){
             return ContextCompat.getColor(context, R.color.gym);
         } else {
             // If there is no color assigned to still, use the default colors
@@ -101,13 +101,13 @@ public class ColorAndIcons {
         if (still.getIcon() != null) {
             String icon = still.getIcon().toLowerCase();
 
-            // Base / Original Places
+
             if (icon.contains("home")) iconXml = R.drawable.ic_home;
 
             else if (icon.contains("briefcase")) iconXml = R.drawable.lucide_briefcase;
-            else if (icon.contains("gym") || icon.contains("fitness")) iconXml = R.drawable.ic_gym; // Alternatively: material_icons_fitness_center
-            else if (icon.contains("school")) iconXml = R.drawable.ic_school; // Alternatively: lucide_school
-            else if (icon.contains("restaurant") || icon.contains("food")) iconXml = R.drawable.ic_restaurant; // Alternatively: material_icons_food_bank
+            else if (icon.contains("gym") || icon.contains("fitness")) iconXml = R.drawable.ic_gym;
+            else if (icon.contains("school")) iconXml = R.drawable.ic_school;
+            else if (icon.contains("restaurant") || icon.contains("food")) iconXml = R.drawable.ic_restaurant;
             else if (icon.contains("cafe") || icon.contains("coffee")) iconXml = R.drawable.ic_coffee;
 
                 // Vehicles & Transportation
@@ -119,7 +119,7 @@ public class ColorAndIcons {
             else if (icon.contains("ambulance")) iconXml = R.drawable.lucide_ambulance;
             else if (icon.contains("bike") || icon.contains("bicycle")) iconXml = R.drawable.lucide_bike;
             else if (icon.contains("bus")) iconXml = R.drawable.lucide_bus;
-            else if (icon.contains("caravan")) iconXml = R.drawable.lucide_caravan; // Must be checked before "car"
+            else if (icon.contains("caravan")) iconXml = R.drawable.lucide_caravan;
             else if (icon.contains("car")) iconXml = R.drawable.ic_car;
             else if (icon.contains("tram")) iconXml = R.drawable.material_symbols_tram;
             else if (icon.contains("truck")) iconXml = R.drawable.lucide_truck;

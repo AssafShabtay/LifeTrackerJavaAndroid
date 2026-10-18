@@ -441,6 +441,8 @@ public class CalendarManager {
 
     private int getWeekStartDayPreference() {
         SharedPreferences preferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-        return preferences.getInt(KEY_WEEK_START_DAY, Calendar.MONDAY);
+        int systemFirstDay = Calendar.getInstance().getFirstDayOfWeek();
+        int defaultFirstDay = (systemFirstDay == Calendar.SUNDAY) ? Calendar.SUNDAY : Calendar.MONDAY;
+        return preferences.getInt(KEY_WEEK_START_DAY, defaultFirstDay);
     }
 }

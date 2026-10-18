@@ -87,7 +87,7 @@ public class PunctualityStatisticsManager {
         long thirtyDaysMs = 30L * 24 * 60 * 60 * 1000;
         long thirtyDaysAgo = now - thirtyDaysMs;
 
-        app.getDatabaseWriteExecutor().execute(() -> {
+        app.getBackgroundWriteExecutor().execute(() -> {
             if (!listener.isFragmentAdded()) return;
 
             ActivityDatabase db = ActivityDatabase.getDatabase(context);

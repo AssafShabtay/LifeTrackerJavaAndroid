@@ -164,7 +164,7 @@ public class EditStillActivitySheet extends BottomSheetDialogFragment {
         selectedGeofenceId = still.getGeofencePlaceId();
 
         if (still.getPlaceId() != null) {
-            app.getDatabaseWriteExecutor().execute(() -> {
+            app.getBackgroundWriteExecutor().execute(() -> {
                 selectedPlace = placeDao.getPlaceById(still.getPlaceId());
             });
         }
@@ -183,7 +183,7 @@ public class EditStillActivitySheet extends BottomSheetDialogFragment {
         if (still.getLat() != null && still.getLng() != null) {
             double initialLat = still.getLat();
             double initialLng = still.getLng();
-            app.getDatabaseWriteExecutor().execute(() -> {
+            app.getBackgroundWriteExecutor().execute(() -> {
                 List<Place> allPlaces = placeDao.getAllPlaces();
                 List<Place> nearbyPlaces = new ArrayList<>();
                 for (Place p : allPlaces) {
@@ -221,7 +221,7 @@ public class EditStillActivitySheet extends BottomSheetDialogFragment {
             String address = etAddress.getText().toString().trim();
             Context context = requireContext().getApplicationContext();
 
-            app.getDatabaseWriteExecutor().execute(() -> {
+            app.getBackgroundWriteExecutor().execute(() -> {
                 still.setPlaceName(name);
                 still.setPlaceAddressAndUpdateCoordinates(address, context);
                 still.setStartTimeDate(editedStartTime);
@@ -288,7 +288,7 @@ public class EditStillActivitySheet extends BottomSheetDialogFragment {
                     return;
                 }
 
-                app.getDatabaseWriteExecutor().execute(() -> {
+                app.getBackgroundWriteExecutor().execute(() -> {
                     if (getContext() == null) return;
                     Geocoder geocoder = new Geocoder(requireContext());
                     try {

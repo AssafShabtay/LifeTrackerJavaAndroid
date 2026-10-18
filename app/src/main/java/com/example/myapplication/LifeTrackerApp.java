@@ -2,16 +2,16 @@ package com.example.myapplication;
 
 import android.app.Application;
 import android.content.Intent;
+import android.os.Process;
+
 import java.util.concurrent.ExecutorService;
 
 import com.example.myapplication.util.ErrorLogger;
 import com.example.myapplication.util.Logger;
-import com.example.myapplication.tracking.location.LocationService;
 
 public class LifeTrackerApp extends Application {
 
-    private final ExecutorService databaseWriteExecutor = java.util.concurrent.Executors.newFixedThreadPool(4);
-    private final ExecutorService locationTrackingExecutor = java.util.concurrent.Executors.newSingleThreadExecutor();
+    private final ExecutorService backgroundWriteExecutor = java.util.concurrent.Executors.newFixedThreadPool(4);
     @Override
     public void onCreate() {
         super.onCreate();
@@ -25,15 +25,11 @@ public class LifeTrackerApp extends Application {
             startActivity(intent);
 
             //Kill the current crashed process
-            android.os.Process.killProcess(android.os.Process.myPid());
+            Process.killProcess(Process.myPid());
             System.exit(1);
         });
     }
-    public ExecutorService getDatabaseWriteExecutor() {
-        return databaseWriteExecutor;
-    }
-
-    public ExecutorService getLocationTrackingExecutor() {
-        return locationTrackingExecutor;
+    public ExecutorService getBackgroundWriteExecutor() {
+        return backgroundWriteExecutor;
     }
 }
