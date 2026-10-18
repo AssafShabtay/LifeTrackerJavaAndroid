@@ -3,9 +3,6 @@ package com.example.myapplication.tracking.usage;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Encapsulates the digital usage statistics for a specific timeline item (visit / movement / stop).
- */
 public class TimelineItemUsageData {
     private final long screenTimeMs;
     private final long durationMs;

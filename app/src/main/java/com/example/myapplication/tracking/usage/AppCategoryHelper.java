@@ -89,34 +89,20 @@ public class AppCategoryHelper {
 
     public static int getCategoryIconRes(String categoryName) {
         if (categoryName == null) return R.drawable.ic_cat_other;
-        switch (categoryName) {
-            case "Social":
-                return R.drawable.ic_cat_social;
-            case "Entertainment":
-            case "Video & Movies":
-                return R.drawable.ic_cat_entertainment;
-            case "Games":
-                return R.drawable.ic_cat_games;
-            case "Productivity":
-                return R.drawable.ic_cat_productivity;
-            case "Browser":
-                return R.drawable.ic_cat_browser;
-            case "Shopping":
-                return R.drawable.ic_cat_shopping;
-            case "News & Reading":
-                return R.drawable.ic_cat_news;
-            case "Audio & Music":
-                return R.drawable.ic_cat_audio;
-            case "Photos & Images":
-                return R.drawable.ic_cat_photos;
-            case "Maps & Navigation":
-                return R.drawable.ic_cat_maps;
-            case "System":
-            case "Accessibility":
-                return R.drawable.ic_cat_system;
-            default:
-                return R.drawable.ic_cat_other;
-        }
+        return switch (categoryName) {
+            case "Social" -> R.drawable.ic_cat_social;
+            case "Entertainment", "Video & Movies" -> R.drawable.ic_cat_entertainment;
+            case "Games" -> R.drawable.ic_cat_games;
+            case "Productivity" -> R.drawable.ic_cat_productivity;
+            case "Browser" -> R.drawable.ic_cat_browser;
+            case "Shopping" -> R.drawable.ic_cat_shopping;
+            case "News & Reading" -> R.drawable.ic_cat_news;
+            case "Audio & Music" -> R.drawable.ic_cat_audio;
+            case "Photos & Images" -> R.drawable.ic_cat_photos;
+            case "Maps & Navigation" -> R.drawable.ic_cat_maps;
+            case "System", "Accessibility" -> R.drawable.ic_cat_system;
+            default -> R.drawable.ic_cat_other;
+        };
     }
 
     public static boolean isDoomscrollApp(PackageManager pm, String pkg) {

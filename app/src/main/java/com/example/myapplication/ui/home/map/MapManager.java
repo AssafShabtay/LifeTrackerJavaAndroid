@@ -181,7 +181,7 @@ public class MapManager implements OnMapReadyCallback {
                         Logger.saveLog(fragment.requireContext(), msg);
                     }
                 } catch (IOException e) {
-            ErrorLogger.logError(fragment.requireContext(), TAG, "Error", e);
+                    ErrorLogger.logError(fragment.requireContext(), TAG, "Error", e);
                     String msg = String.format(TAG + "ERROR: Geocoding failed for still location address: %s", still.getPlaceAddress());
                     Log.w(TAG, msg);
                     Logger.saveLog(fragment.requireContext(), msg);
@@ -200,7 +200,7 @@ public class MapManager implements OnMapReadyCallback {
                         try {
                             mMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 100));
                         } catch (IllegalStateException e) {
-            ErrorLogger.logError(fragment.requireContext(), TAG, "Error", e);
+                            ErrorLogger.logError(fragment.requireContext(), TAG, "Error", e);
                             if (movement.getStartLat() != null) {
                                 mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(movement.getStartLat(), movement.getStartLng()), 15f));
                             }
@@ -374,7 +374,7 @@ public class MapManager implements OnMapReadyCallback {
                 try {
                     mMap.animateCamera(CameraUpdateFactory.newLatLngBounds(totalBounds.build(), 100));
                 } catch (Exception e) {
-            ErrorLogger.logError(fragment.requireContext(), TAG, "Error", e);}
+                    ErrorLogger.logError(fragment.requireContext(), TAG, "Error", e);}
             });
         });
     }
@@ -492,7 +492,7 @@ public class MapManager implements OnMapReadyCallback {
             try {
                 mMap.setMyLocationEnabled(true);
             } catch (SecurityException e) {
-            ErrorLogger.logError(fragment.requireContext(), TAG, "Error", e);
+                ErrorLogger.logError(fragment.requireContext(), TAG, "Error", e);
                 Log.e(TAG, "SecurityException setting my location enabled", e);
             }
         }
