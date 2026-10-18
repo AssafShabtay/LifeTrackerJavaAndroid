@@ -184,10 +184,19 @@ public class PhoneUsageMiniCardManager {
 
                     View legendView = inflater.inflate(R.layout.item_phone_usage_legend, legendContainer, false);
                     View dotView = legendView.findViewById(R.id.dot_legend_color);
+                    TextView tvCategory = legendView.findViewById(R.id.tv_legend_category);
+                    TextView tvTime = legendView.findViewById(R.id.tv_legend_time);
                     TextView tvText = legendView.findViewById(R.id.tv_legend_text);
 
                     setDotColor(dotView, color);
-                    if (tvText != null) {
+                    if (tvCategory != null) {
+                        tvCategory.setText(cat.name);
+                    }
+                    if (tvTime != null) {
+                        tvTime.setText(formatDuration(cat.totalMs));
+                    }
+                    if (tvText != null && tvCategory == null) {
+                        tvText.setVisibility(View.VISIBLE);
                         tvText.setText(String.format(Locale.getDefault(), "%s: %s", cat.name, formatDuration(cat.totalMs)));
                     }
 

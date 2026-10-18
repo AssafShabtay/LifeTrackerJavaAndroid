@@ -21,7 +21,6 @@ public class LocationServiceRestartReceiver extends BroadcastReceiver {
 
             if (!LocationService.isServiceRunning(context)) {
                 Logger.saveLog(context, "LocationServiceRestartReceiver: LocationService not running, restarting it.");
-                Log.d(TAG, "LocationService not running, restarting it.");
                 Intent serviceIntent = new Intent(context, LocationService.class);
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     context.startForegroundService(serviceIntent);
@@ -30,7 +29,6 @@ public class LocationServiceRestartReceiver extends BroadcastReceiver {
                 }
             } else {
                 Logger.saveLog(context, "LocationServiceRestartReceiver: LocationService is already running.");
-                Log.d(TAG, "LocationService is already running.");
             }
         }
     }

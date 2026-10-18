@@ -1,5 +1,5 @@
 package com.example.myapplication.tracking.location;
-import com.example.myapplication.R;
+
 import com.example.myapplication.tracking.geofence.GeofenceManager;
 import com.example.myapplication.tracking.geofence.GeofenceUtilsManager;
 
@@ -75,7 +75,7 @@ public class LocationService extends Service {
     private ActivityMergeManager activityMergeManager;
     private LocationProvider locationProvider;
     private LifeTrackerApp app;
-    private PlacesClient placesClient; // Added PlacesClient member variable
+    private PlacesClient placesClient;
     public static final int NOTIFICATION_ID = 101;
     public static final String CHANNEL_ID = "LocationServiceChannel";
     public static final String TAG = "LocationService";
@@ -103,7 +103,7 @@ public class LocationService extends Service {
         if (!Places.isInitialized()) {
             Places.initializeWithNewPlacesApiEnabled(getApplicationContext(), BuildConfig.GOOGLE_API_KEY);
         }
-        placesClient = Places.createClient(this); // Initialize the member variable
+        placesClient = Places.createClient(this);
 
         geofenceUtilsManager = new GeofenceUtilsManager(placeDao, this, placesClient, geofenceManager);
 
@@ -112,7 +112,7 @@ public class LocationService extends Service {
         createNotificationChannel();
 
         // Schedule the service restart alarm
-        scheduleServiceRestartAlarm();
+        //TODO scheduleServiceRestartAlarm();
 
         app.getLocationTrackingExecutor().execute(() -> {
             // Recover previous activity state after restart in background thread
@@ -123,7 +123,6 @@ public class LocationService extends Service {
                 // Restore the previous active still
                 currentStillTrackingId = activeStill.getId();
                 currentActivityType = DetectedActivity.STILL;
-                Log.d(TAG, "Recovered active still tracking ID: " + currentStillTrackingId);
 
                 // If a still was recovered and had no location, start frequent updates
                 if (activeStill.getLat() == null || activeStill.getLng() == null) {
@@ -173,11 +172,8 @@ public class LocationService extends Service {
         Logger.saveLog(this, "LocationService onDestroy");
         locationProvider.stopRouteUpdates();
         locationProvider.stopFrequentStillLocationUpdates();
-        // Cancel the service restart alarm
         cancelServiceRestartAlarm();
         if (placesClient != null) {
-            // There is no explicit shutdown method for PlacesClient.
-            // Setting it to null allows for garbage collection.
             placesClient = null;
         }
     }
@@ -194,7 +190,7 @@ public class LocationService extends Service {
                     int activityType = intent.getIntExtra(ActivityTransitionReceiver.EXTRA_ACTIVITY_TYPE, DetectedActivity.UNKNOWN);
                     int transitionType = intent.getIntExtra(ActivityTransitionReceiver.EXTRA_TRANSITION_TYPE, -1);
                     long timestampMs = intent.getLongExtra(ActivityTransitionReceiver.EXTRA_TIMESTAMP_MS, System.currentTimeMillis());
-                    // calling handleActivityUpdate in background
+
                     app.getLocationTrackingExecutor().execute(() -> {
                         handleActivityUpdate(activityType, transitionType, timestampMs);
                     });

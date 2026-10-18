@@ -103,7 +103,7 @@
             android:layout_marginBottom="14dp"
             android:background="@color/outline_variant" />
 
-        <!-- Metrics Grid (3 Cards: Scroll Time, Late Night, Peak Scroll) -->
+        <!-- Metrics Grid (3 Cards: Scroll Time, Late Night, Longest Scroll) -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -199,7 +199,7 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Card 3: Peak Scroll -->
+            <!-- Card 3: Longest Scroll -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
@@ -219,7 +219,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="⚡ Peak Scroll"
+                        android:text="⚡ Longest Scroll"
                         android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
                         android:textColor="?attr/colorOnSurfaceVariant" />
 

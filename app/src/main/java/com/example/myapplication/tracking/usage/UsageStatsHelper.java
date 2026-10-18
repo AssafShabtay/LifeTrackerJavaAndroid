@@ -503,6 +503,7 @@ public class  UsageStatsHelper {
             } else if (eventType == UsageEvents.Event.ACTIVITY_PAUSED) {
                 Long start = lastAppStart.remove(pkg);
                 if (start != null && timestamp > start) {
+                    // Check if the app is a doomscroll app, if data is absent, check if it is a doomscroll app and return the result
                     if (doomscrollAppCache.computeIfAbsent(pkg, p -> AppCategoryHelper.isDoomscrollApp(pm, p))) {
                         doomscrollSessions.add(new AppSession(pkg, start, timestamp));
                     }
@@ -518,6 +519,7 @@ public class  UsageStatsHelper {
             }
         }
 
+        // check if there aren't any doomscroll sessions
         if (doomscrollSessions.isEmpty()) {
             return new DoomscrollStats(0, 0, 0, 0, "N/A", new ArrayList<>());
         }
@@ -540,6 +542,7 @@ public class  UsageStatsHelper {
         Map<String, Long> currentSessionAppTimes = new HashMap<>();
 
         for (AppSession session : doomscrollSessions) {
+            // the loop handles always the session behind it
             if (currentSessionStart == -1) {
                 // initialize the first session
                 currentSessionStart = session.start;
@@ -559,7 +562,7 @@ public class  UsageStatsHelper {
                     if (sessionDuration >= minThreshold) {
                         totalDoomscrollTimeMs += sessionDuration;
                         sessionCount++;
-
+                        // calculate late night usage
                         long lateNightMs = calculateLateNightOverlap(currentSessionStart, currentSessionEnd, cal);
                         lateNightDoomscrollTimeMs += lateNightMs;
 
@@ -571,6 +574,7 @@ public class  UsageStatsHelper {
                             longestSessionPkg = sessionTopPkg;
                         }
 
+                        //updating the app statistics
                         for (Map.Entry<String, Long> appEntry : currentSessionAppTimes.entrySet()) {
                             String p = appEntry.getKey();
                             long timeInSession = appEntry.getValue();
@@ -586,7 +590,7 @@ public class  UsageStatsHelper {
                 }
             }
         }
-
+        // handles the last session(after the loop handled the session behind it always)
         if (currentSessionStart != -1) {
             long sessionDuration = currentSessionEnd - currentSessionStart;
             boolean isLateNight = isLateNightWindow(currentSessionStart, currentSessionEnd, cal);
@@ -595,16 +599,18 @@ public class  UsageStatsHelper {
             if (sessionDuration >= minThreshold) {
                 totalDoomscrollTimeMs += sessionDuration;
                 sessionCount++;
-
+                // calculate late night usage
                 long lateNightMs = calculateLateNightOverlap(currentSessionStart, currentSessionEnd, cal);
                 lateNightDoomscrollTimeMs += lateNightMs;
 
+                // get longest session
                 String sessionTopPkg = getTopAppForSession(currentSessionAppTimes);
                 if (sessionDuration > longestSessionMs) {
                     longestSessionMs = sessionDuration;
                     longestSessionPkg = sessionTopPkg;
                 }
 
+                //updating the app statistics
                 for (Map.Entry<String, Long> appEntry : currentSessionAppTimes.entrySet()) {
                     String p = appEntry.getKey();
                     long timeInSession = appEntry.getValue();
@@ -614,6 +620,7 @@ public class  UsageStatsHelper {
             }
         }
 
+        //converts all the data into DoomscrollAppItem
         List<DoomscrollAppItem> topDoomscrollApps = new ArrayList<>();
         for (Map.Entry<String, Long> entry : appTotalDoomscrollMs.entrySet()) {
             String pkg = entry.getKey();
