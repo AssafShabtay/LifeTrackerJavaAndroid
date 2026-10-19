@@ -30,6 +30,7 @@ import com.example.myapplication.ui.home.HomeFragment;
 import com.example.myapplication.ui.settings.SettingsFragment;
 import com.example.myapplication.ui.statistics.locationStatistics.StatisticsFragment;
 import com.example.myapplication.tracking.receiver.ActivityTransitionReceiver;
+import com.example.myapplication.tracking.location.ActivityTransitionManager;
 import com.example.myapplication.tracking.location.LocationService;
 import com.google.android.gms.location.ActivityRecognition;
 import com.google.android.gms.location.ActivityTransition;
@@ -346,77 +347,13 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
-        ArrayList<ActivityTransition> transitions = new ArrayList<>();
-        int[] types = new int[]{
-                DetectedActivity.STILL,
-                DetectedActivity.WALKING,
-                DetectedActivity.RUNNING,
-                DetectedActivity.IN_VEHICLE,
-                DetectedActivity.ON_BICYCLE,
-                DetectedActivity.ON_FOOT
-        };
-
-        for (int type : types) {
-            transitions.add(new ActivityTransition.Builder()
-                    .setActivityType(type)
-                    .setActivityTransition(ActivityTransition.ACTIVITY_TRANSITION_ENTER)
-                    .build());
-            transitions.add(new ActivityTransition.Builder()
-                    .setActivityType(type)
-                    .setActivityTransition(ActivityTransition.ACTIVITY_TRANSITION_EXIT)
-                    .build());
-        }
-
-        ActivityTransitionRequest request = new ActivityTransitionRequest(transitions);
-        Intent intent = new Intent(this, ActivityTransitionReceiver.class);
-
-        intent.setAction(ActivityTransitionReceiver.ACTION_ACTIVITY_UPDATE);
-        intent.setPackage(getPackageName());
-
-        int flags = PendingIntent.FLAG_UPDATE_CURRENT;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            flags |= PendingIntent.FLAG_MUTABLE;
-        }
-        PendingIntent pendingIntent = PendingIntent.getBroadcast(
-                this,
-                0,
-                intent,
-                flags
-        );
-
-        // Also request regular activity updates for a quick initial detection
-        PendingIntent activityUpdatePendingIntent = PendingIntent.getBroadcast(//TODO THIS CHUNK MIGHT BE USELESS
-                this,
-                1,
-                intent,
-                flags
-        );
-
-        try {
-            ActivityRecognition.getClient(this)
-                    .requestActivityTransitionUpdates(request, pendingIntent)
-                    .addOnSuccessListener(unused -> {
-                        transitionsRegistered = true;
-                        Logger.saveLog(this, TAG + ": Activity transitions registered successfully");
-                    })
-                    .addOnFailureListener(e -> {
-                        transitionsRegistered = false;
-                        Logger.saveLog(this, TAG + ": Registration failed: " + e.getMessage());
-                    });
-
-            // Initial quick detection to avoid "idle" state
-            ActivityRecognition.getClient(this) //TODO THIS CHUNK MIGHT BE USELESS
-                    .requestActivityUpdates(60000, activityUpdatePendingIntent)
-                    .addOnSuccessListener(unused -> Logger.saveLog(this, TAG + ": Initial activity updates requested"))
-                    .addOnFailureListener(e -> Logger.saveLog(this, TAG + ": Failed to request initial activity updates: " + e.getMessage()));
-
-        } catch (SecurityException e) {
-            ErrorLogger.logError(this, TAG, "Error", e);
-            transitionsRegistered = false;
-            Logger.saveLog(this, TAG + ": Missing permission for transitions: " + e.getMessage());
-            Intent PermIntent = new Intent("com.example.myapplication.PERMISSION_REVOKED").setPackage(getPackageName());
-            sendBroadcast(PermIntent);
-        }
+        ActivityTransitionManager.registerActivityTransitions(this, success -> {
+            transitionsRegistered = success;
+            if (!success) {
+                Intent permIntent = new Intent("com.example.myapplication.PERMISSION_REVOKED").setPackage(getPackageName());
+                sendBroadcast(permIntent);
+            }
+        });
     }
 
     private void startTrackingService() {

@@ -106,6 +106,8 @@ public class LocationService extends Service {
         activityMergeManager = new ActivityMergeManager(dao, this, locationProvider);
         createNotificationChannel();
 
+        ActivityTransitionManager.registerActivityTransitions(this);
+
 
         app.getBackgroundWriteExecutor().execute(() -> {
             // Recover previous activity state after restart in background thread
@@ -185,7 +187,7 @@ public class LocationService extends Service {
                     long timestampMs = intent.getLongExtra(ActivityTransitionReceiver.EXTRA_TIMESTAMP_MS, System.currentTimeMillis());
                     // calling handleActivityUpdate in background
                     app.getBackgroundWriteExecutor().execute(() -> {
-                        handleActivityUpdate(activityType, transitionType, timestampMs);;
+                        handleActivityUpdate(activityType, transitionType, timestampMs);
                     });
 //TODO                } else if (GeofenceBroadcastReceiver.ACTION_GEOFENCE_UPDATE.equals(action)) { // checks if the intent came from geofence
 //TODO                    // Extracts the geofence data

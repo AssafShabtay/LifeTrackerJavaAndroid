@@ -1,5 +1,4 @@
 package com.example.myapplication.tracking.receiver;
-import com.example.myapplication.tracking.location.ActivityTrackingUtils;
 
 import static com.example.myapplication.tracking.location.ActivityTrackingUtils.getActivityName;
 
@@ -7,15 +6,15 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
+import android.os.SystemClock;
 import android.util.Log;
 
+import com.example.myapplication.tracking.location.LocationService;
 import com.example.myapplication.util.ErrorLogger;
 import com.example.myapplication.util.Logger;
-import com.example.myapplication.tracking.location.LocationService;
 import com.google.android.gms.location.ActivityTransition;
 import com.google.android.gms.location.ActivityTransitionEvent;
 import com.google.android.gms.location.ActivityTransitionResult;
-import com.google.android.gms.location.DetectedActivity;
 
 public class ActivityTransitionReceiver extends BroadcastReceiver {
 
@@ -36,7 +35,7 @@ public class ActivityTransitionReceiver extends BroadcastReceiver {
             if (result != null) {
                 for (ActivityTransitionEvent event : result.getTransitionEvents()) {
                     long eventElapsedNanos = event.getElapsedRealTimeNanos();
-                    long ageMs = (android.os.SystemClock.elapsedRealtimeNanos() - eventElapsedNanos) / 1_000_000L;
+                    long ageMs = (SystemClock.elapsedRealtimeNanos() - eventElapsedNanos) / 1_000_000L;
                     long eventTimestampMs = System.currentTimeMillis() - ageMs;
                     String eventMsg = "onReceive: Processing transition for " + getActivityName(event.getActivityType()) + " (" + getTransitionName(event.getTransitionType()) + ")";
                     Log.d(TAG, eventMsg);
@@ -45,11 +44,7 @@ public class ActivityTransitionReceiver extends BroadcastReceiver {
                 }
             }
         }
-
     }
-
-
-
 
     private String getTransitionName(int transitionType) {
         return switch (transitionType) {
@@ -72,12 +67,17 @@ public class ActivityTransitionReceiver extends BroadcastReceiver {
 
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                context.startForegroundService(serviceIntent);
+                try {
+                    context.startForegroundService(serviceIntent);
+                } catch (IllegalStateException e) {
+                    Log.w(TAG, "Cannot start foreground service from background receiver, falling back to startService", e);
+                    context.startService(serviceIntent);
+                }
             } else {
                 context.startService(serviceIntent);
             }
         } catch (Exception e) {
-            ErrorLogger.logError(context, TAG, "Error", e);
+            ErrorLogger.logError(context, TAG, "Error notifying service", e);
             String errorMsg = "notifyService: Failed to start service from receiver: " + e.getMessage();
             Log.e(TAG, errorMsg);
             Logger.saveLog(context, errorMsg);
