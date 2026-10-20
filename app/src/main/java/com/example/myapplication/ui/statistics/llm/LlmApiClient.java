@@ -48,7 +48,7 @@ public class LlmApiClient {
                         .build();
 
                 GenerativeModel firebaseAI = FirebaseAI.getInstance(GenerativeBackend.vertexAI())
-                        .generativeModel("gemini-2.5-flash", config);
+                        .generativeModel("gemini-2.5-flas", config);
 
                 GenerativeModelFutures model = GenerativeModelFutures.from(firebaseAI);
 

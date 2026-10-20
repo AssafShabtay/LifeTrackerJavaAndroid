@@ -102,7 +102,9 @@ public class AddressAutocompleteHelper {
             @Override
             public void onFocusChange(View v, boolean hasFocus) {
                 if (hasFocus) {
-                    autoCompleteTextView.showDropDown();
+                    try {
+                        autoCompleteTextView.showDropDown();
+                    } catch (Exception ignored) {}
                 }
             }
         });
@@ -110,34 +112,44 @@ public class AddressAutocompleteHelper {
         autoCompleteTextView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                autoCompleteTextView.dismissDropDown();
+                try {
+                    autoCompleteTextView.dismissDropDown();
+                } catch (Exception ignored) {}
             }
         });
     }
 
     private void fetchAutocompletePredictions(String query) {
-        FindAutocompletePredictionsRequest request = FindAutocompletePredictionsRequest.builder()
-                .setSessionToken(autocompleteSessionToken)
-                .setQuery(query)
-                .build();
+        if (placesClient == null || context == null) return;
+        try {
+            FindAutocompletePredictionsRequest request = FindAutocompletePredictionsRequest.builder()
+                    .setSessionToken(autocompleteSessionToken)
+                    .setQuery(query)
+                    .build();
 
-        placesClient.findAutocompletePredictions(request).addOnSuccessListener(response -> {
-            List<AutocompleteItem> addressSuggestions = new ArrayList<>();
-            for (AutocompletePrediction prediction : response.getAutocompletePredictions()) {
-                addressSuggestions.add(new AutocompleteItem(prediction));
-            }
+            placesClient.findAutocompletePredictions(request).addOnSuccessListener(response -> {
+                if (response == null) return;
+                List<AutocompleteItem> addressSuggestions = new ArrayList<>();
+                for (AutocompletePrediction prediction : response.getAutocompletePredictions()) {
+                    addressSuggestions.add(new AutocompleteItem(prediction));
+                }
 
-            // Use custom adapter with custom layout
-            AutocompleteAdapter adapter = new AutocompleteAdapter(context, addressSuggestions);
-            autoCompleteTextView.setAdapter(adapter);
-            adapter.notifyDataSetChanged();
-            // Ensure dropdown is shown if there are suggestions and focused
-            if (autoCompleteTextView.isFocused() && !addressSuggestions.isEmpty()) {
-                autoCompleteTextView.showDropDown();
-            }
-        }).addOnFailureListener(e -> {
-            Log.e(TAG, "Autocomplete prediction fetch failed", e);
-        });
+                // Use custom adapter with custom layout
+                AutocompleteAdapter adapter = new AutocompleteAdapter(context, addressSuggestions);
+                autoCompleteTextView.setAdapter(adapter);
+                adapter.notifyDataSetChanged();
+                // Ensure dropdown is shown if there are suggestions and focused
+                if (autoCompleteTextView.isFocused() && !addressSuggestions.isEmpty()) {
+                    try {
+                        autoCompleteTextView.showDropDown();
+                    } catch (Exception ignored) {}
+                }
+            }).addOnFailureListener(e -> {
+                Log.e(TAG, "Autocomplete prediction fetch failed", e);
+            });
+        } catch (Exception e) {
+            Log.e(TAG, "Error initiating autocomplete prediction fetch", e);
+        }
     }
 
     public static class AutocompleteItem {

@@ -151,6 +151,7 @@ public class HomeAddressPickerBottomSheet extends BottomSheetDialogFragment {
     }
 
     private void performAddressValidation(String address) {
+        if (getActivity() == null) return;
         LifeTrackerApp app = (LifeTrackerApp) requireActivity().getApplication();
         app.getBackgroundWriteExecutor().execute(() -> {
             if (getContext() == null) return;
@@ -161,6 +162,7 @@ public class HomeAddressPickerBottomSheet extends BottomSheetDialogFragment {
 
                 if (getActivity() != null) {
                     requireActivity().runOnUiThread(() -> {
+                        if (!isAdded()) return;
                         if (isValid) {
                             tilHomeAddress.setError(null);
                             btnSaveHomeAddress.setEnabled(true);
@@ -173,9 +175,9 @@ public class HomeAddressPickerBottomSheet extends BottomSheetDialogFragment {
             } catch (Exception e) {
                 if (getActivity() != null) {
                     requireActivity().runOnUiThread(() -> {
-                        //TODO HANDLE ERRORS
-                        //In case of error (no internet ect), don't block the user but  don't clear errors if any
-
+                        if (!isAdded()) return;
+                        // In case of error (no internet etc), don't block the user
+                        tilHomeAddress.setError(null);
                         btnSaveHomeAddress.setEnabled(true);
                     });
                 }
@@ -185,6 +187,7 @@ public class HomeAddressPickerBottomSheet extends BottomSheetDialogFragment {
 
     private void validateAndSave(String address) {
         btnSaveHomeAddress.setEnabled(false);
+        if (getActivity() == null) return;
         LifeTrackerApp app = (LifeTrackerApp) requireActivity().getApplication();
         app.getBackgroundWriteExecutor().execute(() -> {
             if (getContext() == null) return;
@@ -195,6 +198,7 @@ public class HomeAddressPickerBottomSheet extends BottomSheetDialogFragment {
 
                 if (getActivity() != null) {
                     requireActivity().runOnUiThread(() -> {
+                        if (!isAdded()) return;
                         if (isValid) {
                             if (listener != null) {
                                 listener.onHomeAddressSelected(address);
@@ -209,7 +213,8 @@ public class HomeAddressPickerBottomSheet extends BottomSheetDialogFragment {
             } catch (Exception e) {
                 if (getActivity() != null) {
                     requireActivity().runOnUiThread(() -> {
-                        // If validation fails due to network, allow saving anyway to be safe
+                        if (!isAdded()) return;
+                        // If validation fails due to network, allow saving anyway
                         if (listener != null) {
                             listener.onHomeAddressSelected(address);
                             dismiss();

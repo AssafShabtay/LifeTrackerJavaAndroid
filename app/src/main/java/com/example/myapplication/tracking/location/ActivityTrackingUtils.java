@@ -109,6 +109,7 @@ public class ActivityTrackingUtils {
         return results[0];
     }
     public static double[] getCoordinatesFromAddress(String address, Context context) {
+        if (context == null || address == null) return null;
         Geocoder geocoder = new Geocoder(context, Locale.getDefault());
         try {
             List<Address> addresses = geocoder.getFromLocationName(address, 1);
@@ -116,8 +117,8 @@ public class ActivityTrackingUtils {
                 Address location = addresses.get(0);
                 return new double[]{location.getLatitude(), location.getLongitude()};
             }
-        } catch (IOException e) {
-            ErrorLogger.logError(context, TAG, "Error", e);
+        } catch (Exception e) {
+            ErrorLogger.logError(context, TAG, "Error geocoding address", e);
         }
         return null;
     }

@@ -317,6 +317,7 @@ public class EditStillActivitySheet extends BottomSheetDialogFragment {
                         final double finalLng = lng;
                         if (getActivity() != null) {
                             requireActivity().runOnUiThread(() -> {
+                                if (!isAdded()) return;
                                 if (isValid) {
                                     tvAddressStatus.setVisibility(View.VISIBLE);
                                     tvAddressStatus.setText("Valid Address");
@@ -389,10 +390,11 @@ public class EditStillActivitySheet extends BottomSheetDialogFragment {
                         ErrorLogger.logError(requireContext(), TAG, "Error", e);
                         if (getActivity() != null) {
                             requireActivity().runOnUiThread(() -> {
+                                if (!isAdded()) return;
                                 tvAddressStatus.setVisibility(View.VISIBLE);
-                                tvAddressStatus.setText("Unable to validate address");
-                                tvAddressStatus.setTextColor(Color.RED);
-                                btnSave.setEnabled(false);
+                                tvAddressStatus.setText("Offline - Address saved as typed");
+                                tvAddressStatus.setTextColor(Color.GRAY);
+                                btnSave.setEnabled(true);
                             });
                         }
                     }

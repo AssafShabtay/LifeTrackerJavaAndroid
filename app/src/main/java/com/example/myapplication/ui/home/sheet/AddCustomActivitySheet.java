@@ -3,6 +3,7 @@ import com.example.myapplication.ui.home.map.MapPickerActivity;
 
 import android.app.Activity;
 import android.app.TimePickerDialog;
+import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
@@ -228,6 +229,7 @@ public class AddCustomActivitySheet extends BottomSheetDialogFragment {
                         final double finalLng = lng;
                         if (getActivity() != null) {
                             requireActivity().runOnUiThread(() -> {
+                                if (!isAdded()) return;
                                 if (isValid) {
                                     tvAddressStatus.setVisibility(View.VISIBLE);
                                     tvAddressStatus.setText("Valid Address");
@@ -297,13 +299,17 @@ public class AddCustomActivitySheet extends BottomSheetDialogFragment {
                             });
                         }
                     } catch (Exception e) {
-                        ErrorLogger.logError(requireContext(), TAG, "Error", e);
+                        Context context = getContext();
+                        if (context != null) {
+                            ErrorLogger.logError(context, TAG, "Error validating address", e);
+                        }
                         if (getActivity() != null) {
                             requireActivity().runOnUiThread(() -> {
+                                if (!isAdded()) return;
                                 tvAddressStatus.setVisibility(View.VISIBLE);
-                                tvAddressStatus.setText("Unable to validate address");
-                                tvAddressStatus.setTextColor(Color.RED);
-                                btnSave.setEnabled(false);
+                                tvAddressStatus.setText("Offline - Address saved as typed");
+                                tvAddressStatus.setTextColor(Color.GRAY);
+                                btnSave.setEnabled(true);
                             });
                         }
                     }
@@ -374,10 +380,13 @@ public class AddCustomActivitySheet extends BottomSheetDialogFragment {
 
                 ActivityDatabase.getDatabase(requireContext()).activityDao().insertStillLocation(newStill);
 
-                requireActivity().runOnUiThread(() -> {
-                    if (listener != null) listener.onActivityAdded();
-                    dismiss();
-                });
+                Activity activity = getActivity();
+                if (activity != null) {
+                    activity.runOnUiThread(() -> {
+                        if (listener != null) listener.onActivityAdded();
+                        if (isAdded()) dismiss();
+                    });
+                }
             });
         });
     }

@@ -1,6 +1,7 @@
 package com.example.myapplication.ui.statistics.locationStatistics;
 
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 import android.location.Address;
 import android.location.Geocoder;
@@ -152,16 +153,19 @@ public class WorkAddressPickerBottomSheet extends BottomSheetDialogFragment {
     }
 
     private void performAddressValidation(String address) {
+        if (getActivity() == null) return;
         LifeTrackerApp app = (LifeTrackerApp) requireActivity().getApplication();
         app.getBackgroundWriteExecutor().execute(() -> {
-            if (getContext() == null) return;
-            Geocoder geocoder = new Geocoder(requireContext());
+            Context context = getContext();
+            if (context == null) return;
+            Geocoder geocoder = new Geocoder(context.getApplicationContext());
             try {
                 List<Address> addresses = geocoder.getFromLocationName(address, 1);
                 boolean isValid = addresses != null && !addresses.isEmpty();
 
                 if (getActivity() != null) {
                     requireActivity().runOnUiThread(() -> {
+                        if (!isAdded()) return;
                         if (isValid) {
                             tilWorkAddress.setError(null);
                             btnSaveWorkAddress.setEnabled(true);
@@ -174,8 +178,9 @@ public class WorkAddressPickerBottomSheet extends BottomSheetDialogFragment {
             } catch (Exception e) {
                 if (getActivity() != null) {
                     requireActivity().runOnUiThread(() -> {
-                        //TODO HANDLE ERRORS
-                        //In case of error (no internet ect), don't block the user but  don't clear errors if any
+                        if (!isAdded()) return;
+                        // In case of error (no internet etc), don't block the user
+                        tilWorkAddress.setError(null);
                         btnSaveWorkAddress.setEnabled(true);
                     });
                 }
@@ -185,16 +190,18 @@ public class WorkAddressPickerBottomSheet extends BottomSheetDialogFragment {
 
     private void validateAndSave(String address) {
         btnSaveWorkAddress.setEnabled(false);
+        if (getActivity() == null) return;
         LifeTrackerApp app = (LifeTrackerApp) requireActivity().getApplication();
         app.getBackgroundWriteExecutor().execute(() -> {
             if (getContext() == null) return;
-            Geocoder geocoder = new Geocoder(requireContext());
+            Geocoder geocoder = new Geocoder(getContext().getApplicationContext());
             try {
                 List<Address> addresses = geocoder.getFromLocationName(address, 1);
                 boolean isValid = addresses != null && !addresses.isEmpty();
 
                 if (getActivity() != null) {
                     requireActivity().runOnUiThread(() -> {
+                        if (!isAdded()) return;
                         if (isValid) {
                             if (listener != null) {
                                 listener.onWorkAddressSelected(address);
@@ -209,7 +216,8 @@ public class WorkAddressPickerBottomSheet extends BottomSheetDialogFragment {
             } catch (Exception e) {
                 if (getActivity() != null) {
                     requireActivity().runOnUiThread(() -> {
-                        // If validation fails due to network, allow saving anyway to be safe
+                        if (!isAdded()) return;
+                        // If validation fails due to network, allow saving anyway
                         if (listener != null) {
                             listener.onWorkAddressSelected(address);
                             dismiss();

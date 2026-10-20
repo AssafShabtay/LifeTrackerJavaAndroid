@@ -1,6 +1,8 @@
 package com.example.myapplication.util;
 
 import android.content.Context;
+import android.util.Log;
+
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -15,6 +17,10 @@ public class ErrorLogger {
     private static final String TAG = "ErrorLogger";
 
     public static void logError(Context context, String tag, String message, Throwable throwable) {
+        if (context == null || context.getFilesDir() == null) {
+            Log.e(TAG, "Cannot log error: context or filesDir is null. Tag: " + tag + ", Message: " + message, throwable);
+            return;
+        }
         File logFile = new File(context.getFilesDir(), LOG_FILE_NAME);
         try (FileWriter fileWriter = new FileWriter(logFile, true);
              PrintWriter printWriter = new PrintWriter(fileWriter)) {
@@ -33,9 +39,8 @@ public class ErrorLogger {
             printWriter.println("------------------------------------");
             printWriter.flush();
 
-        } catch (IOException e) {
-            ErrorLogger.logError(context, TAG, "Error", e);
-            android.util.Log.e("ErrorLogger", "Failed to write error to log file", e);
+        } catch (Exception e) {
+            Log.e("ErrorLogger", "Failed to write error to log file", e);
         }
     }
 

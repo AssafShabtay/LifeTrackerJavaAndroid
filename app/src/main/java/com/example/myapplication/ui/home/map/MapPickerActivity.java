@@ -126,6 +126,7 @@ public class MapPickerActivity extends AppCompatActivity implements OnMapReadyCa
             try {
                 List<Address> addresses = geocoder.getFromLocation(latLng.latitude, latLng.longitude, 1);
                 runOnUiThread(() -> {
+                    if (isFinishing() || isDestroyed()) return;
                     if (addresses != null && !addresses.isEmpty()) {
                         Address address = addresses.get(0);
                         selectedAddress = address.getAddressLine(0);
@@ -137,11 +138,12 @@ public class MapPickerActivity extends AppCompatActivity implements OnMapReadyCa
                         btnConfirm.setEnabled(false);
                     }
                 });
-            } catch (IOException e) {
+            } catch (Exception e) {
                 Log.e("MapPickerActivity", "Geocoder error", e);
                 runOnUiThread(() -> {
+                    if (isFinishing() || isDestroyed()) return;
                     selectedAddress = null;
-                    tvAddress.setText("Error finding address");
+                    tvAddress.setText("Offline - Address not found");
                     btnConfirm.setEnabled(false);
                 });
             }

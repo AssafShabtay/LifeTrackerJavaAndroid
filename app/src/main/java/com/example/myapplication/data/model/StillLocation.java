@@ -18,6 +18,7 @@ import com.example.myapplication.util.Logger;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Date;
 import java.util.Objects;
 @Entity(tableName = "still_locations",
@@ -196,10 +197,11 @@ public class StillLocation implements TimelineItem {
         this.placeAddress = placeAddress;
     }
     public void setPlaceAddressAndUpdateCoordinates(String placeAddress, Context context) {
+        if (context == null) return;
         Geocoder coder = new Geocoder(context);
         this.placeAddress = placeAddress;
         try {
-            ArrayList<Address> addresses = (ArrayList<Address>) coder.getFromLocationName(placeAddress, 1);
+            List<Address> addresses = coder.getFromLocationName(placeAddress, 1);
             if (addresses != null && !addresses.isEmpty()) {
                 double longitude = 0;
                 double latitude = 0;
@@ -217,7 +219,7 @@ public class StillLocation implements TimelineItem {
                 Logger.saveLog(context, msg);
 
             }
-        } catch (IOException e) {
+        } catch (Exception e) {
             ErrorLogger.logError(context, TAG, "Error", e);
             String msg = String.format(TAG + "ERROR: Cant find coordinates for still location ");
             Log.w(TAG, msg);

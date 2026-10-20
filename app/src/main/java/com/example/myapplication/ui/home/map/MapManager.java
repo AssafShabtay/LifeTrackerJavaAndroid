@@ -4,6 +4,7 @@ import static com.example.myapplication.ui.general.ColorAndIcons.getStillColor;
 import static com.example.myapplication.ui.general.ColorAndIcons.getStillIconRes;
 
 import android.Manifest;
+import android.content.Context;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
@@ -165,11 +166,12 @@ public class MapManager implements OnMapReadyCallback {
             // Use existing lat/lng if available for camera animation
             if (still.getLat() != null && still.getLng() != null) {
                 mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(still.getLat(), still.getLng()), 15f));
-            } else if (still.getPlaceAddress() != null) {
+            } else if (still.getPlaceAddress() != null && fragment.getContext() != null) {
+                Context context = fragment.getContext();
                 // If lat/lng are not available, try geocoding the address for camera animation
-                Geocoder coder = new Geocoder(fragment.requireContext());
+                Geocoder coder = new Geocoder(context);
                 try {
-                    ArrayList<Address> addresses = (ArrayList<Address>) coder.getFromLocationName(still.getPlaceAddress(), 1);
+                    List<Address> addresses = coder.getFromLocationName(still.getPlaceAddress(), 1);
                     if (addresses != null && !addresses.isEmpty()) {
                         Address address = addresses.get(0);
                         double latitude = address.getLatitude();
@@ -178,35 +180,41 @@ public class MapManager implements OnMapReadyCallback {
                     } else {
                         String msg = String.format(TAG + "ERROR: Could not find coordinates for still location address: %s", still.getPlaceAddress());
                         Log.w(TAG, msg);
-                        Logger.saveLog(fragment.requireContext(), msg);
+                        Logger.saveLog(context, msg);
                     }
-                } catch (IOException e) {
-                    ErrorLogger.logError(fragment.requireContext(), TAG, "Error", e);
+                } catch (Exception e) {
+                    ErrorLogger.logError(context, TAG, "Error", e);
                     String msg = String.format(TAG + "ERROR: Geocoding failed for still location address: %s", still.getPlaceAddress());
                     Log.w(TAG, msg);
-                    Logger.saveLog(fragment.requireContext(), msg);
+                    Logger.saveLog(context, msg);
                 }
             }
         } else if (item instanceof MovementActivity) {
             MovementActivity movement = (MovementActivity) item;
+            Context context = fragment.getContext();
+            if (context == null) return;
+            Context appContext = context.getApplicationContext();
 
             app.getBackgroundWriteExecutor().execute(() -> {
-                ActivityDao dao = ActivityDatabase.getDatabase(fragment.requireContext()).activityDao();
+                ActivityDao dao = ActivityDatabase.getDatabase(appContext).activityDao();
                 List<RoutePoint> points = dao.getRoutePointsForMovement(movement.getId());
 
-                fragment.requireActivity().runOnUiThread(() -> {
-                    LatLngBounds bounds = drawMovementOnMap(movement, points, 1, true);
-                    if (bounds != null) {
-                        try {
-                            mMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 100));
-                        } catch (IllegalStateException e) {
-                            ErrorLogger.logError(fragment.requireContext(), TAG, "Error", e);
-                            if (movement.getStartLat() != null) {
-                                mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(movement.getStartLat(), movement.getStartLng()), 15f));
+                if (fragment.getActivity() != null) {
+                    fragment.getActivity().runOnUiThread(() -> {
+                        if (!fragment.isAdded()) return;
+                        LatLngBounds bounds = drawMovementOnMap(movement, points, 1, true);
+                        if (bounds != null) {
+                            try {
+                                mMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 100));
+                            } catch (IllegalStateException e) {
+                                ErrorLogger.logError(appContext, TAG, "Error", e);
+                                if (movement.getStartLat() != null) {
+                                    mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(movement.getStartLat(), movement.getStartLng()), 15f));
+                                }
                             }
                         }
-                    }
-                });
+                    });
+                }
             });
         }
     }
