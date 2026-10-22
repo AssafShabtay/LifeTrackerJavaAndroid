@@ -5,9 +5,11 @@ import static com.example.myapplication.tracking.location.ActivityTrackingUtils.
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.content.res.Configuration;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Handler;
+import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.LinearLayout;
@@ -23,6 +25,7 @@ import com.example.myapplication.data.model.Place;
 import com.example.myapplication.data.db.PlaceDao;
 import com.example.myapplication.data.model.StillLocation;
 
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -291,8 +294,9 @@ public class WorkStatisticsManager {
         if (maxHours == 0) maxHours = 1;
         if (maxHours < 9) maxHours = 9;
 
-        int colorDark = Color.parseColor("#4CAF50");// TODO FIX COLORS
-        int colorLight = Color.parseColor("#DCEDC8");// TODO FIX COLORS
+        boolean isNight = (context.getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
+        int colorDark = Color.parseColor("#4CAF50");
+        int colorLight = Color.parseColor(isNight ? "#233825" : "#DCEDC8");
 
         String[] allDays = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
         String[] days = new String[7];
@@ -308,7 +312,7 @@ public class WorkStatisticsManager {
             LinearLayout.LayoutParams columnParams = new LinearLayout.LayoutParams(
                     0, ViewGroup.LayoutParams.MATCH_PARENT, 1.0f);
             dayColumn.setLayoutParams(columnParams);
-            dayColumn.setGravity(android.view.Gravity.BOTTOM | android.view.Gravity.CENTER_HORIZONTAL);
+            dayColumn.setGravity(Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
 
             dayColumn.setWeightSum(1.0f);
 
@@ -318,7 +322,7 @@ public class WorkStatisticsManager {
 
             double hoursWorked = dailyHours.get(i);
             if (hoursWorked > 0) {
-                hoursLabel.setText(new java.text.DecimalFormat("0.#").format(hoursWorked) + "h");
+                hoursLabel.setText(new DecimalFormat("0.#").format(hoursWorked) + "h");
             } else {
                 hoursLabel.setText("");
             }

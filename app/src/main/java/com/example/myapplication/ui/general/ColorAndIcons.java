@@ -120,7 +120,6 @@ public class ColorAndIcons {
             else if (icon.contains("bike") || icon.contains("bicycle")) iconXml = R.drawable.lucide_bike;
             else if (icon.contains("bus")) iconXml = R.drawable.lucide_bus;
             else if (icon.contains("caravan")) iconXml = R.drawable.lucide_caravan;
-            else if (icon.contains("car")) iconXml = R.drawable.ic_car;
             else if (icon.contains("tram")) iconXml = R.drawable.material_symbols_tram;
             else if (icon.contains("truck")) iconXml = R.drawable.lucide_truck;
             else if (icon.contains("van")) iconXml = R.drawable.lucide_van;

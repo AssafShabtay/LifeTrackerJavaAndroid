@@ -1,8 +1,12 @@
 package com.example.myapplication;
 
 import android.app.Application;
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Process;
+
+import androidx.appcompat.app.AppCompatDelegate;
 
 import java.util.concurrent.ExecutorService;
 
@@ -15,6 +19,10 @@ public class LifeTrackerApp extends Application {
     @Override
     public void onCreate() {
         super.onCreate();
+
+        SharedPreferences preferences = getSharedPreferences("MyPrefs", Context.MODE_PRIVATE);
+        int currentMode = preferences.getInt("theme_mode", AppCompatDelegate.MODE_NIGHT_NO);
+        AppCompatDelegate.setDefaultNightMode(currentMode);
         // Set up the global error handler
         Thread.setDefaultUncaughtExceptionHandler((thread, throwable) -> {
             Logger.saveLog(getApplicationContext(), "FATAL CRASH: " + throwable.getMessage() + throwable.fillInStackTrace()+ throwable.getCause());

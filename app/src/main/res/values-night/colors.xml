@@ -13,16 +13,16 @@
 
 
     <color name="gym">#B22222</color>
-    <!-- Modern Neutral & Soft Palette 596D5B -->
-    <color name="primary">#425945</color>
-    <color name="on_primary">#edf0da</color>
-    <color name="primary_container">#edf0da</color>
-    <color name="on_primary_container">#174EA6</color>
+    <!-- Modern Neutral & Soft Palette -->
+    <color name="primary">#A8D1A9</color>
+    <color name="on_primary">#1B361C</color>
+    <color name="primary_container">#2B382C</color>
+    <color name="on_primary_container">#EDF0DA</color>
 
-    <color name="secondary">#FF0000FF</color>
-    <color name="on_secondary">#245433</color>
-    <color name="secondary_container">#2b352c</color>
-    <color name="on_secondary_container">#edf0da</color>
+    <color name="secondary">#A2ACA0</color>
+    <color name="on_secondary">#1B231C</color>
+    <color name="secondary_container">#2B352C</color>
+    <color name="on_secondary_container">#EDF0DA</color>
 
     <color name="green_dark">#25351C</color>
     <color name="green_light">#a8d1a9</color>

@@ -1,6 +1,7 @@
 package com.example.myapplication.ui.statistics.locationStatistics;
 
 import android.content.Context;
+import android.content.res.Configuration;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Handler;
@@ -215,12 +216,14 @@ public class PunctualityStatisticsManager {
         PrecisionResult arrivalStats = currentArrivals != null ? calculatePrecision(currentArrivals) : null;
         PrecisionResult departureStats = currentDepartures != null ? calculatePrecision(currentDepartures) : null;
 
+        boolean isNight = (context.getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
+
         // Draw Arrival Graph
         if (arrivalStats != null) {
             drawHistogram(currentArrivals, arrivalStats.mean,
                     R.id.chart_arrival_container, R.id.tv_arrival_start,
                     R.id.tv_arrival_avg, R.id.tv_arrival_end,
-                    "#5C5CD6", "#8A8ADF", "#E0E0F8");
+                    "#5C5CD6", "#8A8ADF", isNight ? "#282850" : "#E0E0F8");
         } else {
             chartArrivalContainer.removeAllViews();
             tvArrivalAvg.setVisibility(View.INVISIBLE);
@@ -231,7 +234,7 @@ public class PunctualityStatisticsManager {
             drawHistogram(currentDepartures, departureStats.mean,
                     R.id.chart_departure_container, R.id.tv_departure_start,
                     R.id.tv_departure_avg, R.id.tv_departure_end,
-                    "#009688", "#4DB6AC", "#E0F2F1");
+                    "#009688", "#4DB6AC", isNight ? "#1A3B38" : "#E0F2F1");
         } else {
             chartDepartureContainer.removeAllViews();
             tvDepartureAvg.setVisibility(View.INVISIBLE);
