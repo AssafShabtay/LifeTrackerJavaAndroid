@@ -68,6 +68,7 @@ public class CalendarManager {
 
         this.sharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
 
+        // listen to start of the week changes
         this.preferenceChangeListener = (prefs, key) -> {
             if (KEY_WEEK_START_DAY.equals(key)) {
                 Calendar cal = Calendar.getInstance();
@@ -90,8 +91,9 @@ public class CalendarManager {
     }
 
     private void init() {
-        updateSmallCalendarUI();
+        updateCalendarHeaderUI();
 
+        // set up next day arrow
         if (btnPrevDay != null) {
             btnPrevDay.setOnClickListener(v -> {
                 Calendar cal = Calendar.getInstance();
@@ -99,13 +101,13 @@ public class CalendarManager {
                 cal.add(Calendar.DAY_OF_MONTH, -1);
                 selectedDate = cal.getTime();
 
-                updateSmallCalendarUI();
+                updateCalendarHeaderUI();
                 if (listener != null) {
                     listener.onDateSelected(selectedDate);
                 }
             });
         }
-
+        // set up previous day arrow
         if (btnNextDay != null) {
             btnNextDay.setOnClickListener(v -> {
                 Calendar today = Calendar.getInstance();
@@ -119,14 +121,14 @@ public class CalendarManager {
                     cal.add(Calendar.DAY_OF_MONTH, 1);
                     selectedDate = cal.getTime();
 
-                    updateSmallCalendarUI();
+                    updateCalendarHeaderUI();
                     if (listener != null) {
                         listener.onDateSelected(selectedDate);
                     }
                 }
             });
         }
-
+        // set up open calendar button
         if (btnOpenCalendar != null) {
             btnOpenCalendar.setOnClickListener(v -> showCalendarDialog());
         }
@@ -136,12 +138,23 @@ public class CalendarManager {
         return selectedDate;
     }
 
-    private void updateSmallCalendarUI() {
+    public void setSelectedDate(Date date) {
+        if (date != null) {
+            this.selectedDate = date;
+            updateCalendarHeaderUI();
+            if (listener != null) {
+                listener.onDateSelected(selectedDate);
+            }
+        }
+    }
+
+    private void updateCalendarHeaderUI() {
         if (btnOpenCalendar != null) {
             btnOpenCalendar.setText(formatShortDate(selectedDate));
         }
 
         if (btnNextDay != null) {
+            // check if we can go to the next day
             Calendar today = Calendar.getInstance();
             clearTime(today);
 
@@ -200,7 +213,7 @@ public class CalendarManager {
         currentYear = selected.get(Calendar.YEAR);
 
         buildWeekHeader(weekHeader);
-        renderCalendarInDialog(dialog, tvMonthYear, btnNextMonth, calendarGrid);
+        renderCalendarMonth(dialog, tvMonthYear, btnNextMonth, calendarGrid);
 
         btnPrevMonth.setOnClickListener(v -> {
             if (currentMonth == Calendar.JANUARY) {
@@ -209,7 +222,7 @@ public class CalendarManager {
             } else {
                 currentMonth--;
             }
-            renderCalendarInDialog(dialog, tvMonthYear, btnNextMonth, calendarGrid);
+            renderCalendarMonth(dialog, tvMonthYear, btnNextMonth, calendarGrid);
         });
 
         btnNextMonth.setOnClickListener(v -> {
@@ -229,7 +242,7 @@ public class CalendarManager {
                 currentMonth++;
             }
 
-            renderCalendarInDialog(dialog, tvMonthYear, btnNextMonth, calendarGrid);
+            renderCalendarMonth(dialog, tvMonthYear, btnNextMonth, calendarGrid);
         });
 
         dialog.show();
@@ -262,7 +275,7 @@ public class CalendarManager {
         }
     }
 
-    private void renderCalendarInDialog(BottomSheetDialog dialog, TextView tvMonthYear, ImageButton btnNextMonth, GridLayout calendarGrid) {
+    private void renderCalendarMonth(BottomSheetDialog dialog, TextView tvMonthYear, ImageButton btnNextMonth, GridLayout calendarGrid) {
         Calendar monthCal = Calendar.getInstance();
         monthCal.setFirstDayOfWeek(getWeekStartDayPreference());
         monthCal.set(Calendar.YEAR, currentYear);
@@ -286,7 +299,7 @@ public class CalendarManager {
         selectedCal.setTime(selectedDate);
         clearTime(selectedCal);
 
-        int totalCells = 42;
+        int totalCells = 42; // six rows
 
         for (int cellIndex = 0; cellIndex < totalCells; cellIndex++) {
             int dayNumber = cellIndex - firstDayOffset + 1;
@@ -377,7 +390,7 @@ public class CalendarManager {
 
             root.setOnClickListener(v -> {
                 selectedDate = cellDate;
-                updateSmallCalendarUI();
+                updateCalendarHeaderUI();
                 if (listener != null) {
                     listener.onDateSelected(selectedDate);
                 }

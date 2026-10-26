@@ -11,8 +11,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ContainsArrayAdapter extends ArrayAdapter<String> {
-    private final List<String> items;
-    private final List<String> filteredItems;
+    protected final List<String> items;
+    protected final List<String> filteredItems;
 
     public ContainsArrayAdapter(@NonNull Context context, int resource, @NonNull List<String> objects) {
         super(context, resource, objects);

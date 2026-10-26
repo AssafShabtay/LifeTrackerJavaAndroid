@@ -1,14 +1,11 @@
 package com.example.myapplication.ui.home.calendar;
-import com.example.myapplication.R;
 
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Paint;
-import android.util.AttributeSet;
 import android.view.View;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 
 public class DayDataIndicatorView extends View {
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);

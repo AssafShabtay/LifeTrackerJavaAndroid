@@ -126,7 +126,7 @@ public class TimelineUsageBadgeHelper {
             FrameLayout layoutMicroBreakdownContainer
     ) {
         if (data == null || data.getScreenTimeMs() < 15000) {
-            // Less than 15s phone usage: phone free badge
+            // Less than 15s phone usage is phone free badge
             layoutUsageBadge.setVisibility(View.VISIBLE);
             tvUsageBadgeText.setText("Phone Free");
 

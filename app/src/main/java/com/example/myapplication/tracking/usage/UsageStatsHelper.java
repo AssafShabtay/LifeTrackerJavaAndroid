@@ -169,14 +169,14 @@ public class  UsageStatsHelper {
         return unlockCount;
     }
 
-    public static long[] getHourlyUsageBuckets(Context context, long startTime, long endTime) {
-        long[] hourlyBucketsMs = new long[24];
-        if (!hasUsageAccessPermission(context) || startTime >= endTime) return hourlyBucketsMs;
+    public static long[] getHourlyUsageArray(Context context, long startTime, long endTime) {
+        long[] hourlyUsageMs = new long[24];
+        if (!hasUsageAccessPermission(context) || startTime >= endTime) return hourlyUsageMs;
         UsageStatsManager usageStatsManager = (UsageStatsManager) context.getSystemService(Context.USAGE_STATS_SERVICE);
-        if (usageStatsManager == null) return hourlyBucketsMs;
+        if (usageStatsManager == null) return hourlyUsageMs;
 
         UsageEvents usageEvents = usageStatsManager.queryEvents(startTime, endTime);
-        if (usageEvents == null) return hourlyBucketsMs;
+        if (usageEvents == null) return hourlyUsageMs;
 
         UsageEvents.Event currentEvent = new UsageEvents.Event();
         Map<String, Long> lastAppStart = new HashMap<>();
@@ -196,7 +196,7 @@ public class  UsageStatsHelper {
             } else if (eventType == UsageEvents.Event.ACTIVITY_PAUSED) {
                 Long start = lastAppStart.remove(pkg);
                 if (start != null && timestamp > start) {
-                    addDurationToHourlyBuckets(hourlyBucketsMs, start, timestamp, cal);
+                    addDurationToHourlyUsage(hourlyUsageMs, start, timestamp, cal);
                 }
             }
         }
@@ -204,14 +204,14 @@ public class  UsageStatsHelper {
         // Account for any app that doesn't have an endtime
         for (Map.Entry<String, Long> entry : lastAppStart.entrySet()) {
             if (endTime > entry.getValue()) {
-                addDurationToHourlyBuckets(hourlyBucketsMs, entry.getValue(), endTime, cal);
+                addDurationToHourlyUsage(hourlyUsageMs, entry.getValue(), endTime, cal);
             }
         }
 
-        return hourlyBucketsMs;
+        return hourlyUsageMs;
     }
 
-    private static void addDurationToHourlyBuckets(long[] buckets, long startMs, long endMs, Calendar cal) {
+    private static void addDurationToHourlyUsage(long[] usageArray, long startMs, long endMs, Calendar cal) {
         if (startMs >= endMs) return;
 
         cal.setTimeInMillis(startMs);
@@ -221,7 +221,7 @@ public class  UsageStatsHelper {
         int endHour = cal.get(Calendar.HOUR_OF_DAY);
 
         if (startHour == endHour) {
-            buckets[startHour] += (endMs - startMs);
+            usageArray[startHour] += (endMs - startMs);
         } else {
             // Split across hour boundaries
             cal.setTimeInMillis(startMs);
@@ -229,7 +229,7 @@ public class  UsageStatsHelper {
             cal.set(Calendar.SECOND, 59);
             cal.set(Calendar.MILLISECOND, 999);
             long endOfFirstHour = Math.min(cal.getTimeInMillis() + 1, endMs);
-            buckets[startHour] += (endOfFirstHour - startMs);
+            usageArray[startHour] += (endOfFirstHour - startMs);
 
             long cursor = endOfFirstHour;
             while (cursor < endMs) {
@@ -242,7 +242,7 @@ public class  UsageStatsHelper {
                 long nextBoundary = Math.min(cal.getTimeInMillis(), endMs);
 
                 if (curHour >= 0 && curHour < 24) {
-                    buckets[curHour] += (nextBoundary - cursor);
+                    usageArray[curHour] += (nextBoundary - cursor);
                 }
                 cursor = nextBoundary;
             }
@@ -252,13 +252,13 @@ public class  UsageStatsHelper {
 
 
 
-    public static String getPeakUsageHour(long[] hourlyBucketsMs) {
+    public static String getPeakUsageHour(long[] hourlyUsageMs) {
 
         int maxHour = -1;
         long maxDuration = 0;
         for (int h = 0; h < 24; h++) {
-            if (hourlyBucketsMs[h] > maxDuration) {
-                maxDuration = hourlyBucketsMs[h];
+            if (hourlyUsageMs[h] > maxDuration) {
+                maxDuration = hourlyUsageMs[h];
                 maxHour = h;
             }
         }

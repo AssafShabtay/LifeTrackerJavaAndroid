@@ -1,4 +1,5 @@
 package com.example.myapplication.ui.home.sheet;
+
 import com.example.myapplication.ui.home.map.MapPickerActivity;
 
 import android.app.Activity;
@@ -26,6 +27,7 @@ import android.widget.TextView;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.LayoutRes;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.text.HtmlCompat;
@@ -34,14 +36,14 @@ import com.example.myapplication.BuildConfig;
 import com.example.myapplication.LifeTrackerApp;
 import com.example.myapplication.R;
 import com.example.myapplication.data.db.ActivityDatabase;
-import com.example.myapplication.data.model.Place;
 import com.example.myapplication.data.db.PlaceDao;
+import com.example.myapplication.data.model.Place;
 import com.example.myapplication.data.model.StillLocation;
-import com.example.myapplication.util.AddressAutocompleteHelper;
 import com.example.myapplication.ui.general.ColorAndIcons;
 import com.example.myapplication.ui.general.ContainsArrayAdapter;
-import com.example.myapplication.util.ErrorLogger;
 import com.example.myapplication.ui.general.PlaceDropdownAdapter;
+import com.example.myapplication.util.AddressAutocompleteHelper;
+import com.example.myapplication.util.ErrorLogger;
 import com.example.myapplication.util.UiFormatters;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.libraries.places.api.Places;
@@ -65,64 +67,62 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class AddCustomActivitySheet extends BottomSheetDialogFragment {
+public abstract class BaseStillActivitySheet extends BottomSheetDialogFragment {
 
-    private static final String TAG = "AddCustomActivitySheet";
+    protected static final String TAG = "BaseStillActivitySheet";
 
-    public interface OnActivityAddedListener {
-        void onActivityAdded();
-    }
+    protected PlacesClient placesClient;
+    protected PlaceDao placeDao;
+    protected AddressAutocompleteHelper addressAutocompleteHelper;
 
-    private OnActivityAddedListener listener;
-    private PlacesClient placesClient;
-    private PlaceDao placeDao;
-    private AddressAutocompleteHelper addressAutocompleteHelper;
+    protected AutoCompleteTextView actvName;
+    protected AutoCompleteTextView etAddress;
+    protected AutoCompleteTextView actvCategory;
+    protected TextView tvAddressStatus;
+    protected Button btnStartTime, btnEndTime;
+    protected View btnSave;
 
-    private AutoCompleteTextView actvName;
-    private AutoCompleteTextView etAddress;
-    private AutoCompleteTextView actvCategory;
-    private TextView tvAddressStatus;
-    private Button btnStartTime, btnEndTime;
+    protected View layoutIconPicker;
+    protected View viewSelectedColor;
+    protected ImageView ivSelectedIcon;
 
-    private View layoutIconPicker;
-    private View viewSelectedColor;
-    private ImageView ivSelectedIcon;
+    protected Date editedStartTime, editedEndTime;
+    protected Integer selectedColor;
+    protected String selectedIcon;
+    protected Place selectedPlace;
+    protected String selectedCategory;
+    protected String selectedGeofenceId;
+    protected LifeTrackerApp app;
 
-    private Date editedStartTime, editedEndTime;
-    private Integer selectedColor;
-    private String selectedIcon;
-    private Place selectedPlace;
-    private String selectedCategory;
-    private String selectedGeofenceId;
-    private LifeTrackerApp app;
-    private Date selectedDate;
-
-    private final ActivityResultLauncher<Intent> mapPickerLauncher = registerForActivityResult(
+    // Receives address result when user picks a point in the map picker
+    protected final ActivityResultLauncher<Intent> mapPickerLauncher = registerForActivityResult(
             new ActivityResultContracts.StartActivityForResult(),
             result -> {
                 if (result.getResultCode() == Activity.RESULT_OK && result.getData() != null) {
                     String address = result.getData().getStringExtra(MapPickerActivity.EXTRA_ADDRESS);
                     if (address != null) {
                         etAddress.setText(address);
-                        tvAddressStatus.setText("Location picked from map");
-                        tvAddressStatus.setVisibility(View.VISIBLE);
-                        tvAddressStatus.setTextColor(requireContext().getColor(android.R.color.holo_green_dark));
+                        if (tvAddressStatus != null) {
+                            tvAddressStatus.setText("Location picked from map");
+                            tvAddressStatus.setVisibility(View.VISIBLE);
+                            tvAddressStatus.setTextColor(requireContext().getColor(android.R.color.holo_green_dark));
+                        }
                     }
                 }
             }
     );
 
-    public static AddCustomActivitySheet newInstance(Date date, OnActivityAddedListener listener) {
-        AddCustomActivitySheet fragment = new AddCustomActivitySheet();
-        fragment.selectedDate = date;
-        fragment.listener = listener;
-        return fragment;
-    }
+    @LayoutRes
+    protected abstract int getLayoutResId();
+
+    protected abstract void onInitializeData();
+
+    protected abstract void onSaveClicked();
 
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        return inflater.inflate(R.layout.add_custom_activity_sheet, container, false);
+        return inflater.inflate(getLayoutResId(), container, false);
     }
 
     @Override
@@ -147,36 +147,26 @@ public class AddCustomActivitySheet extends BottomSheetDialogFragment {
         viewSelectedColor = view.findViewById(R.id.viewSelectedColor);
         ivSelectedIcon = view.findViewById(R.id.ivSelectedIcon);
 
-        View btnSave = view.findViewById(R.id.btnSave);
+        btnSave = view.findViewById(R.id.btnSave);
 
         app = (LifeTrackerApp) requireActivity().getApplication();
 
-        // Initialize state
-        Calendar cal = Calendar.getInstance();
-        if (selectedDate != null) cal.setTime(selectedDate);
-        cal.set(Calendar.HOUR_OF_DAY, 12);
-        cal.set(Calendar.MINUTE, 0);
-        cal.set(Calendar.SECOND, 0);
-        editedStartTime = cal.getTime();
-
-        cal.add(Calendar.HOUR_OF_DAY, 1);
-        editedEndTime = cal.getTime();
-
-        selectedColor = Color.parseColor("#4CAF50");
-        selectedIcon = "Still";
-
+        // listener for icon picker dialog
         getChildFragmentManager().setFragmentResultListener("icon_picker_request", this, (requestKey, bundle) -> {
             selectedIcon = bundle.getString("selectedIcon");
             selectedColor = bundle.getInt("selectedColor");
             updateIconAndColorUi();
         });
 
-        setupCategoryDropdown();
+        onInitializeData();
 
+        setupCategoryDropdown();
         updateIconAndColorUi();
+
         addressAutocompleteHelper = new AddressAutocompleteHelper(requireContext(), etAddress);
         addressAutocompleteHelper.setMapPickerLauncher(mapPickerLauncher);
 
+        // Set up icon picker
         if (layoutIconPicker != null) {
             layoutIconPicker.setOnClickListener(v -> showIconPickerDialog());
         }
@@ -186,17 +176,31 @@ public class AddCustomActivitySheet extends BottomSheetDialogFragment {
 
         updateTimeButtons();
 
-        // Validate address
-        btnSave.setEnabled(false);
+        if (btnSave != null) {
+            btnSave.setOnClickListener(v -> onSaveClicked());
+        }
+
+        setupAddressValidation();
+    }
+
+    protected void setupAddressValidation() {
+        // address validation logic
+        if (btnSave != null) {
+            btnSave.setEnabled(false);
+        }
         Handler validationHandler = new Handler(Looper.getMainLooper());
         Runnable validationRunnable = new Runnable() {
             @Override
             public void run() {
                 String address = etAddress.getText().toString().trim();
                 if (address.isEmpty()) {
-                    tvAddressStatus.setVisibility(View.INVISIBLE);
-                    tvAddressStatus.setText(null);
-                    btnSave.setEnabled(true); // Allow saving without an address
+                    if (tvAddressStatus != null) {
+                        tvAddressStatus.setVisibility(View.INVISIBLE);
+                        tvAddressStatus.setText(null);
+                    }
+                    if (btnSave != null) {
+                        btnSave.setEnabled(true);
+                    }
                     return;
                 }
 
@@ -215,6 +219,7 @@ public class AddCustomActivitySheet extends BottomSheetDialogFragment {
                             lat = add.getLatitude();
                             lng = add.getLongitude();
 
+                            // search for user's places near the selected location
                             List<Place> allPlaces = placeDao.getAllPlaces();
                             for (Place p : allPlaces) {
                                 float[] results = new float[1];
@@ -231,14 +236,18 @@ public class AddCustomActivitySheet extends BottomSheetDialogFragment {
                             requireActivity().runOnUiThread(() -> {
                                 if (!isAdded()) return;
                                 if (isValid) {
-                                    tvAddressStatus.setVisibility(View.VISIBLE);
-                                    tvAddressStatus.setText("Valid Address");
-                                    tvAddressStatus.setTextColor(Color.parseColor("#4CAF50")); // Green
-                                    btnSave.setEnabled(true);
+                                    if (tvAddressStatus != null) {
+                                        tvAddressStatus.setVisibility(View.VISIBLE);
+                                        tvAddressStatus.setText("Valid Address");
+                                        tvAddressStatus.setTextColor(Color.parseColor("#4CAF50"));
+                                    }
+                                    if (btnSave != null) {
+                                        btnSave.setEnabled(true);
+                                    }
 
-                                    // Populate actvName with Google Places (and local nearby places) from the start
-                                    searchGooglePlaces(finalLat, finalLng, nearbyPlaces);
+                                    setupPlacesDropdown(finalLat, finalLng, nearbyPlaces);
 
+                                    // Ask user if they want to link an existing nearby place
                                     if (!nearbyPlaces.isEmpty()) {
                                         Place firstPlace = nearbyPlaces.get(0);
                                         new MaterialAlertDialogBuilder(requireContext())
@@ -257,7 +266,7 @@ public class AddCustomActivitySheet extends BottomSheetDialogFragment {
                                                 updateIconAndColorUi();
                                             })
                                             .setNegativeButton("No", (dialog, which) -> {
-                                                // Show another pop up with a list of all the places
+                                                // Show selection list of all nearby local places
                                                 String[] placeNames = new String[nearbyPlaces.size()];
                                                 for (int i = 0; i < nearbyPlaces.size(); i++) {
                                                     placeNames[i] = nearbyPlaces.get(i).getName();
@@ -279,11 +288,11 @@ public class AddCustomActivitySheet extends BottomSheetDialogFragment {
                                                             updateIconAndColorUi();
                                                         })
                                                         .setNegativeButton("Not here", (dialog1, which1) -> {
-                                                            searchGooglePlaces(finalLat, finalLng, nearbyPlaces);
+                                                            setupPlacesDropdown(finalLat, finalLng, nearbyPlaces);
                                                         })
                                                         .setOnDismissListener(dialog1 -> {
                                                             if (selectedPlace == null) {
-                                                                searchGooglePlaces(finalLat, finalLng, nearbyPlaces);
+                                                                setupPlacesDropdown(finalLat, finalLng, nearbyPlaces);
                                                             }
                                                         })
                                                         .show();
@@ -291,10 +300,14 @@ public class AddCustomActivitySheet extends BottomSheetDialogFragment {
                                             .show();
                                     }
                                 } else {
-                                    tvAddressStatus.setVisibility(View.VISIBLE);
-                                    tvAddressStatus.setText("Invalid Address");
-                                    tvAddressStatus.setTextColor(Color.RED);
-                                    btnSave.setEnabled(false);
+                                    if (tvAddressStatus != null) {
+                                        tvAddressStatus.setVisibility(View.VISIBLE);
+                                        tvAddressStatus.setText("Invalid Address");
+                                        tvAddressStatus.setTextColor(Color.RED);
+                                    }
+                                    if (btnSave != null) {
+                                        btnSave.setEnabled(false);
+                                    }
                                 }
                             });
                         }
@@ -306,10 +319,15 @@ public class AddCustomActivitySheet extends BottomSheetDialogFragment {
                         if (getActivity() != null) {
                             requireActivity().runOnUiThread(() -> {
                                 if (!isAdded()) return;
-                                tvAddressStatus.setVisibility(View.VISIBLE);
-                                tvAddressStatus.setText("Offline - Address saved as typed");
-                                tvAddressStatus.setTextColor(Color.GRAY);
-                                btnSave.setEnabled(true);
+                                // Allow saving typed address when offline or geocoder unavailable
+                                if (tvAddressStatus != null) {
+                                    tvAddressStatus.setVisibility(View.VISIBLE);
+                                    tvAddressStatus.setText("Offline - Address saved as typed");
+                                    tvAddressStatus.setTextColor(Color.GRAY);
+                                }
+                                if (btnSave != null) {
+                                    btnSave.setEnabled(true);
+                                }
                             });
                         }
                     }
@@ -326,72 +344,26 @@ public class AddCustomActivitySheet extends BottomSheetDialogFragment {
 
             @Override
             public void afterTextChanged(Editable s) {
-                // Clear any previous error styling
                 etAddress.setError(null);
-                
-                // Reset selected place if the user types a new address
                 selectedPlace = null;
-                
-                // Show checking status immediately when user is typing
-                tvAddressStatus.setVisibility(View.VISIBLE);
-                tvAddressStatus.setText("Checking...");
-                tvAddressStatus.setTextColor(Color.GRAY);
-                btnSave.setEnabled(false);
-                
+
+                // don't execute address validation while user is actively typing
                 validationHandler.removeCallbacks(validationRunnable);
-                validationHandler.postDelayed(validationRunnable, 3000); // 1 second debounce
-            }
-        });
-
-        btnSave.setOnClickListener(v -> {
-            String name = actvName.getText().toString().trim();
-            if (name.isEmpty()) {
-                name = "Custom Activity";
-            }
-
-            final String finalName = name;
-            final String address = etAddress.getText().toString().trim();
-
-            app.getBackgroundWriteExecutor().execute(() -> {
-                StillLocation newStill = new StillLocation();
-                newStill.setPlaceName(finalName);
-                newStill.setPlaceAddressAndUpdateCoordinates(address, requireContext());
-                newStill.setStartTimeDate(editedStartTime);
-                newStill.setEndTimeDate(editedEndTime);
-                newStill.setIcon(selectedIcon);
-                newStill.setColor(selectedColor);
-                newStill.setCategory(selectedCategory);
-                newStill.setGeofencePlaceId(selectedGeofenceId);
-
-
-                if (selectedPlace != null) {
-                    newStill.setPlaceId(selectedPlace.getId());
-                } else {
-                    Place newPlace = new Place();
-                    newPlace.setName(finalName);
-                    newPlace.setAddress(address);
-                    newPlace.setIcon(selectedIcon);
-                    newPlace.setColor(selectedColor);
-                    newPlace.setCategory(selectedCategory);
-                    newPlace.setGeofencePlaceId(selectedGeofenceId);
-                    long placeId = placeDao.insertPlace(newPlace);
-                    newStill.setPlaceId(placeId);
+                if (tvAddressStatus != null) {
+                    tvAddressStatus.setVisibility(View.VISIBLE);
+                    tvAddressStatus.setText("Checking...");
+                    tvAddressStatus.setTextColor(Color.GRAY);
                 }
-
-                ActivityDatabase.getDatabase(requireContext()).activityDao().insertStillLocation(newStill);
-
-                Activity activity = getActivity();
-                if (activity != null) {
-                    activity.runOnUiThread(() -> {
-                        if (listener != null) listener.onActivityAdded();
-                        if (isAdded()) dismiss();
-                    });
+                if (btnSave != null) {
+                    btnSave.setEnabled(false);
                 }
-            });
+                validationHandler.postDelayed(validationRunnable, 1000);
+            }
         });
     }
 
-    private void setupCategoryDropdown() {
+    protected void setupCategoryDropdown() {
+        // category dropdown choices from categories.json
         Map<String, String> categoryMap = loadCategories();
         List<String> displayNames = new ArrayList<>(categoryMap.keySet());
         Collections.sort(displayNames);
@@ -430,7 +402,8 @@ public class AddCustomActivitySheet extends BottomSheetDialogFragment {
         });
     }
 
-    private Map<String, String> loadCategories() {
+    protected Map<String, String> loadCategories() {
+        // load categories from JSON file
         Map<String, String> map = new HashMap<>();
         try (InputStream is = getResources().openRawResource(R.raw.categories);
              InputStreamReader reader = new InputStreamReader(is)) {
@@ -449,6 +422,7 @@ public class AddCustomActivitySheet extends BottomSheetDialogFragment {
         return map;
     }
 
+    // Adjust window soft input mode so software keyboard resizes the bottom sheet properly
     @Override
     public void onStart() {
         super.onStart();
@@ -457,9 +431,7 @@ public class AddCustomActivitySheet extends BottomSheetDialogFragment {
         }
     }
 
-
-
-    private void searchGooglePlaces(double lat, double lng, @Nullable List<Place> nearbyPlaces) {
+    protected void setupPlacesDropdown(double lat, double lng, @Nullable List<Place> nearbyPlaces) {
         if (getActivity() == null || placesClient == null) return;
 
         List<com.google.android.libraries.places.api.model.Place.Field> placeFields = Arrays.asList(
@@ -519,7 +491,7 @@ public class AddCustomActivitySheet extends BottomSheetDialogFragment {
                             for (com.google.android.libraries.places.api.model.Place p : googlePlaces) {
                                 if (p.getDisplayName() != null && p.getDisplayName().equals(selectedName)) {
                                     actvName.setText(p.getDisplayName(), false);
-                                    com.example.myapplication.data.model.Place newLocalPlace = new com.example.myapplication.data.model.Place();
+                                    Place newLocalPlace = new Place();
                                     newLocalPlace.setName(p.getDisplayName());
                                     if (p.getLocation() != null) {
                                         newLocalPlace.setLat(p.getLocation().latitude);
@@ -568,12 +540,13 @@ public class AddCustomActivitySheet extends BottomSheetDialogFragment {
                 });
     }
 
-    private void showIconPickerDialog() {
+    protected void showIconPickerDialog() {
         IconPickerDialog dialog = IconPickerDialog.newInstance(selectedIcon, selectedColor);
         dialog.show(getChildFragmentManager(), "icon_picker");
     }
 
-    private void updateIconAndColorUi() {
+    protected void updateIconAndColorUi() {
+        // Update color preview
         if (viewSelectedColor != null) {
             GradientDrawable gd = new GradientDrawable();
             gd.setShape(GradientDrawable.OVAL);
@@ -581,7 +554,9 @@ public class AddCustomActivitySheet extends BottomSheetDialogFragment {
             viewSelectedColor.setBackground(gd);
         }
 
+        // Update icon preview
         if (ivSelectedIcon != null) {
+            // Create a dummy StillLocation to pass to getStillIconRes
             StillLocation tempStill = new StillLocation();
             tempStill.setIcon(selectedIcon);
             int iconRes = ColorAndIcons.getStillIconRes(tempStill);
@@ -591,25 +566,30 @@ public class AddCustomActivitySheet extends BottomSheetDialogFragment {
         }
     }
 
-    private void updateTimeButtons() {
+    protected void updateTimeButtons() {
         btnStartTime.setText("Start: " + UiFormatters.timeOnly(editedStartTime));
         btnEndTime.setText("End: " + UiFormatters.timeOnly(editedEndTime));
+
+        boolean isOngoing = (editedEndTime == null);
+        btnEndTime.setEnabled(!isOngoing);
+        btnEndTime.setAlpha(isOngoing ? 0.5f : 1.0f);
     }
 
-    private void showTimePickerDialog(boolean isStart) {
-        Date initialDate = isStart ? editedStartTime : editedEndTime;
-        final Date baseDate = (initialDate == null) ? new Date() : initialDate;
+    protected void showTimePickerDialog(boolean isStart) {
+        if (!isStart && editedEndTime == null) return;
 
+        Date baseDate = isStart ? editedStartTime : editedEndTime;
+        if (baseDate == null) baseDate = new Date();
 
         Calendar cal = Calendar.getInstance();
         cal.setTime(baseDate);
 
         TimePickerDialog picker = new TimePickerDialog(requireContext(), (view, hourOfDay, minute) -> {
             Calendar newCal = Calendar.getInstance();
-            newCal.setTime(baseDate);
+            Date currentVal = isStart ? editedStartTime : editedEndTime;
+            newCal.setTime(currentVal != null ? currentVal : new Date());
             newCal.set(Calendar.HOUR_OF_DAY, hourOfDay);
             newCal.set(Calendar.MINUTE, minute);
-            newCal.set(Calendar.SECOND, 0);
 
             if (isStart) editedStartTime = newCal.getTime();
             else editedEndTime = newCal.getTime();

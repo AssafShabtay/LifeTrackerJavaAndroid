@@ -1,230 +1,53 @@
 package com.example.myapplication.ui.statistics.locationStatistics;
 
-import android.app.Activity;
-import android.content.Context;
-import android.content.Intent;
-import android.location.Address;
-import android.location.Geocoder;
-import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
-import android.text.Editable;
-import android.text.TextWatcher;
-import android.view.LayoutInflater;
-import android.view.View;
-import android.view.ViewGroup;
-import android.widget.AutoCompleteTextView;
-import android.widget.Button;
-
-import androidx.activity.result.ActivityResultLauncher;
-import androidx.activity.result.contract.ActivityResultContracts;
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-
-import com.example.myapplication.LifeTrackerApp;
 import com.example.myapplication.R;
-import com.example.myapplication.util.AddressAutocompleteHelper;
-import com.example.myapplication.ui.general.PlaceDropdownAdapter;
-import com.example.myapplication.ui.home.map.MapPickerActivity;
-import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
-import com.google.android.material.textfield.TextInputLayout;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 
-public class WorkAddressPickerBottomSheet extends BottomSheetDialogFragment {
+public class WorkAddressPickerBottomSheet extends BaseAddressPickerBottomSheet {
 
     public interface OnWorkAddressSelectedListener {
         void onWorkAddressSelected(String address);
     }
 
-    private static final String ARG_PLACE_SUGGESTIONS = "place_suggestions";
-
-    private AutoCompleteTextView etWorkAddress;
-    private TextInputLayout tilWorkAddress;
-    private Button btnSaveWorkAddress;
     private OnWorkAddressSelectedListener listener;
-    private List<String> placeSuggestions;
-    private final Handler validationHandler = new Handler(Looper.getMainLooper());
-    private Runnable validationRunnable;
 
-    private final ActivityResultLauncher<Intent> mapPickerLauncher = registerForActivityResult(
-            new ActivityResultContracts.StartActivityForResult(),
-            result -> {
-                if (result.getResultCode() == Activity.RESULT_OK && result.getData() != null) {
-                    String address = result.getData().getStringExtra(MapPickerActivity.EXTRA_ADDRESS);
-                    if (address != null) {
-                        etWorkAddress.setText(address);
-                    }
-                }
-            }
-    );
-
-    // passing parms to the fragment
     public static WorkAddressPickerBottomSheet newInstance(OnWorkAddressSelectedListener listener, Map<String, Long> placeDurations) {
         WorkAddressPickerBottomSheet fragment = new WorkAddressPickerBottomSheet();
         fragment.listener = listener;
-
-        // bundling the place suggestions
-        Bundle args = new Bundle();
-        if (placeDurations != null && !placeDurations.isEmpty()) {
-            List<Map.Entry<String, Long>> sortedPlaces = new ArrayList<>(placeDurations.entrySet());
-            sortedPlaces.sort((e1, e2) -> e2.getValue().compareTo(e1.getValue())); // Sort by duration descending
-            ArrayList<String> suggestions = new ArrayList<>();
-            for (int i = 0; i < Math.min(sortedPlaces.size(), 5); i++) { // Take top 5
-                suggestions.add(sortedPlaces.get(i).getKey());
-            }
-            args.putStringArrayList(ARG_PLACE_SUGGESTIONS, suggestions);
-        }
-        fragment.setArguments(args);
-
+        fragment.setArguments(createArgs(placeDurations));
         return fragment;
     }
 
-    @Nullable
     @Override
-    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        if (getArguments() != null) {
-            placeSuggestions = getArguments().getStringArrayList(ARG_PLACE_SUGGESTIONS);
-        }
-        return inflater.inflate(R.layout.bottom_sheet_work_address_picker, container, false);
+    protected int getLayoutResId() {
+        return R.layout.bottom_sheet_work_address_picker;
     }
 
     @Override
-    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
-        super.onViewCreated(view, savedInstanceState);
+    protected int getInputEditTextResId() {
+        return R.id.etWorkAddressInput;
+    }
 
-        etWorkAddress = view.findViewById(R.id.etWorkAddressInput);
-        tilWorkAddress = view.findViewById(R.id.tilWorkAddress);
-        btnSaveWorkAddress = view.findViewById(R.id.btnSaveWorkAddress);
+    @Override
+    protected int getTextInputLayoutResId() {
+        return R.id.tilWorkAddress;
+    }
 
+    @Override
+    protected int getSaveButtonResId() {
+        return R.id.btnSaveWorkAddress;
+    }
 
-        // Display common places as suggestions
-        if (placeSuggestions != null && !placeSuggestions.isEmpty()) {
-            PlaceDropdownAdapter adapter = new PlaceDropdownAdapter(requireContext(), placeSuggestions);
-            etWorkAddress.setAdapter(adapter);
+    @Override
+    protected String getEmptyErrorMessage() {
+        return "Please enter a work address.";
+    }
 
-            // show the drop down after the ui is loaded
-            etWorkAddress.post(() -> etWorkAddress.showDropDown());
+    @Override
+    protected void onAddressSaved(String address) {
+        if (listener != null) {
+            listener.onWorkAddressSelected(address);
         }
-
-        AddressAutocompleteHelper addressAutocomplete = new AddressAutocompleteHelper(requireContext(), etWorkAddress);
-        addressAutocomplete.setMapPickerLauncher(mapPickerLauncher);
-
-        setupAddressValidation();
-
-        // Save address handler
-        btnSaveWorkAddress.setOnClickListener(v -> {
-            String address = etWorkAddress.getText().toString().trim();
-            if (address.isEmpty()) {
-                tilWorkAddress.setError("Please enter a work address.");
-            } else {
-                validateAndSave(address);
-            }
-        });
-    }
-
-    private void setupAddressValidation() {
-        validationRunnable = () -> {
-            String address = etWorkAddress.getText().toString().trim();
-            if (address.isEmpty()) {
-                tilWorkAddress.setError(null);
-                btnSaveWorkAddress.setEnabled(true);
-                return;
-            }
-            performAddressValidation(address);
-        };
-
-        etWorkAddress.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-                tilWorkAddress.setError(null);
-                validationHandler.removeCallbacks(validationRunnable);
-                validationHandler.postDelayed(validationRunnable, 1000);
-            }
-
-            @Override
-            public void afterTextChanged(Editable s) {}
-        });
-    }
-
-    private void performAddressValidation(String address) {
-        if (getActivity() == null) return;
-        LifeTrackerApp app = (LifeTrackerApp) requireActivity().getApplication();
-        app.getBackgroundWriteExecutor().execute(() -> {
-            Context context = getContext();
-            if (context == null) return;
-            Geocoder geocoder = new Geocoder(context.getApplicationContext());
-            try {
-                List<Address> addresses = geocoder.getFromLocationName(address, 1);
-                boolean isValid = addresses != null && !addresses.isEmpty();
-
-                if (getActivity() != null) {
-                    requireActivity().runOnUiThread(() -> {
-                        if (!isAdded()) return;
-                        if (isValid) {
-                            tilWorkAddress.setError(null);
-                            btnSaveWorkAddress.setEnabled(true);
-                        } else {
-                            tilWorkAddress.setError("Invalid address. Please check and try again.");
-                            btnSaveWorkAddress.setEnabled(false);
-                        }
-                    });
-                }
-            } catch (Exception e) {
-                if (getActivity() != null) {
-                    requireActivity().runOnUiThread(() -> {
-                        if (!isAdded()) return;
-                        // In case of error (no internet etc), don't block the user
-                        tilWorkAddress.setError(null);
-                        btnSaveWorkAddress.setEnabled(true);
-                    });
-                }
-            }
-        });
-    }
-
-    private void validateAndSave(String address) {
-        btnSaveWorkAddress.setEnabled(false);
-        if (getActivity() == null) return;
-        LifeTrackerApp app = (LifeTrackerApp) requireActivity().getApplication();
-        app.getBackgroundWriteExecutor().execute(() -> {
-            if (getContext() == null) return;
-            Geocoder geocoder = new Geocoder(getContext().getApplicationContext());
-            try {
-                List<Address> addresses = geocoder.getFromLocationName(address, 1);
-                boolean isValid = addresses != null && !addresses.isEmpty();
-
-                if (getActivity() != null) {
-                    requireActivity().runOnUiThread(() -> {
-                        if (!isAdded()) return;
-                        if (isValid) {
-                            if (listener != null) {
-                                listener.onWorkAddressSelected(address);
-                                dismiss();
-                            }
-                        } else {
-                            tilWorkAddress.setError("Invalid address. Please check and try again.");
-                            btnSaveWorkAddress.setEnabled(true);
-                        }
-                    });
-                }
-            } catch (Exception e) {
-                if (getActivity() != null) {
-                    requireActivity().runOnUiThread(() -> {
-                        if (!isAdded()) return;
-                        // If validation fails due to network, allow saving anyway
-                        if (listener != null) {
-                            listener.onWorkAddressSelected(address);
-                            dismiss();
-                        }
-                    });
-                }
-            }
-        });
     }
 }

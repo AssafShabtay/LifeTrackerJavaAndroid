@@ -85,23 +85,19 @@ public class MapPickerActivity extends AppCompatActivity implements OnMapReadyCa
     @Override
     public void onMapReady(@NonNull GoogleMap googleMap) {
         mMap = googleMap;
-        mMap.getUiSettings().setZoomControlsEnabled(false); // Clean UI: hide default zoom controls
+        mMap.getUiSettings().setZoomControlsEnabled(false);
         mMap.getUiSettings().setMyLocationButtonEnabled(true);
         mMap.getUiSettings().setCompassEnabled(false);
 
-        // Try to center on user's current location
+        // center on user's current location
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
             mMap.setMyLocationEnabled(true);
             fusedLocationClient.getLastLocation().addOnSuccessListener(this, location -> {
                 if (location != null) {
                     LatLng currentLatLng = new LatLng(location.getLatitude(), location.getLongitude());
                     mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLatLng, 17f));
-                } else {
-                    centerOnDefault();
                 }
             });
-        } else {
-            centerOnDefault();
         }
 
         mMap.setOnCameraMoveStartedListener(reason -> {
@@ -115,11 +111,6 @@ public class MapPickerActivity extends AppCompatActivity implements OnMapReadyCa
         });
     }
 
-    private void centerOnDefault() {
-        // Default location: Tel Aviv
-        LatLng defaultLocation = new LatLng(32.0853, 34.7818);
-        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(defaultLocation, 15f));
-    }
 
     private void updateAddress(LatLng latLng) {
         new Thread(() -> {

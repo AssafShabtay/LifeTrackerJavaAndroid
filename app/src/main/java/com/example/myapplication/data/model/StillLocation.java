@@ -1,12 +1,11 @@
 package com.example.myapplication.data.model;
-import com.example.myapplication.tracking.location.LocationService;
 
 import static com.example.myapplication.tracking.location.LocationService.TAG;
 
+import android.content.Context;
 import android.location.Address;
 import android.location.Geocoder;
 import android.util.Log;
-import android.content.Context; // Added import for Context
 
 import androidx.room.ColumnInfo;
 import androidx.room.Entity;
@@ -16,10 +15,8 @@ import androidx.room.PrimaryKey;
 import com.example.myapplication.util.ErrorLogger;
 import com.example.myapplication.util.Logger;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Date;
+import java.util.List;
 import java.util.Objects;
 @Entity(tableName = "still_locations",
         foreignKeys = @ForeignKey(

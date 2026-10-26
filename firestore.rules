@@ -1,0 +1,29 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{uid}/{collection}/{recordId} {
+      function owner() {
+        return request.auth != null && request.auth.uid == uid;
+      }
+      function supported() {
+        return collection in ['places', 'movement_activities', 'still_locations', 'route_points'];
+      }
+      function valid() {
+        let data = request.resource.data;
+        return recordId.matches('^[a-f0-9]{32}$')
+          && data.keys().hasAll(['schema', 'deleted', 'fields', 'mutation', 'updatedAt'])
+          && data.keys().hasOnly(['schema', 'deleted', 'fields', 'mutation', 'updatedAt'])
+          && data.schema == 1
+          && data.deleted is bool
+          && data.fields is map && data.fields.size() <= 30
+          && data.mutation is string && data.mutation.matches('^[a-f0-9]{32}$')
+          && data.updatedAt == request.time;
+      }
+      allow read: if owner() && supported();
+      allow create: if owner() && supported() && valid();
+      allow update: if owner() && supported() && valid() && resource.data.deleted == false;
+      // Keep tombstones so an offline phone cannot bring deleted history back.
+      allow delete: if false;
+    }
+  }
+}

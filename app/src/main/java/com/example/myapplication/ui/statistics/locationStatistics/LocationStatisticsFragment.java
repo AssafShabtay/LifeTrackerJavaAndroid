@@ -23,13 +23,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class LocationStatisticsFragment extends Fragment implements
+public class  LocationStatisticsFragment extends Fragment implements
         HomeAddressPickerBottomSheet.OnHomeAddressSelectedListener,
         WorkAddressPickerBottomSheet.OnWorkAddressSelectedListener,
         HomeStatisticsManager.HomeStatisticsListener,
         WorkStatisticsManager.WorkStatisticsListener,
-        PunctualityStatisticsManager.PunctualityStatisticsListener,
-        LlmInsightsManager.LlmInsightsListener {
+        PunctualityStatisticsManager.PunctualityStatisticsListener {
 
     private static final String TAG = "LocationStatisticsFragment";
 
@@ -53,7 +52,6 @@ public class LocationStatisticsFragment extends Fragment implements
     private HomeStatisticsManager homeStatisticsManager;
     private WorkStatisticsManager workStatisticsManager;
     private PunctualityStatisticsManager punctualityStatisticsManager;
-    private LlmInsightsManager llmInsightsManager;
     private SharedPreferences sharedPreferences;
     private SharedPreferences.OnSharedPreferenceChangeListener preferenceChangeListener;
 
@@ -87,7 +85,6 @@ public class LocationStatisticsFragment extends Fragment implements
         homeStatisticsManager = new HomeStatisticsManager(requireContext(), app, mainHandler, this, view);
         workStatisticsManager = new WorkStatisticsManager(requireContext(), app, mainHandler, this, view);
         punctualityStatisticsManager = new PunctualityStatisticsManager(requireContext(), app, mainHandler, this, view);
-        llmInsightsManager = new LlmInsightsManager(requireContext(), app, mainHandler, this, view);
 
         btnPrevPlace = view.findViewById(R.id.btn_prev_place);
         btnNextPlace = view.findViewById(R.id.btn_next_place);
@@ -153,7 +150,6 @@ public class LocationStatisticsFragment extends Fragment implements
 
         homeStatisticsManager.loadCabinFeverIndex();
         punctualityStatisticsManager.loadArrivalDepartureStats();
-        llmInsightsManager.loadLlmInsights();
         workStatisticsManager.loadWorkStatistics();
     }
 

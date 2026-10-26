@@ -122,11 +122,15 @@ public class IconPickerDialog extends DialogFragment {
     private void filterIcons(String query) {
         // filters the list based on the keywords
         List<IconItem> filteredList = new ArrayList<>();
-        String lowerCaseQuery = query.toLowerCase();
-        for (IconItem item : allIcons) {
-            if (item.getName().toLowerCase().contains(lowerCaseQuery) ||
-                (item.getKeywords() != null && containsKeyword(item.getKeywords(), lowerCaseQuery))) { // Check keywords
-                filteredList.add(item);
+        String lowerCaseQuery = query.toLowerCase().trim();
+        if (lowerCaseQuery.isEmpty()) {
+            filteredList.addAll(allIcons);
+        } else {
+            for (IconItem item : allIcons) {
+                if (item.getName().toLowerCase().contains(lowerCaseQuery) ||
+                    (item.getKeywords() != null && containsKeyword(item.getKeywords(), lowerCaseQuery))) { // Check keywords
+                    filteredList.add(item);
+                }
             }
         }
         iconAdapter.submitList(filteredList); // submit the filtered list to recycle view
@@ -163,6 +167,7 @@ public class IconPickerDialog extends DialogFragment {
 
     private void setupIconRecycler() {
         recyclerIcons.setLayoutManager(new GridLayoutManager(getContext(), 7));
+        recyclerIcons.setHasFixedSize(true);
         showIcons();
     }
 

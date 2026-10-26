@@ -2,7 +2,7 @@ package com.example.myapplication.ui.home;
 import com.example.myapplication.ui.home.calendar.CalendarManager;
 import com.example.myapplication.ui.home.map.MapManager;
 import com.example.myapplication.ui.home.phoneUsage.PhoneUsageMiniCardManager;
-import com.example.myapplication.ui.home.sheet.AddCustomActivitySheet;
+import com.example.myapplication.ui.home.sheet.AddCustomStillActivitySheet;
 import com.example.myapplication.ui.home.sheet.AddCustomMovementActivitySheet;
 import com.example.myapplication.ui.home.sheet.EditMovementActivitySheet;
 import com.example.myapplication.ui.home.sheet.EditStillActivitySheet;
@@ -10,7 +10,6 @@ import com.example.myapplication.ui.home.timeline.TimelineAdapter;
 
 import android.os.Bundle;
 import android.view.LayoutInflater;
-import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
@@ -23,7 +22,6 @@ import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-// Removed import com.example.myapplication.tracking.geofence.GeofenceManager;
 import com.example.myapplication.LifeTrackerApp;
 import com.example.myapplication.data.db.ActivityDao;
 import com.example.myapplication.data.db.ActivityDatabase;
@@ -41,11 +39,10 @@ public class HomeFragment extends Fragment {
 
     private static final String TAG = "HomeFragment";
 
-    private static final long UPDATE_INTERVAL_MS = 2 * 60 * 1000; // 2 minutes
 
     private ActivityDao dao;
 
-    private TimelineAdapter timelineAdapter;
+    private TimelineAdapter timelineAdapter;;
 
     private MapManager mapManager;
     private CalendarManager calendarManager;
@@ -85,14 +82,14 @@ public class HomeFragment extends Fragment {
                     Date date = calendarManager != null ? calendarManager.getSelectedDate() : new Date();
 
                     if (item.getItemId() == 1) {
-                        AddCustomActivitySheet sheet = AddCustomActivitySheet.newInstance(date, () -> {
-                            loadTimelineData(calendarManager.getSelectedDate());
+                        AddCustomStillActivitySheet sheet = AddCustomStillActivitySheet.newInstance(date, () -> {
+                            loadHomeData(calendarManager.getSelectedDate());
                         });
-                        sheet.show(getChildFragmentManager(), "AddCustomActivitySheet");
+                        sheet.show(getChildFragmentManager(), "AddCustomStillActivitySheet");
                         return true;
                     } else if (item.getItemId() == 2) {
                         AddCustomMovementActivitySheet sheet = AddCustomMovementActivitySheet.newInstance(date, () -> {
-                            loadTimelineData(calendarManager.getSelectedDate());
+                            loadHomeData(calendarManager.getSelectedDate());
                         });
                         sheet.show(getChildFragmentManager(), "AddCustomMovementActivitySheet");
                         return true;
@@ -111,47 +108,11 @@ public class HomeFragment extends Fragment {
                 }
             });
         }
-
         mapManager = new MapManager(this, R.id.map);
         mapManager.init();
-        View mapView = view.findViewById(R.id.map);
-        if (mapView != null) {
-            final float[] downX = new float[1];
-            final float[] downY = new float[1];
-            final int CLICK_THRESHOLD = 10;
-
-            mapView.setOnTouchListener((v, event) -> {
-                switch (event.getAction()) {
-                    case MotionEvent.ACTION_DOWN:
-                        downX[0] = event.getX();
-                        downY[0] = event.getY();
-                        v.getParent().requestDisallowInterceptTouchEvent(true);
-                        break;
-
-                    case MotionEvent.ACTION_MOVE:
-                        v.getParent().requestDisallowInterceptTouchEvent(true);
-                        break;
-
-                    case MotionEvent.ACTION_UP:
-                        v.getParent().requestDisallowInterceptTouchEvent(false);
-
-                        float dx = Math.abs(event.getX() - downX[0]);
-                        float dy = Math.abs(event.getY() - downY[0]);
-                        if (dx < CLICK_THRESHOLD && dy < CLICK_THRESHOLD) {
-                            v.performClick();
-                        }
-                        break;
-
-                    case MotionEvent.ACTION_CANCEL:
-                        v.getParent().requestDisallowInterceptTouchEvent(false);
-                        break;
-                }
-                return false;
-            });
-        }
         // ---------------- initialize calendar -----------------
         calendarManager = new CalendarManager(view, date -> {
-            loadTimelineData(date);
+            loadHomeData(date);
         }, app.getBackgroundWriteExecutor());
 
         // ----------------- initialize timeline --------------------
@@ -177,14 +138,14 @@ public class HomeFragment extends Fragment {
     }
 
     private void showStillEditSheet(StillLocation still) {
-        EditStillActivitySheet sheet = EditStillActivitySheet.newInstance(still.copy(), new EditStillActivitySheet.OnVisitInteractionListener() {
+        EditStillActivitySheet sheet = EditStillActivitySheet.newInstance(still.copy(), new EditStillActivitySheet.OnVisitChangeListener() {
             @Override
             public void onUpdate(StillLocation updatedStill) {
                 app.getBackgroundWriteExecutor().execute(() -> {
                             dao.updateStillAndSyncPlace(updatedStill);
                             if (isAdded()) {
                                 requireActivity().runOnUiThread(() -> {
-                                    loadTimelineData(calendarManager.getSelectedDate());
+                                    loadHomeData(calendarManager.getSelectedDate());
                                 });
                             }
                         }
@@ -197,7 +158,7 @@ public class HomeFragment extends Fragment {
                             dao.deleteStillLocation(stillToDelete.getId());
                             if (isAdded()) {
                                 requireActivity().runOnUiThread(() -> {
-                                    loadTimelineData(calendarManager.getSelectedDate());
+                                    loadHomeData(calendarManager.getSelectedDate());
                                 });
                             }
                         }
@@ -215,7 +176,7 @@ public class HomeFragment extends Fragment {
                             dao.updateMovementActivity(movement);
                             if (isAdded()) {
                                 requireActivity().runOnUiThread(() -> {
-                                    loadTimelineData(calendarManager.getSelectedDate());
+                                    loadHomeData(calendarManager.getSelectedDate());
                                 });
                             }
                         }
@@ -228,7 +189,7 @@ public class HomeFragment extends Fragment {
                             dao.deleteMovementActivity(movement.getId());
                             if (isAdded()) {
                                 requireActivity().runOnUiThread(() -> {
-                                    loadTimelineData(calendarManager.getSelectedDate());
+                                    loadHomeData(calendarManager.getSelectedDate());
                                 });
                             }
                         }
@@ -238,7 +199,7 @@ public class HomeFragment extends Fragment {
         sheet.show(getChildFragmentManager(), "PlaceLabelSheet");
     }
 
-    private void loadTimelineData(Date date) {
+    private void loadHomeData(Date date) {
         if (date == null) return;
 
         if (phoneUsageMiniCardManager != null) {
@@ -300,7 +261,7 @@ public class HomeFragment extends Fragment {
             }
 
             if (isAdded()) {
-                requireActivity().runOnUiThread(() -> timelineAdapter.submitList(processedCombined)); // switch back to the main thread and updates the list
+                requireActivity().runOnUiThread(() -> timelineAdapter.submitList(processedCombined)); // updates the list
             }
         });
     }
@@ -308,7 +269,9 @@ public class HomeFragment extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
-        loadTimelineData(calendarManager.getSelectedDate());
+        if (calendarManager != null) {
+            calendarManager.setSelectedDate(calendarManager.getSelectedDate());
+        }
         if (mapManager != null) {
             mapManager.onResume();
         }
@@ -317,6 +280,12 @@ public class HomeFragment extends Fragment {
     @Override
     public void onPause() {
         super.onPause();
+    }
+
+    public void setSelectedDate(Date date) {
+        if (calendarManager != null) {
+            calendarManager.setSelectedDate(date);
+        }
     }
 
     @Override

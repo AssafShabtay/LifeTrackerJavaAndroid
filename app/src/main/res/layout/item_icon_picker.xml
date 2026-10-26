@@ -2,16 +2,16 @@
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    android:layout_width="40dp"
-    android:layout_height="40dp"
-    android:layout_margin="7dp"
+    android:layout_width="match_parent"
+    android:layout_height="48dp"
     android:background="?attr/selectableItemBackgroundBorderless"
     tools:ignore="Overdraw">
 
     <View
         android:id="@+id/iconBackground"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_gravity="center"
         android:background="@drawable/bg_icon_selected"
         android:visibility="gone" />
 
@@ -20,6 +20,7 @@
         android:layout_width="24dp"
         android:layout_height="24dp"
         android:layout_gravity="center"
+        android:contentDescription="@null"
         app:tint="?attr/colorOnSurface" />
 
 </FrameLayout>

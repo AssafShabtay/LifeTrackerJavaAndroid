@@ -38,7 +38,10 @@ import com.google.android.gms.location.ActivityTransitionRequest;
 import com.google.android.gms.location.DetectedActivity;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.card.MaterialCardView;
+
+import java.util.Date;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.google.android.material.navigation.NavigationBarView;
 import com.google.android.material.progressindicator.LinearProgressIndicator;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.appcheck.FirebaseAppCheck;
@@ -378,6 +381,15 @@ public class MainActivity extends AppCompatActivity {
         }
         if (statisticsFragment != null) {
             statisticsFragment.selectScreenTimeTab();
+        }
+    }
+
+    public void navigateToDate(Date date) {
+        if (bottomNav != null) {
+            bottomNav.setSelectedItemId(R.id.nav_home);
+        }
+        if (homeFragment != null) {
+            homeFragment.setSelectedDate(date);
         }
     }
 }

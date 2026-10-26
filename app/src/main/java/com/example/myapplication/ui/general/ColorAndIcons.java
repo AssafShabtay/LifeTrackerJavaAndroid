@@ -104,7 +104,7 @@ public class ColorAndIcons {
 
             if (icon.contains("home")) iconXml = R.drawable.ic_home;
 
-            else if (icon.contains("briefcase")) iconXml = R.drawable.lucide_briefcase;
+            else if (icon.contains("briefcase")) iconXml = R.drawable.ic_work;
             else if (icon.contains("gym") || icon.contains("fitness")) iconXml = R.drawable.ic_gym;
             else if (icon.contains("school")) iconXml = R.drawable.ic_school;
             else if (icon.contains("restaurant") || icon.contains("food")) iconXml = R.drawable.ic_restaurant;
@@ -189,7 +189,7 @@ public class ColorAndIcons {
         return Arrays.asList(
                 // Basic & Original
                 new IconItem("Home", R.drawable.ic_home, Arrays.asList("house", "residence", "dwelling")),
-                new IconItem("Briefcase", R.drawable.lucide_briefcase, Arrays.asList("work", "job", "business", "office")),
+                new IconItem("Briefcase", R.drawable.ic_work, Arrays.asList("work", "job", "business", "office")),
                 new IconItem("Gym", R.drawable.ic_gym, Arrays.asList("fitness", "workout", "exercise", "weights")),
                 new IconItem("School", R.drawable.ic_school, Arrays.asList("education", "college", "university", "study")),
                 new IconItem("Restaurant", R.drawable.ic_restaurant, Arrays.asList("food", "eat", "dining", "cafe")),

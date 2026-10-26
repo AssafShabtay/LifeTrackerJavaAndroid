@@ -71,6 +71,7 @@ public class PhoneUsageMiniCardManager {
             btnGrantPermission.setOnClickListener(v -> UsageStatsHelper.openUsageAccessSettings(context));
         }
 
+        // when clicking on the card, navigate to the screen time statistics
         View.OnClickListener navigateToStatsListener = v -> {
             Activity activity = getActivityFromContext(context);
             if (activity instanceof MainActivity) {
@@ -156,12 +157,13 @@ public class PhoneUsageMiniCardManager {
                 totalMs += duration;
             }
 
-            // Separate "Other" (unrecognized apps) from specific named categories
+            // Hold the unrecognized Other category aside while ranking named categories
             DetailedPhoneUsageCardManager.CategoryUsage otherCategory = categoryMap.remove("Other");
             if (otherCategory == null) {
                 otherCategory = new DetailedPhoneUsageCardManager.CategoryUsage("Other");
             }
 
+            // Collect and sort specific named categories
             List<DetailedPhoneUsageCardManager.CategoryUsage> specificCategories = new ArrayList<>();
             for (DetailedPhoneUsageCardManager.CategoryUsage cat : categoryMap.values()) {
                 if (cat.totalMs > 0) {
@@ -173,9 +175,12 @@ public class PhoneUsageMiniCardManager {
             List<DetailedPhoneUsageCardManager.CategoryUsage> displayCategories = new ArrayList<>();
 
             if (specificCategories.size() > 3) {
+                // Keep top 3 specific categories
                 for (int i = 0; i < 3; i++) {
                     displayCategories.add(specificCategories.get(i));
                 }
+
+                // Combine all leftover specific categories into otherCategory
                 for (int i = 3; i < specificCategories.size(); i++) {
                     DetailedPhoneUsageCardManager.CategoryUsage cat = specificCategories.get(i);
                     otherCategory.totalMs += cat.totalMs;
@@ -184,6 +189,7 @@ public class PhoneUsageMiniCardManager {
                 displayCategories.addAll(specificCategories);
             }
 
+            // Append the single consolidated "Other" category if it has usage
             if (otherCategory.totalMs > 0) {
                 displayCategories.add(otherCategory);
             }
@@ -233,6 +239,7 @@ public class PhoneUsageMiniCardManager {
             }
         }
 
+        // Donut segments
         List<PhoneUsageDonutView.DonutSegment> segments = new ArrayList<>();
         if (totalMs > 0 && categories != null) {
             int[] colorResIds = AppCategoryHelper.CATEGORY_COLOR_RES_IDS;

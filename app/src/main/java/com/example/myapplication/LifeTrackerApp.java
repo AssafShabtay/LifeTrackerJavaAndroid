@@ -19,6 +19,7 @@ public class LifeTrackerApp extends Application {
     @Override
     public void onCreate() {
         super.onCreate();
+        com.example.myapplication.data.sync.CloudSyncManager.schedule(this);
 
         SharedPreferences preferences = getSharedPreferences("MyPrefs", Context.MODE_PRIVATE);
         int currentMode = preferences.getInt("theme_mode", AppCompatDelegate.MODE_NIGHT_NO);

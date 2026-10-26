@@ -12,6 +12,7 @@ import androidx.viewpager2.adapter.FragmentStateAdapter;
 import androidx.viewpager2.widget.ViewPager2;
 
 import com.example.myapplication.R;
+import com.example.myapplication.ui.statistics.askTimeline.AskTimelineBottomSheetFragment;
 import com.example.myapplication.ui.statistics.screenTime.ScreenTimeFragment;
 import com.google.android.material.tabs.TabLayout;
 import com.google.android.material.tabs.TabLayoutMediator;
@@ -33,6 +34,15 @@ public class StatisticsFragment extends Fragment {
 
         tabLayout = view.findViewById(R.id.tab_layout);
         viewPager = view.findViewById(R.id.view_pager);
+
+        View AskTimelineButton = view.findViewById(R.id.ask_timeline_button);
+        if (AskTimelineButton != null) {
+            AskTimelineButton.setOnClickListener(v -> {
+                AskTimelineBottomSheetFragment bottomSheet =
+                        AskTimelineBottomSheetFragment.newInstance();
+                bottomSheet.show(getChildFragmentManager(), "AskTimelineBottomSheet");
+            });
+        }
 
         StatisticsPagerAdapter adapter = new StatisticsPagerAdapter(this);
         viewPager.setAdapter(adapter);

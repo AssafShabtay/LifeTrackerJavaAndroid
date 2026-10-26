@@ -2,9 +2,12 @@
 <com.google.android.material.card.MaterialCardView
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:layout_width="wrap_content"
+    android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_margin="16dp"
+    android:layout_marginStart="16dp"
+    android:layout_marginEnd="16dp"
+    android:layout_marginTop="16dp"
+    android:layout_marginBottom="16dp"
     app:cardCornerRadius="28dp"
     app:cardElevation="16dp"
     app:cardUseCompatPadding="true"
@@ -12,7 +15,7 @@
     app:strokeWidth="0dp">
 
     <LinearLayout
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:paddingTop="24dp"
@@ -42,6 +45,7 @@
             android:layout_marginStart="24dp"
             android:layout_marginEnd="24dp"
             android:layout_marginBottom="12dp"
+            android:autofillHints=""
             android:background="@android:color/transparent"
             android:hint="Search icons..."
             android:inputType="text"
@@ -53,10 +57,10 @@
             android:layout_width="match_parent"
             android:layout_height="260dp"
             android:clipToPadding="false"
-            android:paddingStart="24dp"
-            android:paddingEnd="24dp"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
             app:layoutManager="androidx.recyclerview.widget.GridLayoutManager"
-            app:spanCount="8" />
+            app:spanCount="6" />
 
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>
