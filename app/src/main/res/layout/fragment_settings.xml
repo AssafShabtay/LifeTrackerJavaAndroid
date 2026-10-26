@@ -333,60 +333,29 @@
             app:cardCornerRadius="16dp">
 
             <LinearLayout
-                android:id="@+id/btn_delete_history"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:padding="16dp"
-                android:background="?attr/selectableItemBackground"
-                android:clickable="true"
-                android:focusable="true">
-
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:src="@drawable/delete_24px"
-                    app:tint="?attr/colorError"
-                    android:contentDescription="Delete Icon"/>
-
+                android:orientation="vertical">
                 <LinearLayout
-                    android:layout_width="0dp"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
                     android:orientation="vertical"
-                    android:layout_marginStart="16dp">
-
-                    <TextView
-                        android:layout_width="wrap_content"
+                    android:padding="16dp">
+                    <com.google.android.material.switchmaterial.SwitchMaterial
+                        android:id="@+id/switchCloudSync"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Delete Location History"
+                        android:text="Cloud sync"
                         android:textAppearance="@style/TextAppearance.Material3.BodyLarge"
-                        android:textColor="?attr/colorError"
-                        android:textStyle="bold"/>
-
+                        android:textStyle="bold" />
                     <TextView
-                        android:layout_width="wrap_content"
+                        android:id="@+id/cloud_sync_status"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Permanently clear all tracked activities and saved places"
+                        android:text="Sign in to save and restore your history across devices."
                         android:textAppearance="@style/TextAppearance.Material3.BodySmall"
-                        android:textColor="?attr/colorOnSurfaceVariant"/>
-Cloud sync"
-                            android:textAppearance="@style/TextAppearance.Material3.BodyLarge"
-                            android:textStyle="bold"
-                            android:checked="false" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:id="@+id/cloud_sync_status"
-                            android:text="Sign in to save and restore your history across devices."
-                            android:textAppearance="@style/TextAppearance.Material3.BodySmall"
-                            android:textColor="?attr/colorOnSurfaceVariant"
-                            android:layout_marginTop="2dp"/>
-                    </LinearLayout>
+                        android:textColor="?attr/colorOnSurfaceVariant" />
                 </LinearLayout>
-
                 <View
                     android:layout_width="match_parent"
                     android:layout_height="1dp"

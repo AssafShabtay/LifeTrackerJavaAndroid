@@ -1,9 +1,0 @@
-{
-  "indexes": [],
-  "fieldOverrides": [
-    { "collectionGroup": "places", "fieldPath": "fields", "indexes": [] },
-    { "collectionGroup": "movement_activities", "fieldPath": "fields", "indexes": [] },
-    { "collectionGroup": "still_locations", "fieldPath": "fields", "indexes": [] },
-    { "collectionGroup": "route_points", "fieldPath": "fields", "indexes": [] }
-  ]
-}
