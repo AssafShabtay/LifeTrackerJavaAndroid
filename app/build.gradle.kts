@@ -49,11 +49,7 @@ android {
 }
 
 dependencies {
-    implementation("com.google.firebase:firebase-firestore")
-    implementation("androidx.work:work-runtime:2.10.1")
     implementation("com.google.firebase:firebase-ai")
-    implementation("com.google.firebase:firebase-storage")
-    implementation("com.google.firebase:firebase-auth")
     implementation("com.google.firebase:firebase-appcheck-debug")
     implementation(platform("com.google.firebase:firebase-bom:34.16.0"))
     implementation("com.google.firebase:firebase-analytics")

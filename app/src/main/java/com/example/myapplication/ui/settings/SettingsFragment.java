@@ -21,7 +21,6 @@ import com.example.myapplication.tracking.usage.UsageStatsHelper;
 import com.example.myapplication.util.PermissionManager;
 import com.google.android.material.button.MaterialButtonToggleGroup;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
-import com.google.android.material.switchmaterial.SwitchMaterial;
 
 import java.util.Calendar;
 
@@ -30,7 +29,6 @@ public class SettingsFragment extends Fragment {
     private static final String PREFS_NAME = "MyPrefs";
     private static final String KEY_WEEK_START_DAY = "week_start_day";
     private LifeTrackerApp app;
-    private CloudSyncSettings cloudSyncSettings;
 
     private TextView tvLocationPermissionStatus;
     private TextView tvUsagePermissionStatus;
@@ -44,7 +42,7 @@ public class SettingsFragment extends Fragment {
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-        cloudSyncSettings = new CloudSyncSettings(this, view);
+
         app = (LifeTrackerApp) requireActivity().getApplication();
 
         MaterialButtonToggleGroup themeToggleGroup = view.findViewById(R.id.themeToggleGroup);
@@ -65,12 +63,6 @@ public class SettingsFragment extends Fragment {
     public void onResume() {
         super.onResume();
         updatePermissionStatuses();
-    }
-
-    @Override public void onDestroyView() {
-        if (cloudSyncSettings != null) cloudSyncSettings.close();
-        cloudSyncSettings = null;
-        super.onDestroyView();
     }
 
     private void setupThemePreferences(MaterialButtonToggleGroup themeToggleGroup) {
@@ -180,18 +172,14 @@ public class SettingsFragment extends Fragment {
     private void handleDeleteHistory() {
         new MaterialAlertDialogBuilder(requireContext())
                 .setTitle("Delete Location History")
-                .setMessage("Delete all history and saved places on this phone? These deletions will also sync to your account when cloud sync is enabled. This cannot be undone.")
+                .setMessage("Are you sure you want to delete all your location history and saved places? This action cannot be undone.")
                 .setPositiveButton("Delete", (dialog, which) -> {
-                    Context context = requireContext().getApplicationContext();
                     app.getBackgroundWriteExecutor().execute(() -> {
-                        ActivityDatabase db = ActivityDatabase.getDatabase(context);
-                        db.runInTransaction(() -> {
-                            db.activityDao().deleteAllActivities();
-                            db.placeDao().deleteAllPlaces();
-                        });
-                        com.example.myapplication.data.sync.CloudSyncManager.schedule(context);
+                        ActivityDatabase db = ActivityDatabase.getDatabase(requireContext());
+                        db.activityDao().deleteAllActivities();
+                        db.placeDao().deleteAllPlaces();
 
-                        SharedPreferences llmPrefs = context.getSharedPreferences("llm_insights_prefs", Context.MODE_PRIVATE);
+                        SharedPreferences llmPrefs = requireContext().getSharedPreferences("llm_insights_prefs", Context.MODE_PRIVATE);
                         llmPrefs.edit().clear().apply();
 
                         if (getActivity() != null) {

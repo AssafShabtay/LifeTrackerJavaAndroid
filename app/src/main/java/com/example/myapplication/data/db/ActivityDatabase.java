@@ -33,7 +33,7 @@ public abstract class ActivityDatabase extends RoomDatabase {
                                     ActivityDatabase.class,
                                     "activity_database"
                             )
-                            .addCallback(new com.example.myapplication.data.sync.SyncSchema())
+                            .fallbackToDestructiveMigration(true)
                             .build();
                 }
             }
