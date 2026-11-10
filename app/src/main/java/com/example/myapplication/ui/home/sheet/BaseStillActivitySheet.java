@@ -72,6 +72,9 @@ public abstract class BaseStillActivitySheet extends BottomSheetDialogFragment {
     protected static final String TAG = "BaseStillActivitySheet";
 
     protected PlacesClient placesClient;
+    private final Handler mainHandler = new Handler(Looper.getMainLooper());
+    private Handler addressValidationHandler;
+    private Runnable addressValidationRunnable;
     protected PlaceDao placeDao;
     protected AddressAutocompleteHelper addressAutocompleteHelper;
 
@@ -188,8 +191,8 @@ public abstract class BaseStillActivitySheet extends BottomSheetDialogFragment {
         if (btnSave != null) {
             btnSave.setEnabled(false);
         }
-        Handler validationHandler = new Handler(Looper.getMainLooper());
-        Runnable validationRunnable = () -> {
+        addressValidationHandler = mainHandler;
+        addressValidationRunnable = () -> {
             String address = etAddress.getText().toString().trim();
             if (address.isEmpty()) {
                 if (tvAddressStatus != null) {
@@ -202,9 +205,11 @@ public abstract class BaseStillActivitySheet extends BottomSheetDialogFragment {
                 return;
             }
 
+            Context context = getContext();
+            if (context == null) return;
+            Context applicationContext = context.getApplicationContext();
             app.getBackgroundWriteExecutor().execute(() -> {
-                if (getContext() == null) return;
-                Geocoder geocoder = new Geocoder(requireContext());
+                Geocoder geocoder = new Geocoder(applicationContext);
                 try {
                     List<Address> addresses = geocoder.getFromLocationName(address, 1);
                     boolean isValid = addresses != null && !addresses.isEmpty();
@@ -230,9 +235,8 @@ public abstract class BaseStillActivitySheet extends BottomSheetDialogFragment {
 
                     final double finalLat = lat;
                     final double finalLng = lng;
-                    if (getActivity() != null) {
-                        requireActivity().runOnUiThread(() -> {
-                            if (!isAdded()) return;
+                    mainHandler.post(() -> {
+                            if (!isAdded() || getView() == null) return;
                             if (isValid) {
                                 if (tvAddressStatus != null) {
                                     tvAddressStatus.setVisibility(View.VISIBLE);
@@ -307,16 +311,11 @@ public abstract class BaseStillActivitySheet extends BottomSheetDialogFragment {
                                     btnSave.setEnabled(false);
                                 }
                             }
-                        });
-                    }
+                    });
                 } catch (Exception e) {
-                    Context context = getContext();
-                    if (context != null) {
-                        ErrorLogger.logError(context, TAG, "Error validating address", e);
-                    }
-                    if (getActivity() != null) {
-                        requireActivity().runOnUiThread(() -> {
-                            if (!isAdded()) return;
+                    ErrorLogger.logError(applicationContext, TAG, "Error validating address", e);
+                    mainHandler.post(() -> {
+                            if (!isAdded() || getView() == null) return;
                             // Allow saving typed address when offline or geocoder unavailable
                             if (tvAddressStatus != null) {
                                 tvAddressStatus.setVisibility(View.VISIBLE);
@@ -326,8 +325,7 @@ public abstract class BaseStillActivitySheet extends BottomSheetDialogFragment {
                             if (btnSave != null) {
                                 btnSave.setEnabled(true);
                             }
-                        });
-                    }
+                    });
                 }
             });
         };
@@ -345,7 +343,7 @@ public abstract class BaseStillActivitySheet extends BottomSheetDialogFragment {
                 selectedPlace = null;
 
                 // don't execute address validation while user is actively typing
-                validationHandler.removeCallbacks(validationRunnable);
+                addressValidationHandler.removeCallbacks(addressValidationRunnable);
                 if (tvAddressStatus != null) {
                     tvAddressStatus.setVisibility(View.VISIBLE);
                     tvAddressStatus.setText("Checking...");
@@ -354,7 +352,7 @@ public abstract class BaseStillActivitySheet extends BottomSheetDialogFragment {
                 if (btnSave != null) {
                     btnSave.setEnabled(false);
                 }
-                validationHandler.postDelayed(validationRunnable, 1000);
+                addressValidationHandler.postDelayed(addressValidationRunnable, 1000);
             }
         });
     }
@@ -429,7 +427,8 @@ public abstract class BaseStillActivitySheet extends BottomSheetDialogFragment {
     }
 
     protected void setupPlacesDropdown(double lat, double lng, @Nullable List<Place> nearbyPlaces) {
-        if (getActivity() == null || placesClient == null) return;
+        if (!isAdded() || getView() == null || placesClient == null) return;
+        Context applicationContext = requireContext().getApplicationContext();
 
         List<com.google.android.libraries.places.api.model.Place.Field> placeFields = Arrays.asList(
                 com.google.android.libraries.places.api.model.Place.Field.DISPLAY_NAME,
@@ -446,7 +445,7 @@ public abstract class BaseStillActivitySheet extends BottomSheetDialogFragment {
 
         placesClient.searchNearby(request)
                 .addOnSuccessListener(response -> {
-                    if (isAdded()) {
+                    if (isAdded() && getView() != null) {
                         response.getPlaces();
                         List<com.google.android.libraries.places.api.model.Place> googlePlaces = response.getPlaces();
                         List<String> names = new ArrayList<>();
@@ -510,8 +509,8 @@ public abstract class BaseStillActivitySheet extends BottomSheetDialogFragment {
                     }
                 })
                 .addOnFailureListener(e -> {
-                    ErrorLogger.logError(requireContext(), TAG, "Google Places search failed", e);
-                    if (isAdded() && nearbyPlaces != null && !nearbyPlaces.isEmpty()) {
+                    ErrorLogger.logError(applicationContext, TAG, "Google Places search failed", e);
+                    if (isAdded() && getView() != null && nearbyPlaces != null && !nearbyPlaces.isEmpty()) {
                         List<String> names = new ArrayList<>();
                         for (Place p : nearbyPlaces) {
                             if (p.getName() != null && !names.contains(p.getName())) {
@@ -599,6 +598,9 @@ public abstract class BaseStillActivitySheet extends BottomSheetDialogFragment {
 
     @Override
     public void onDestroyView() {
+        if (addressValidationHandler != null && addressValidationRunnable != null) {
+            addressValidationHandler.removeCallbacks(addressValidationRunnable);
+        }
         super.onDestroyView();
         if (placesClient != null) {
             placesClient = null;
