@@ -5,6 +5,8 @@ import static com.example.myapplication.ui.general.ColorAndIcons.getStillColor;
 import android.app.Activity;
 import android.content.Context;
 import android.location.Location;
+import android.os.Handler;
+import android.os.Looper;
 import android.os.Bundle;
 import android.view.View;
 
@@ -31,6 +33,7 @@ public class EditStillActivitySheet extends BaseStillActivitySheet {
     private StillLocation still;
     private OnVisitChangeListener listener;
     private MaterialButton btnDelete;
+    private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
     public static EditStillActivitySheet newInstance(StillLocation still, OnVisitChangeListener listener) {
         EditStillActivitySheet fragment = new EditStillActivitySheet();
@@ -103,9 +106,10 @@ public class EditStillActivitySheet extends BaseStillActivitySheet {
                         nearbyPlaces.add(p);
                     }
                 }
-                if (getActivity() != null) {
-                    requireActivity().runOnUiThread(() -> setupPlacesDropdown(initialLat, initialLng, nearbyPlaces));
-                }
+                mainHandler.post(() -> {
+                    if (!isAdded() || getView() == null) return;
+                    setupPlacesDropdown(initialLat, initialLng, nearbyPlaces);
+                });
             });
         }
     }
@@ -150,10 +154,9 @@ public class EditStillActivitySheet extends BaseStillActivitySheet {
                 listener.onUpdate(still);
             }
 
-            Activity activity = getActivity();
-            if (activity != null) {
-                activity.runOnUiThread(this::dismiss);
-            }
+            mainHandler.post(() -> {
+                if (isAdded() && !isStateSaved()) dismiss();
+            });
         });
     }
 }
