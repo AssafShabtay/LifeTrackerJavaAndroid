@@ -6,7 +6,6 @@ import android.content.Intent;
 import android.os.Build;
 import android.util.Log;
 
-import com.example.myapplication.tracking.location.ActivityTransitionManager;
 import com.example.myapplication.tracking.location.LocationService;
 import com.example.myapplication.util.Logger;
 
@@ -22,7 +21,7 @@ public class BootReceiver extends BroadcastReceiver {
             Intent.ACTION_MY_PACKAGE_REPLACED.equals(action) ||
             "android.intent.action.QUICKBOOT_POWERON".equals(action)) {
 
-            String msg = TAG + ": Boot completed or package replaced, starting LocationService and registering transitions.";
+            String msg = TAG + ": Boot completed or package replaced, starting LocationService (which registers transitions).";
             Log.d(TAG, msg);
             Logger.saveLog(context, msg);
 
@@ -39,7 +38,6 @@ public class BootReceiver extends BroadcastReceiver {
                 Logger.saveLog(context, errorMsg);
             }
 
-            ActivityTransitionManager.registerActivityTransitions(context);
         }
     }
 }
