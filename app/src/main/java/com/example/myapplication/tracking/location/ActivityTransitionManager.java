@@ -23,6 +23,10 @@ import java.util.ArrayList;
 public class ActivityTransitionManager {
 
     private static final String TAG = "ActivityTransitionManager";
+    private static final Object REGISTRATION_LOCK = new Object();
+    private static boolean registered = false;
+    private static boolean registering = false;
+    private static final ArrayList<RegistrationCallback> pendingCallbacks = new ArrayList<>();
 
     public interface RegistrationCallback {
         void onResult(boolean success);
@@ -33,12 +37,23 @@ public class ActivityTransitionManager {
     }
 
     public static void registerActivityTransitions(Context context, RegistrationCallback callback) {
+        Context appContext = context.getApplicationContext();
+        // A single registration is shared by every caller in this app process.
+        synchronized (REGISTRATION_LOCK) {
+            if (registered) {
+                if (callback != null) callback.onResult(true);
+                return;
+            }
+            if (callback != null) pendingCallbacks.add(callback);
+            if (registering) return;
+            registering = true;
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACTIVITY_RECOGNITION) != PackageManager.PERMISSION_GRANTED) {
                 String msg = TAG + ": Cannot register activity transitions - ACTIVITY_RECOGNITION permission not granted.";
                 Log.w(TAG, msg);
                 Logger.saveLog(context, msg);
-                if (callback != null) callback.onResult(false);
+                finishRegistration(false);
                 return;
             }
         }
@@ -65,33 +80,47 @@ public class ActivityTransitionManager {
         }
 
         ActivityTransitionRequest request = new ActivityTransitionRequest(transitions);
-        PendingIntent pendingIntent = getPendingIntent(context);
+        PendingIntent pendingIntent = getPendingIntent(appContext);
 
         try {
-            ActivityRecognition.getClient(context)
+            ActivityRecognition.getClient(appContext)
                     .requestActivityTransitionUpdates(request, pendingIntent)
                     .addOnSuccessListener(unused -> {
                         String msg = TAG + ": Activity transitions registered successfully";
                         Log.d(TAG, msg);
                         Logger.saveLog(context, msg);
-                        if (callback != null) callback.onResult(true);
+                        finishRegistration(true);
                     })
                     .addOnFailureListener(e -> {
                         String msg = TAG + ": Activity transitions registration failed: " + e.getMessage();
                         Log.e(TAG, msg);
                         Logger.saveLog(context, msg);
-                        if (callback != null) callback.onResult(false);
+                        finishRegistration(false);
                     });
         } catch (SecurityException e) {
             ErrorLogger.logError(context, TAG, "SecurityException registering transitions", e);
-            if (callback != null) callback.onResult(false);
+            finishRegistration(false);
         } catch (Exception e) {
             ErrorLogger.logError(context, TAG, "Exception registering transitions", e);
-            if (callback != null) callback.onResult(false);
+            finishRegistration(false);
         }
     }
 
+    private static void finishRegistration(boolean success) {
+        ArrayList<RegistrationCallback> callbacks;
+        synchronized (REGISTRATION_LOCK) {
+            registered = success;
+            registering = false;
+            callbacks = new ArrayList<>(pendingCallbacks);
+            pendingCallbacks.clear();
+        }
+        for (RegistrationCallback callback : callbacks) callback.onResult(success);
+    }
+
     public static void unregisterActivityTransitions(Context context) {
+        synchronized (REGISTRATION_LOCK) {
+            registered = false;
+        }
         PendingIntent pendingIntent = getPendingIntent(context);
         try {
             ActivityRecognition.getClient(context)
