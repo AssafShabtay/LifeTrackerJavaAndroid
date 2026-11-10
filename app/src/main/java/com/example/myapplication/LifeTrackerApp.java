@@ -9,13 +9,17 @@ import android.os.Process;
 import androidx.appcompat.app.AppCompatDelegate;
 
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import com.example.myapplication.util.ErrorLogger;
 import com.example.myapplication.util.Logger;
 
 public class LifeTrackerApp extends Application {
 
-    private final ExecutorService backgroundWriteExecutor = java.util.concurrent.Executors.newFixedThreadPool(4);
+    private final ExecutorService backgroundWriteExecutor = Executors.newSingleThreadExecutor();
+    private final ExecutorService backgroundTaskExecutor = Executors.newFixedThreadPool(4);
+
+
     @Override
     public void onCreate() {
         super.onCreate();
@@ -37,7 +41,12 @@ public class LifeTrackerApp extends Application {
             System.exit(1);
         });
     }
+
     public ExecutorService getBackgroundWriteExecutor() {
         return backgroundWriteExecutor;
+    }
+
+    public ExecutorService getBackgroundTaskExecutor() {
+        return backgroundTaskExecutor;
     }
 }

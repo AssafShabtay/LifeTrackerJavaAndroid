@@ -92,7 +92,7 @@ public class TimelineUsageBadgeHelper {
             layoutMicroBreakdownContainer.setVisibility(View.GONE);
 
             LifeTrackerApp app = (LifeTrackerApp) context.getApplicationContext();
-            app.getBackgroundWriteExecutor().execute(() -> {
+            app.getBackgroundTaskExecutor().execute(() -> {
                 TimelineItemUsageData data = UsageStatsHelper.getUsageDataForPeriod(context, startDateTime, endDateTime);
                 if (data != null) {
                     usageCache.put(itemKey, data);

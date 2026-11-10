@@ -46,7 +46,7 @@ public class AskTimelineLlmClient {
         Context appContext = context.getApplicationContext();
         LifeTrackerApp app = (LifeTrackerApp) appContext;
 
-        app.getBackgroundWriteExecutor().execute(() -> {
+        app.getBackgroundTaskExecutor().execute(() -> {
             try {
                 // extract last 30 day data for the llm
                 String timelineContext = buildTimelineContext(appContext);

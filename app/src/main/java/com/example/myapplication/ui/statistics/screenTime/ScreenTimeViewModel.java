@@ -189,7 +189,7 @@ public class ScreenTimeViewModel extends AndroidViewModel {
         isLoading.setValue(true);
         LifeTrackerApp app = (LifeTrackerApp) getApplication();
 
-        pendingLoad = app.getBackgroundWriteExecutor().submit(() -> {
+        pendingLoad = app.getBackgroundTaskExecutor().submit(() -> {
             Map<String, Long> packageUsage = new HashMap<>();
             try {
                 DailyUsageItem day = period == PERIOD_DAILY ? loadDailyUsage(periodOffset, packageUsage) : null;

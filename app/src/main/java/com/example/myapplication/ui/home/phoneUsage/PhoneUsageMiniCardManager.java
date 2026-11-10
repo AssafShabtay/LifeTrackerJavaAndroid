@@ -136,7 +136,7 @@ public class PhoneUsageMiniCardManager {
 
         final int currentVersion = ++loadVersion;
 
-        app.getBackgroundWriteExecutor().execute(() -> {
+        app.getBackgroundTaskExecutor().execute(() -> {
             Map<String, Long> packageUsage = UsageStatsHelper.getUsageTimePerPackage(context, startTime, endTime);
 
             if (isDestroyed || currentVersion != loadVersion) return;

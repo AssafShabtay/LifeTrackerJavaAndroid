@@ -157,7 +157,7 @@ public class DetailedPhoneUsageCardManager {
         locationsLoaded = false;
         selectMode(selectedMode);
         final int version = usageCalcVersion;
-        pendingUsageCalc = app.getBackgroundWriteExecutor().submit(() -> {
+        pendingUsageCalc = app.getBackgroundTaskExecutor().submit(() -> {
             processAndBindUsageData(packageUsage, customTotalText, version);
         });
         loadPhoneUsagePerLocation();
@@ -175,7 +175,7 @@ public class DetailedPhoneUsageCardManager {
             tvDailyCardNoLocations.setVisibility(View.VISIBLE);
         }
         // load data
-        pendingLocationsCalc = app.getBackgroundWriteExecutor().submit(() -> {
+        pendingLocationsCalc = app.getBackgroundTaskExecutor().submit(() -> {
             List<LocationUsageRankItem> ranks = calculateLocationUsageRanks(startTime, endTime);
             mainHandler.post(() -> {
                 if (version != usageCalcVersion) return;

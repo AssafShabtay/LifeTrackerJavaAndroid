@@ -21,7 +21,7 @@ public class BootReceiver extends BroadcastReceiver {
             Intent.ACTION_MY_PACKAGE_REPLACED.equals(action) ||
             "android.intent.action.QUICKBOOT_POWERON".equals(action)) {
 
-            String msg = TAG + ": Boot completed or package replaced, starting LocationService (which registers transitions).";
+            String msg = TAG + ": Boot completed or package replaced, starting LocationService";
             Log.d(TAG, msg);
             Logger.saveLog(context, msg);
 

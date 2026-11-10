@@ -21,7 +21,7 @@ public class ActivityTrackingUtils {
     private static final String TAG = "ActivityTrackingUtils";
 
     private static final double ALLOWED_RADIUS_METERS = 50.0;
-    private static final double MIN_REQUIRED_INSIDE_RATIO = 0.50;
+    private static final double MIN_REQUIRED_INSIDE_RATIO = 0.50; // percentage of points inside the radius
     public static boolean isValidAccuracy(Location location, float maxAllowedMeters) {
         if (location == null) return false;
         // Some devices occasionally return locations without accuracy details
@@ -38,7 +38,7 @@ public class ActivityTrackingUtils {
             return false;
         }
         // finds the center of all the route points
-        // Calculate the Centroid (Average Lat and Lng)
+        // Calculate the centroid (Average Lat and Lng)
         double sumLat = 0;
         double sumLng = 0;
         for (RoutePoint point : routePoints) {
@@ -75,7 +75,7 @@ public class ActivityTrackingUtils {
         long durationMs = endTime.getTime() - startTime.getTime();
         float durationSec = durationMs / 1000f;
 
-        // 2. Prevent division by zero and handle anomalous negative time jumps
+        // Prevent division by zero
         if (durationSec <= 0) return "Still";
 
         float speed = distance / durationSec;
@@ -123,7 +123,7 @@ public class ActivityTrackingUtils {
         return null;
     }
     public static double[] calculateRadiusBox(double lat, double lng, double radiusInMeters) {
-        // some shity math I wont try to understand to calculate the radius
+        // some shitty math I wont try to understand to calculate the radius
         double latDelta = radiusInMeters / 111320.0;
         double lngDelta = radiusInMeters / (111320.0 * Math.cos(Math.toRadians(lat)));
 
