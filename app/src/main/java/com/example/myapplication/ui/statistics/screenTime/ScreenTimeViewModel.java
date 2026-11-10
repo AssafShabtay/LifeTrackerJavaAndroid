@@ -143,17 +143,20 @@ public class ScreenTimeViewModel extends AndroidViewModel {
         //// update screen time stats
         cancelPendingLoad();
         int period = selectedPeriod.getValue() != null ? selectedPeriod.getValue() : PERIOD_DAILY;
-        int index = period == PERIOD_DAILY ?
-                (currentDayIndex.getValue() != null ? currentDayIndex.getValue() : 0) :
-                (currentWeekIndex.getValue() != null ? currentWeekIndex.getValue() : 0);
+        int index;
+        if (period == PERIOD_DAILY) {
+            index = (currentDayIndex.getValue() != null) ? currentDayIndex.getValue() : 0;
+        } else {
+            index = (currentWeekIndex.getValue() != null) ? currentWeekIndex.getValue() : 0;
+        }
 
         loadError.setValue(false);
 
         if (period == PERIOD_DAILY) {
             // Check for cached data
             if (dailyHistoryList.containsKey(index)) {
-                dailyUsageItem.setValue(dailyHistoryList.get(index));
                 currentPackageUsage.setValue(dailyPackageUsage.get(index));
+                dailyUsageItem.setValue(dailyHistoryList.get(index));
                 isLoading.setValue(false);
             } else {
                 loadSelectedUsage();
@@ -161,8 +164,8 @@ public class ScreenTimeViewModel extends AndroidViewModel {
         } else {
             // Check for cached data
             if (weeklyHistoryList.containsKey(index)) {
-                weeklyUsageItem.setValue(weeklyHistoryList.get(index));
                 currentPackageUsage.setValue(weeklyPackageUsage.get(index));
+                weeklyUsageItem.setValue(weeklyHistoryList.get(index));
                 isLoading.setValue(false);
             } else {
                 loadSelectedUsage();
@@ -176,9 +179,12 @@ public class ScreenTimeViewModel extends AndroidViewModel {
         final int version = ++loadVersion;
         final int period = selectedPeriod.getValue() != null ? selectedPeriod.getValue() : PERIOD_DAILY;
         // period offset is how far back in time the user has navigated
-        final int periodOffset = period == PERIOD_DAILY ?
-                (currentDayIndex.getValue() != null ? currentDayIndex.getValue() : 0) :
-                (currentWeekIndex.getValue() != null ? currentWeekIndex.getValue() : 0);
+        final int periodOffset;
+        if (period == PERIOD_DAILY) {
+            periodOffset = (currentDayIndex.getValue() != null) ? currentDayIndex.getValue() : 0;
+        } else {
+            periodOffset = (currentWeekIndex.getValue() != null) ? currentWeekIndex.getValue() : 0;
+        }
 
         isLoading.setValue(true);
         LifeTrackerApp app = (LifeTrackerApp) getApplication();

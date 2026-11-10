@@ -13,9 +13,7 @@ import java.util.Date;
 
 public class AddCustomStillActivitySheet extends BaseStillActivitySheet {
 
-    private static final String TAG = "AddCustomStillActivitySheet";
-
-    // listener for communicating activity added operations
+    // listener for when an activity is added
     public interface OnActivityAddedListener {
         void onActivityAdded();
     }

@@ -1,5 +1,6 @@
 package com.example.myapplication.ui.statistics.screenTime;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.content.res.ColorStateList;
@@ -23,6 +24,7 @@ import com.example.myapplication.tracking.usage.UsageStatsHelper;
 import com.example.myapplication.ui.general.ColorAndIcons;
 import com.example.myapplication.ui.home.phoneUsage.PhoneUsageDonutView;
 import com.example.myapplication.LifeTrackerApp;
+import com.example.myapplication.util.ErrorLogger;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.progressindicator.LinearProgressIndicator;
@@ -35,8 +37,10 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.Future;
-
+@SuppressLint("SetTextI18n")
 public class DetailedPhoneUsageCardManager {
+
+    private static final String TAG = "DetailedPhoneUsageCardManager";
 
     private final Context context;
     private final View cardView;
@@ -62,6 +66,7 @@ public class DetailedPhoneUsageCardManager {
     private long selectedEndTime;
     private boolean hasSelectedRange;
     private boolean locationsLoaded;
+    private boolean isWeekly = false;
     private int usageCalcVersion;
     // lets you cancel the pending calculation
     private Future<?> pendingUsageCalc;
@@ -123,7 +128,7 @@ public class DetailedPhoneUsageCardManager {
             if (layoutCategoriesContainer != null) layoutCategoriesContainer.setVisibility(View.GONE);
             if (layoutTopAppsContainer != null) layoutTopAppsContainer.setVisibility(View.VISIBLE);
             if (layoutLocationsContainer != null) layoutLocationsContainer.setVisibility(View.GONE);
-            if (tvHeaderTitle != null) tvHeaderTitle.setText("Top Apps for this Day");
+            if (tvHeaderTitle != null) tvHeaderTitle.setText(isWeekly ? "Top Apps for this Week" : "Top Apps for this Day");
         }
     }
 
@@ -141,16 +146,19 @@ public class DetailedPhoneUsageCardManager {
         }
     }
 
-    public void updateForUsageData(long startTime, long endTime, Map<String, Long> packageUsage, String customTotalText) {
+
+    public void updateUsageData(long startTime, long endTime, Map<String, Long> packageUsage, String customTotalText, boolean isWeekly) {
         if (cardView == null) return;
         cancelPendingLoad();
+        this.isWeekly = isWeekly;
         selectedStartTime = startTime;
         selectedEndTime = endTime;
         hasSelectedRange = true;
         locationsLoaded = false;
+        selectMode(selectedMode);
         final int version = usageCalcVersion;
         pendingUsageCalc = app.getBackgroundWriteExecutor().submit(() -> {
-            processAndBindUsageData(packageUsage,  customTotalText, version);
+            processAndBindUsageData(packageUsage, customTotalText, version);
         });
         loadPhoneUsagePerLocation();
     }
@@ -166,13 +174,16 @@ public class DetailedPhoneUsageCardManager {
             tvDailyCardNoLocations.setText("Loading locations…");
             tvDailyCardNoLocations.setVisibility(View.VISIBLE);
         }
+        // load data
         pendingLocationsCalc = app.getBackgroundWriteExecutor().submit(() -> {
             List<LocationUsageRankItem> ranks = calculateLocationUsageRanks(startTime, endTime);
             mainHandler.post(() -> {
                 if (version != usageCalcVersion) return;
                 pendingLocationsCalc = null;
                 locationsLoaded = true;
-                if (tvDailyCardNoLocations != null) tvDailyCardNoLocations.setText("No location data for this period.");
+                if (tvDailyCardNoLocations != null) {
+                    tvDailyCardNoLocations.setText(isWeekly ? "No location data for this week." : "No location data for this day.");
+                }
                 renderLocationRanks(ranks, layoutDailyLocationsList, tvDailyCardNoLocations);
             });
         });
@@ -257,7 +268,7 @@ public class DetailedPhoneUsageCardManager {
                     stayScreenTimeMs += duration;
                 }
 
-                // finds the most suitable unique identifier for the location place(Id, placeName, placeAddress, or lat/lng)
+                // finds the most suitable unique identifier for the location place(id, placeName, placeAddress, or lat/lng)
                 String key;
                 if (still.getPlaceId() != null) {
                     key = "place_" + still.getPlaceId();
@@ -306,7 +317,7 @@ public class DetailedPhoneUsageCardManager {
             result.addAll(locationMap.values());
             Collections.sort(result);
         } catch (Exception e) {
-            e.printStackTrace();
+            ErrorLogger.logError(context, TAG, "Error calculating location usage ranks", e);
         }
         return result;
     }
@@ -416,7 +427,7 @@ public class DetailedPhoneUsageCardManager {
 
             if (categories.isEmpty() || totalMs <= 0) {
                 TextView emptyTv = new TextView(context);
-                emptyTv.setText("No usage recorded for this day.");
+                emptyTv.setText(isWeekly ? "No usage recorded for this week." : "No usage recorded for this day.");
                 emptyTv.setTextSize(12);
                 emptyTv.setTextColor(ContextCompat.getColor(context, R.color.secondary));
                 emptyTv.setPadding(0, 16, 0, 16);
@@ -450,17 +461,17 @@ public class DetailedPhoneUsageCardManager {
                         tvName.setText(cat.name);
                     }
 
-                    int pct = totalMs > 0 ? (int) Math.round((double) cat.totalMs * 100 / totalMs) : 0;
-                    pct = Math.min(100, Math.max(0, pct));
+                    int precentage = (int) Math.round((double) cat.totalMs * 100 / totalMs);
+                    precentage = Math.min(100, Math.max(0, precentage));
 
                     if (tvTime != null) {
                         tvTime.setText(formatDuration(cat.totalMs));
                     }
                     if (tvPercentage != null) {
-                        tvPercentage.setText(pct + "% of total");
+                        tvPercentage.setText(precentage + "% of total");
                     }
                     if (progressBar != null) {
-                        progressBar.setProgress(pct);
+                        progressBar.setProgress(precentage);
                         progressBar.setIndicatorColor(color);
                     }
 

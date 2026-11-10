@@ -181,8 +181,14 @@ public class ScreenTimeStatsManager {
         if (loadingIndicator != null) loadingIndicator.setVisibility(loading ? View.VISIBLE : View.GONE);
         if (loading) {
             if (tvDailyCardTitle != null) tvDailyCardTitle.setText("Loading usage…");
-            if (btnPrevDay != null) btnPrevDay.setEnabled(false);
-            if (btnNextDay != null) btnNextDay.setEnabled(false);
+            if (btnPrevDay != null) {
+                btnPrevDay.setEnabled(false);
+                btnPrevDay.setAlpha(0.35f);
+            }
+            if (btnNextDay != null) {
+                btnNextDay.setEnabled(false);
+                btnNextDay.setAlpha(0.35f);
+            }
         }
     }
 
@@ -214,17 +220,15 @@ public class ScreenTimeStatsManager {
         if (item == null) return;
         renderLoadingState(false);
 
-        if (currentDayIndex == 0) {
-            updateGeneralStats(item.getUnlockCount(), item.getPeakHour());
-        }
+        updateGeneralStats(item.getUnlockCount(), item.getPeakHour());
 
         if (detailedCardManager != null) {
             Calendar end = Calendar.getInstance();
             end.setTime(item.getDate());
             end.add(Calendar.DAY_OF_YEAR, 1);
-            detailedCardManager.updateForUsageData(item.getDate().getTime(),
+            detailedCardManager.updateUsageData(item.getDate().getTime(),
                     Math.min(end.getTimeInMillis() - 1, System.currentTimeMillis()),
-                    packageUsage, null);
+                    packageUsage, null, false);
         }
 
         // Update button states & opacity
@@ -271,9 +275,11 @@ public class ScreenTimeStatsManager {
         if (item == null) return;
         renderLoadingState(false);
 
+        updateGeneralStats(item.getTotalUnlockCount(), item.getPeakDayLabel());
+
         if (detailedCardManager != null) {
-            detailedCardManager.updateForUsageData(item.getStartDate().getTime(), item.getEndDate().getTime(),
-                    packageUsage, formatDuration(item.getTotalScreenTimeMs()));
+            detailedCardManager.updateUsageData(item.getStartDate().getTime(), item.getEndDate().getTime(),
+                    packageUsage, formatDuration(item.getTotalScreenTimeMs()), true);
         }
 
         // Navigation button states
@@ -429,8 +435,14 @@ public class ScreenTimeStatsManager {
 
         if (progressDoomscrollRatio != null) {
             progressDoomscrollRatio.setProgress(percentage);
-            int progressColor = percentage > 50 ? context.getColor(R.color.red) :
-                    (percentage > 25 ? context.getColor(R.color.orange) : context.getColor(R.color.green));
+            int progressColor;
+            if (percentage > 50) {
+                progressColor = context.getColor(R.color.red);
+            } else if (percentage > 25) {
+                progressColor = context.getColor(R.color.orange);
+            } else {
+                progressColor = context.getColor(R.color.green);
+            }
             progressDoomscrollRatio.setIndicatorColor(progressColor);
         }
 

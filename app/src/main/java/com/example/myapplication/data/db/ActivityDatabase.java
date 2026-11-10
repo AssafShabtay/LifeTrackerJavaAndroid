@@ -40,4 +40,13 @@ public abstract class ActivityDatabase extends RoomDatabase {
         }
         return INSTANCE;
     }
+
+    public static synchronized void closeInstance() {
+        if (INSTANCE != null) {
+            if (INSTANCE.isOpen()) {
+                INSTANCE.close();
+            }
+            INSTANCE = null;
+        }
+    }
 }

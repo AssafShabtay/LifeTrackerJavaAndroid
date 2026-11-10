@@ -1,7 +1,6 @@
 package com.example.myapplication;
 
 import android.Manifest;
-import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -19,7 +18,7 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.app.AppCompatDelegate; // Import AppCompatDelegate
+import androidx.appcompat.app.AppCompatDelegate;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
@@ -29,25 +28,18 @@ import com.example.myapplication.util.PermissionManager;
 import com.example.myapplication.ui.home.HomeFragment;
 import com.example.myapplication.ui.settings.SettingsFragment;
 import com.example.myapplication.ui.statistics.locationStatistics.StatisticsFragment;
-import com.example.myapplication.tracking.receiver.ActivityTransitionReceiver;
 import com.example.myapplication.tracking.location.ActivityTransitionManager;
 import com.example.myapplication.tracking.location.LocationService;
-import com.google.android.gms.location.ActivityRecognition;
-import com.google.android.gms.location.ActivityTransition;
-import com.google.android.gms.location.ActivityTransitionRequest;
-import com.google.android.gms.location.DetectedActivity;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.card.MaterialCardView;
 
 import java.util.Date;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
-import com.google.android.material.navigation.NavigationBarView;
 import com.google.android.material.progressindicator.LinearProgressIndicator;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.appcheck.FirebaseAppCheck;
 import com.google.firebase.appcheck.debug.DebugAppCheckProviderFactory;
 
-import java.util.ArrayList;
 import java.util.Map;
 
 public class MainActivity extends AppCompatActivity {
@@ -85,22 +77,10 @@ public class MainActivity extends AppCompatActivity {
                 }
 
                 if (!isAllPermissionsGranted) {
-                    // avoid re opening the dialog
+                    // avoid reopening the dialog
                     if (!isShowingRationaleDialog) {
                         handlePermissionDenied();
                     }
-                }
-                refreshPermissionUi(permissionManager.hasAllPermissions());
-            });
-
-    private final ActivityResultLauncher<String> backgroundPermissionLauncher =
-            registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
-                if (isGranted) {
-                    Logger.saveLog(this, TAG + ": Background location granted. Requesting transitions and starting service.");
-                    requestTransitions();
-                    startTrackingService();
-                } else {
-                    Logger.saveLog(this, TAG + ": Background location denied.");
                 }
                 refreshPermissionUi(permissionManager.hasAllPermissions());
             });
@@ -150,9 +130,12 @@ public class MainActivity extends AppCompatActivity {
         AppCompatDelegate.setDefaultNightMode(currentMode);
         super.onCreate(savedInstanceState);
 
+        if (FirebaseApp.getApps(this).isEmpty()) {
+            FirebaseApp.initializeApp(this);
+        }
+
         setContentView(R.layout.activity_main);
 
-        FirebaseApp.initializeApp(this);
         FirebaseAppCheck firebaseAppCheck = FirebaseAppCheck.getInstance();
         firebaseAppCheck.installAppCheckProviderFactory(
                 DebugAppCheckProviderFactory.getInstance()
@@ -160,7 +143,6 @@ public class MainActivity extends AppCompatActivity {
         permissionBlocker = findViewById(R.id.permission_blocker);
         permissionAction = findViewById(R.id.permission_action);
         permissionSubtitle = findViewById(R.id.permission_subtitle);
-        // Initialize the new views
         permissionProgressBar = findViewById(R.id.permission_progress_bar);
         permissionStepText = findViewById(R.id.permission_step_text);
         permissionTitle = findViewById(R.id.permission_title);

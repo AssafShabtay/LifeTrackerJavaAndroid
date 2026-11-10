@@ -145,9 +145,15 @@ public class AskTimelineLlmClient {
         for (StillLocation s : stills) {
             if (s.getStartTimeDate() != null) {
                 long start = s.getStartTimeDate().getTime();
-                long end = s.getEndTimeDate() != null ? s.getEndTimeDate().getTime() : Long.MAX_VALUE;
-                String place = (s.getPlaceName() != null && !s.getPlaceName().trim().isEmpty()) ? s.getPlaceName() :
-                        ((s.getCategory() != null && !s.getCategory().trim().isEmpty()) ? s.getCategory() : "Unknown location");
+                long end = (s.getEndTimeDate() != null) ? s.getEndTimeDate().getTime() : Long.MAX_VALUE;
+                String place;
+                if (s.getPlaceName() != null && !s.getPlaceName().trim().isEmpty()) {
+                    place = s.getPlaceName();
+                } else if (s.getCategory() != null && !s.getCategory().trim().isEmpty()) {
+                    place = s.getCategory();
+                } else {
+                    place = "Unknown location";
+                }
                 rawEvents.add(new TimelineEvent(start, end, "Still at " + place, true));
             }
         }

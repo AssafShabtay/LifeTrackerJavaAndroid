@@ -41,6 +41,7 @@ public class WeeklyUsageGraphView extends BaseUsageGraphView {
 
 
     public void setWeeklyData(long[] data, String[] labels) {
+        this.selectedIndex = -1;
         if (data != null && data.length == 7) {
             this.dailyUsageMs = data.clone();
         } else {
@@ -109,7 +110,7 @@ public class WeeklyUsageGraphView extends BaseUsageGraphView {
 
             float barTop = yBottom - currentBarHeight;
 
-            barRect.set(barLeft, barTop, barRight, yBottom);
+            barRectangle.set(barLeft, barTop, barRight, yBottom);
 
             if (i == selectedIndex) {
                 barPaint.setColor(barColorSelected);
@@ -122,7 +123,7 @@ public class WeeklyUsageGraphView extends BaseUsageGraphView {
                 barPaint.setColor(barColorDefault);
             }
 
-            canvas.drawRoundRect(barRect, cornerRadius, cornerRadius, barPaint);
+            canvas.drawRoundRect(barRectangle, cornerRadius, cornerRadius, barPaint);
 
             // Draw Day Label under each bar
             float labelX = slotLeft + (barSlotWidth / 2f);
@@ -130,7 +131,7 @@ public class WeeklyUsageGraphView extends BaseUsageGraphView {
             canvas.drawText(dayLabels[i], labelX, labelY, textPaint);
         }
 
-        // Draw Interactive Tooltip if selected
+        // Draw tooltip if selected
         if (selectedIndex >= 0 && selectedCenterX >= 0) {
             String durationText = ScreenTimeStatsManager.formatDuration(selectedDuration);
             String tooltipText = selectedLabel + ": " + durationText;

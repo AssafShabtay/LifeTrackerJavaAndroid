@@ -189,150 +189,147 @@ public abstract class BaseStillActivitySheet extends BottomSheetDialogFragment {
             btnSave.setEnabled(false);
         }
         Handler validationHandler = new Handler(Looper.getMainLooper());
-        Runnable validationRunnable = new Runnable() {
-            @Override
-            public void run() {
-                String address = etAddress.getText().toString().trim();
-                if (address.isEmpty()) {
-                    if (tvAddressStatus != null) {
-                        tvAddressStatus.setVisibility(View.INVISIBLE);
-                        tvAddressStatus.setText(null);
-                    }
-                    if (btnSave != null) {
-                        btnSave.setEnabled(true);
-                    }
-                    return;
+        Runnable validationRunnable = () -> {
+            String address = etAddress.getText().toString().trim();
+            if (address.isEmpty()) {
+                if (tvAddressStatus != null) {
+                    tvAddressStatus.setVisibility(View.INVISIBLE);
+                    tvAddressStatus.setText(null);
                 }
+                if (btnSave != null) {
+                    btnSave.setEnabled(true);
+                }
+                return;
+            }
 
-                app.getBackgroundWriteExecutor().execute(() -> {
-                    if (getContext() == null) return;
-                    Geocoder geocoder = new Geocoder(requireContext());
-                    try {
-                        List<Address> addresses = geocoder.getFromLocationName(address, 1);
-                        boolean isValid = addresses != null && !addresses.isEmpty();
+            app.getBackgroundWriteExecutor().execute(() -> {
+                if (getContext() == null) return;
+                Geocoder geocoder = new Geocoder(requireContext());
+                try {
+                    List<Address> addresses = geocoder.getFromLocationName(address, 1);
+                    boolean isValid = addresses != null && !addresses.isEmpty();
 
-                        List<Place> nearbyPlaces = new ArrayList<>();
-                        double lat = 0;
-                        double lng = 0;
-                        if (isValid) {
-                            Address add = addresses.get(0);
-                            lat = add.getLatitude();
-                            lng = add.getLongitude();
+                    List<Place> nearbyPlaces = new ArrayList<>();
+                    double lat = 0;
+                    double lng = 0;
+                    if (isValid) {
+                        Address add = addresses.get(0);
+                        lat = add.getLatitude();
+                        lng = add.getLongitude();
 
-                            // search for user's places near the selected location
-                            List<Place> allPlaces = placeDao.getAllPlaces();
-                            for (Place p : allPlaces) {
-                                float[] results = new float[1];
-                                Location.distanceBetween(lat, lng, p.getLat(), p.getLng(), results);
-                                if (results[0] <= 75) {
-                                    nearbyPlaces.add(p);
-                                }
+                        // search for user's places near the selected location
+                        List<Place> allPlaces = placeDao.getAllPlaces();
+                        for (Place p : allPlaces) {
+                            float[] results = new float[1];
+                            Location.distanceBetween(lat, lng, p.getLat(), p.getLng(), results);
+                            if (results[0] <= 75) {
+                                nearbyPlaces.add(p);
                             }
                         }
+                    }
 
-                        final double finalLat = lat;
-                        final double finalLng = lng;
-                        if (getActivity() != null) {
-                            requireActivity().runOnUiThread(() -> {
-                                if (!isAdded()) return;
-                                if (isValid) {
-                                    if (tvAddressStatus != null) {
-                                        tvAddressStatus.setVisibility(View.VISIBLE);
-                                        tvAddressStatus.setText("Valid Address");
-                                        tvAddressStatus.setTextColor(Color.parseColor("#4CAF50"));
-                                    }
-                                    if (btnSave != null) {
-                                        btnSave.setEnabled(true);
-                                    }
-
-                                    setupPlacesDropdown(finalLat, finalLng, nearbyPlaces);
-
-                                    // Ask user if they want to link an existing nearby place
-                                    if (!nearbyPlaces.isEmpty()) {
-                                        Place firstPlace = nearbyPlaces.get(0);
-                                        new MaterialAlertDialogBuilder(requireContext())
-                                            .setTitle(HtmlCompat.fromHtml("Is the place: <b>" + firstPlace.getName() + "</b>?", HtmlCompat.FROM_HTML_MODE_LEGACY))
-                                            .setMessage(HtmlCompat.fromHtml("Is the place you're looking for <b>" + firstPlace.getName() + "</b>?", HtmlCompat.FROM_HTML_MODE_LEGACY))
-                                            .setPositiveButton("Yes", (dialog, which) -> {
-                                                actvName.setText(firstPlace.getName(), false);
-                                                if (firstPlace.getIcon() != null) {
-                                                    selectedIcon = firstPlace.getIcon();
-                                                }
-                                                if (firstPlace.getColor() != null) {
-                                                    selectedColor = firstPlace.getColor();
-                                                }
-                                                selectedGeofenceId = firstPlace.getGeofencePlaceId();
-                                                selectedPlace = firstPlace;
-                                                updateIconAndColorUi();
-                                            })
-                                            .setNegativeButton("No", (dialog, which) -> {
-                                                // Show selection list of all nearby local places
-                                                String[] placeNames = new String[nearbyPlaces.size()];
-                                                for (int i = 0; i < nearbyPlaces.size(); i++) {
-                                                    placeNames[i] = nearbyPlaces.get(i).getName();
-                                                }
-
-                                                new MaterialAlertDialogBuilder(requireContext())
-                                                        .setTitle("Select a place")
-                                                        .setItems(placeNames, (dialog1, which1) -> {
-                                                            Place selected = nearbyPlaces.get(which1);
-                                                            actvName.setText(selected.getName(), false);
-                                                            if (selected.getIcon() != null) {
-                                                                selectedIcon = selected.getIcon();
-                                                            }
-                                                            if (selected.getColor() != null) {
-                                                                selectedColor = selected.getColor();
-                                                            }
-                                                            selectedGeofenceId = selected.getGeofencePlaceId();
-                                                            selectedPlace = selected;
-                                                            updateIconAndColorUi();
-                                                        })
-                                                        .setNegativeButton("Not here", (dialog1, which1) -> {
-                                                            setupPlacesDropdown(finalLat, finalLng, nearbyPlaces);
-                                                        })
-                                                        .setOnDismissListener(dialog1 -> {
-                                                            if (selectedPlace == null) {
-                                                                setupPlacesDropdown(finalLat, finalLng, nearbyPlaces);
-                                                            }
-                                                        })
-                                                        .show();
-                                            })
-                                            .show();
-                                    }
-                                } else {
-                                    if (tvAddressStatus != null) {
-                                        tvAddressStatus.setVisibility(View.VISIBLE);
-                                        tvAddressStatus.setText("Invalid Address");
-                                        tvAddressStatus.setTextColor(Color.RED);
-                                    }
-                                    if (btnSave != null) {
-                                        btnSave.setEnabled(false);
-                                    }
-                                }
-                            });
-                        }
-                    } catch (Exception e) {
-                        Context context = getContext();
-                        if (context != null) {
-                            ErrorLogger.logError(context, TAG, "Error validating address", e);
-                        }
-                        if (getActivity() != null) {
-                            requireActivity().runOnUiThread(() -> {
-                                if (!isAdded()) return;
-                                // Allow saving typed address when offline or geocoder unavailable
+                    final double finalLat = lat;
+                    final double finalLng = lng;
+                    if (getActivity() != null) {
+                        requireActivity().runOnUiThread(() -> {
+                            if (!isAdded()) return;
+                            if (isValid) {
                                 if (tvAddressStatus != null) {
                                     tvAddressStatus.setVisibility(View.VISIBLE);
-                                    tvAddressStatus.setText("Offline - Address saved as typed");
-                                    tvAddressStatus.setTextColor(Color.GRAY);
+                                    tvAddressStatus.setText("Valid Address");
+                                    tvAddressStatus.setTextColor(Color.parseColor("#4CAF50"));
                                 }
                                 if (btnSave != null) {
                                     btnSave.setEnabled(true);
                                 }
-                            });
-                        }
+
+                                setupPlacesDropdown(finalLat, finalLng, nearbyPlaces);
+
+                                // Ask user if they want to link an existing nearby place
+                                if (!nearbyPlaces.isEmpty()) {
+                                    Place firstPlace = nearbyPlaces.get(0);
+                                    new MaterialAlertDialogBuilder(requireContext())
+                                        .setTitle(HtmlCompat.fromHtml("Is the place: <b>" + firstPlace.getName() + "</b>?", HtmlCompat.FROM_HTML_MODE_LEGACY))
+                                        .setMessage(HtmlCompat.fromHtml("Is the place you're looking for <b>" + firstPlace.getName() + "</b>?", HtmlCompat.FROM_HTML_MODE_LEGACY))
+                                        .setPositiveButton("Yes", (dialog, which) -> {
+                                            actvName.setText(firstPlace.getName(), false);
+                                            if (firstPlace.getIcon() != null) {
+                                                selectedIcon = firstPlace.getIcon();
+                                            }
+                                            if (firstPlace.getColor() != null) {
+                                                selectedColor = firstPlace.getColor();
+                                            }
+                                            selectedGeofenceId = firstPlace.getGeofencePlaceId();
+                                            selectedPlace = firstPlace;
+                                            updateIconAndColorUi();
+                                        })
+                                        .setNegativeButton("No", (dialog, which) -> {
+                                            // Show selection list of all nearby local places
+                                            String[] placeNames = new String[nearbyPlaces.size()];
+                                            for (int i = 0; i < nearbyPlaces.size(); i++) {
+                                                placeNames[i] = nearbyPlaces.get(i).getName();
+                                            }
+
+                                            new MaterialAlertDialogBuilder(requireContext())
+                                                    .setTitle("Select a place")
+                                                    .setItems(placeNames, (dialog1, which1) -> {
+                                                        Place selected = nearbyPlaces.get(which1);
+                                                        actvName.setText(selected.getName(), false);
+                                                        if (selected.getIcon() != null) {
+                                                            selectedIcon = selected.getIcon();
+                                                        }
+                                                        if (selected.getColor() != null) {
+                                                            selectedColor = selected.getColor();
+                                                        }
+                                                        selectedGeofenceId = selected.getGeofencePlaceId();
+                                                        selectedPlace = selected;
+                                                        updateIconAndColorUi();
+                                                    })
+                                                    .setNegativeButton("Not here", (dialog1, which1) -> {
+                                                        setupPlacesDropdown(finalLat, finalLng, nearbyPlaces);
+                                                    })
+                                                    .setOnDismissListener(dialog1 -> {
+                                                        if (selectedPlace == null) {
+                                                            setupPlacesDropdown(finalLat, finalLng, nearbyPlaces);
+                                                        }
+                                                    })
+                                                    .show();
+                                        })
+                                        .show();
+                                }
+                            } else {
+                                if (tvAddressStatus != null) {
+                                    tvAddressStatus.setVisibility(View.VISIBLE);
+                                    tvAddressStatus.setText("Invalid Address");
+                                    tvAddressStatus.setTextColor(Color.RED);
+                                }
+                                if (btnSave != null) {
+                                    btnSave.setEnabled(false);
+                                }
+                            }
+                        });
                     }
-                });
-            }
+                } catch (Exception e) {
+                    Context context = getContext();
+                    if (context != null) {
+                        ErrorLogger.logError(context, TAG, "Error validating address", e);
+                    }
+                    if (getActivity() != null) {
+                        requireActivity().runOnUiThread(() -> {
+                            if (!isAdded()) return;
+                            // Allow saving typed address when offline or geocoder unavailable
+                            if (tvAddressStatus != null) {
+                                tvAddressStatus.setVisibility(View.VISIBLE);
+                                tvAddressStatus.setText("Offline - Address saved as typed");
+                                tvAddressStatus.setTextColor(Color.GRAY);
+                            }
+                            if (btnSave != null) {
+                                btnSave.setEnabled(true);
+                            }
+                        });
+                    }
+                }
+            });
         };
 
         etAddress.addTextChangedListener(new TextWatcher() {
@@ -449,7 +446,8 @@ public abstract class BaseStillActivitySheet extends BottomSheetDialogFragment {
 
         placesClient.searchNearby(request)
                 .addOnSuccessListener(response -> {
-                    if (isAdded() && response.getPlaces() != null) {
+                    if (isAdded()) {
+                        response.getPlaces();
                         List<com.google.android.libraries.places.api.model.Place> googlePlaces = response.getPlaces();
                         List<String> names = new ArrayList<>();
 

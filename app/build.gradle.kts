@@ -24,6 +24,10 @@ android {
 
     }
 
+    lint {
+        disable += "SetTextI18n"
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -50,9 +54,12 @@ android {
 
 dependencies {
     implementation("com.google.firebase:firebase-ai")
+    implementation("com.google.firebase:firebase-auth")
+    implementation("com.google.firebase:firebase-storage")
     implementation("com.google.firebase:firebase-appcheck-debug")
     implementation(platform("com.google.firebase:firebase-bom:34.16.0"))
     implementation("com.google.firebase:firebase-analytics")
+    implementation("androidx.work:work-runtime:2.9.1")
     implementation(libs.appcompat)
     implementation(libs.material)
     implementation(libs.play.services.location)

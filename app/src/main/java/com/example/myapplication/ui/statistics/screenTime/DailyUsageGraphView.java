@@ -36,6 +36,7 @@ public class DailyUsageGraphView extends BaseUsageGraphView {
     }
 
     public void setHourlyData(long[] data) {
+        this.selectedIndex = -1;
         if (data != null && data.length == 24) {
             this.hourlyUsageMs = data.clone();
         } else {
@@ -73,7 +74,7 @@ public class DailyUsageGraphView extends BaseUsageGraphView {
 
         long maxScale = Math.max(maxDuration, 15 * 60 * 1000L); // add 15 mins to max hours, for better scaling
 
-        // Draw horizontal subtle grid lines (0%, 50%, 100%)
+        // Draw horizontal subtle grid line at bottom half point and top
         float yBottom = paddingTop + chartHeight;
         float yMid = paddingTop + (chartHeight / 2f);
 
@@ -96,15 +97,16 @@ public class DailyUsageGraphView extends BaseUsageGraphView {
             float usageFraction = (float) hourlyUsageMs[i] / (float) maxScale;
             float currentBarHeight = chartHeight * usageFraction * animationFraction;
 
-            // Minimum bar height for aesthetic empty/low slot indicator
+            // set minimum bar height
             if (currentBarHeight < dpToPx(2f) && hourlyUsageMs[i] > 0) {
                 currentBarHeight = dpToPx(2f);
             }
 
             float barTop = yBottom - currentBarHeight;
 
-            barRect.set(barLeft, barTop, barRight, yBottom);
+            barRectangle.set(barLeft, barTop, barRight, yBottom);
 
+            // Color bar according to state
             if (i == selectedIndex) {
                 barPaint.setColor(barColorSelected);
                 selectedCenterX = barLeft + (barWidth / 2f);
@@ -115,9 +117,9 @@ public class DailyUsageGraphView extends BaseUsageGraphView {
                 barPaint.setColor(barColorDefault);
             }
 
-            canvas.drawRoundRect(barRect, cornerRadius, cornerRadius, barPaint);
+            canvas.drawRoundRect(barRectangle, cornerRadius, cornerRadius, barPaint);
 
-            // Draw axis labels at 12 AM (00), 6 AM (06), 12 PM (12), 6 PM (18)
+            // Draw axis labels at 12 AM, 6 AM, 12 PM, 6 PM
             if (i == 0 || i == 6 || i == 12 || i == 18) {
                 String label;
                 if (i == 0) label = "12 AM";
@@ -131,7 +133,7 @@ public class DailyUsageGraphView extends BaseUsageGraphView {
             }
         }
 
-        // Draw Interactive Tooltip if an hour is selected
+        // Draw interactive tooltip when an hour is selected
         if (selectedIndex >= 0 && selectedCenterX >= 0) {
             int minutes = (int) Math.round((double) selectedDuration / 60000.0);
             int hour12 = selectedIndex % 12 == 0 ? 12 : selectedIndex % 12;
@@ -139,6 +141,7 @@ public class DailyUsageGraphView extends BaseUsageGraphView {
             String nextAmPm = ((selectedIndex + 1) % 24) >= 12 ? "PM" : "AM";
             int nextHour12 = (selectedIndex + 1) % 12 == 0 ? 12 : (selectedIndex + 1) % 12;
 
+            // Format duration
             String tooltipText = String.format(Locale.getDefault(), "%d%s-%d%s: %dm",
                     hour12, amPm, nextHour12, nextAmPm, minutes);
 

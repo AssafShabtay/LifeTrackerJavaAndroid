@@ -34,45 +34,63 @@ public class ScreenTimeFragment extends Fragment {
     }
 
     private void setupObservers() {
+        // Usage access permission state
         viewModel.getPermissionGranted().observe(getViewLifecycleOwner(), hasPermission -> {
             if (screenTimeStatsManager != null) {
                 screenTimeStatsManager.renderPermissionState(hasPermission);
             }
         });
 
+        // Loading progress
         viewModel.getIsLoading().observe(getViewLifecycleOwner(), isLoading -> {
             if (screenTimeStatsManager != null) {
                 screenTimeStatsManager.renderLoadingState(isLoading);
             }
         });
 
+        // Error state display
         viewModel.getLoadError().observe(getViewLifecycleOwner(), isError -> {
             if (screenTimeStatsManager != null) {
                 screenTimeStatsManager.renderLoadError(isError);
             }
         });
 
+        // Selected tab daily or weekly
         viewModel.getSelectedPeriod().observe(getViewLifecycleOwner(), period -> {
             if (screenTimeStatsManager != null) {
                 screenTimeStatsManager.renderPeriodSelected(period);
             }
         });
 
+        // Daily usage metrics
         viewModel.getDailyUsageItem().observe(getViewLifecycleOwner(), item -> {
             if (screenTimeStatsManager != null && item != null) {
-                int period = viewModel.getSelectedPeriod().getValue() != null ? viewModel.getSelectedPeriod().getValue() : ScreenTimeViewModel.PERIOD_DAILY;
+                int period = ScreenTimeViewModel.PERIOD_DAILY;
+                if (viewModel.getSelectedPeriod().getValue() != null) {
+                    period = viewModel.getSelectedPeriod().getValue();
+                }
                 if (period == ScreenTimeViewModel.PERIOD_DAILY) {
-                    int dayIndex = viewModel.getCurrentDayIndex().getValue() != null ? viewModel.getCurrentDayIndex().getValue() : 0;
+                    int dayIndex = 0;
+                    if (viewModel.getCurrentDayIndex().getValue() != null) {
+                        dayIndex = viewModel.getCurrentDayIndex().getValue();
+                    }
                     screenTimeStatsManager.renderDailyUsage(item, viewModel.getCurrentPackageUsage().getValue(), dayIndex);
                 }
             }
         });
 
+        // Weekly usage metrics
         viewModel.getWeeklyUsageItem().observe(getViewLifecycleOwner(), item -> {
             if (screenTimeStatsManager != null && item != null) {
-                int period = viewModel.getSelectedPeriod().getValue() != null ? viewModel.getSelectedPeriod().getValue() : ScreenTimeViewModel.PERIOD_DAILY;
+                int period = ScreenTimeViewModel.PERIOD_DAILY;
+                if (viewModel.getSelectedPeriod().getValue() != null) {
+                    period = viewModel.getSelectedPeriod().getValue();
+                }
                 if (period == ScreenTimeViewModel.PERIOD_WEEKLY) {
-                    int weekIndex = viewModel.getCurrentWeekIndex().getValue() != null ? viewModel.getCurrentWeekIndex().getValue() : 0;
+                    int weekIndex = 0;
+                    if (viewModel.getCurrentWeekIndex().getValue() != null) {
+                        weekIndex = viewModel.getCurrentWeekIndex().getValue();
+                    }
                     screenTimeStatsManager.renderWeeklyUsage(item, viewModel.getCurrentPackageUsage().getValue(), weekIndex);
                 }
             }
@@ -82,6 +100,7 @@ public class ScreenTimeFragment extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
+        // Refresh stats when returning to the fragment (e.g., coming back from system permission settings)
         if (viewModel != null) {
             viewModel.loadScreenTimeStats();
         }
@@ -89,6 +108,7 @@ public class ScreenTimeFragment extends Fragment {
 
     @Override
     public void onDestroyView() {
+        // Clean up UI manager references to prevent memory leaks across view lifecycles
         if (screenTimeStatsManager != null) {
             screenTimeStatsManager.destroy();
             screenTimeStatsManager = null;

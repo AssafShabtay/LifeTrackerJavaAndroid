@@ -28,7 +28,6 @@ public class EditStillActivitySheet extends BaseStillActivitySheet {
         void onDelete(StillLocation still);
     }
 
-    private static final String TAG = "EditStillActivitySheet";
     private StillLocation still;
     private OnVisitChangeListener listener;
     private MaterialButton btnDelete;

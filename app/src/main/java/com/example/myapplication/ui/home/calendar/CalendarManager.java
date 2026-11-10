@@ -231,6 +231,7 @@ public class CalendarManager {
             int thisMonth = today.get(Calendar.MONTH);
             int thisYear = today.get(Calendar.YEAR);
 
+            // Don't allow scrolling past current month/year
             if (currentYear > thisYear || (currentYear == thisYear && currentMonth >= thisMonth)) {
                 return;
             }
@@ -374,6 +375,7 @@ public class CalendarManager {
         }
         root.addView(tvDay);
 
+        // setup cell(indicator, allow present past selection)
         if (!isFuture) {
             databaseWriteExecutor.execute(() -> {
                 boolean hasData = hasDataForDate(cellDate);
@@ -403,6 +405,7 @@ public class CalendarManager {
         return root;
     }
 
+    // Checks if there are any location visits logged for a specific date range.
     private boolean hasDataForDate(Date date) {
         Calendar cal = Calendar.getInstance();
         cal.setTime(date);
@@ -425,6 +428,7 @@ public class CalendarManager {
         return !movements.isEmpty();
     }
 
+    /// Enables/disables month next button based on whether user is at current month.
     private void updateNextButtonState(ImageButton btnNextMonth) {
         if (btnNextMonth == null) return;
         Calendar today = Calendar.getInstance();

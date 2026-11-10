@@ -9,7 +9,7 @@ import java.util.Date;
 
 public class AddCustomMovementActivitySheet extends BaseMovementActivitySheet {
 
-    // listener for communicating activity added operations
+    // listener for when an activity is added
     public interface OnActivityAddedListener {
         void onActivityAdded();
     }

@@ -12,7 +12,6 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.animation.DecelerateInterpolator;
 
-import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
 
@@ -36,9 +35,8 @@ public abstract class BaseUsageGraphView extends View {
     protected final Paint textPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     protected final Paint tooltipBgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     protected final Paint tooltipTextPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-
-    protected final RectF barRect = new RectF();
-    protected final RectF tooltipRect = new RectF();
+    protected final RectF barRectangle = new RectF();
+    protected final RectF tooltipRectangle = new RectF();
 
     public BaseUsageGraphView(Context context) {
         super(context);
@@ -138,6 +136,7 @@ public abstract class BaseUsageGraphView extends View {
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN:
             case MotionEvent.ACTION_MOVE:
+                // Determine which bar index corresponds to the touch X position
                 float relativeX = x - paddingLeft;
                 if (relativeX < 0) relativeX = 0;
                 if (relativeX >= chartWidth) relativeX = chartWidth - 1;
@@ -173,6 +172,8 @@ public abstract class BaseUsageGraphView extends View {
         return 8f;
     }
 
+    //Helper conversions
+
     protected float dpToPx(float dp) {
         return TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, dp, getResources().getDisplayMetrics());
     }
@@ -186,15 +187,17 @@ public abstract class BaseUsageGraphView extends View {
         float tipWidth = textWidth + dpToPx(20f);
         float tipHeight = dpToPx(24f);
 
+        // Center tooltip
         float tipLeft = selectedCenterX - (tipWidth / 2f);
         if (tipLeft < paddingLeft) tipLeft = paddingLeft;
         if (tipLeft + tipWidth > width - paddingRight) tipLeft = width - paddingRight - tipWidth;
         float tipTop = dpToPx(2f);
         float tipBottom = tipTop + tipHeight;
 
-        tooltipRect.set(tipLeft, tipTop, tipLeft + tipWidth, tipBottom);
-        canvas.drawRoundRect(tooltipRect, dpToPx(8f), dpToPx(8f), tooltipBgPaint);
+        tooltipRectangle.set(tipLeft, tipTop, tipLeft + tipWidth, tipBottom);
+        canvas.drawRoundRect(tooltipRectangle, dpToPx(8f), dpToPx(8f), tooltipBgPaint);
 
+        // Center text vertically inside tooltip box
         Paint.FontMetrics fm = tooltipTextPaint.getFontMetrics();
         float textY = tipTop + (tipHeight / 2f) - (fm.ascent + fm.descent) / 2f;
         canvas.drawText(tooltipText, tipLeft + (tipWidth / 2f), textY, tooltipTextPaint);

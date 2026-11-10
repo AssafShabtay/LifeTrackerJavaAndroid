@@ -669,7 +669,14 @@ public class LocationService extends Service {
     private Notification buildNotification() {
         String activityLabel = (currentActivityType == DetectedActivity.UNKNOWN) ? "Waiting..." : getActivityName(currentActivityType);
         boolean activelyTracking = currentStillTrackingId != null || !currentMovementTrackingIds.isEmpty();
-        String contentText = isInitializing ? "Initializing..." : (activelyTracking ? "Tracking: " + activityLabel : "Idle • Waiting for activity");
+        String contentText;
+        if (isInitializing) {
+            contentText = "Initializing...";
+        } else if (activelyTracking) {
+            contentText = "Tracking: " + activityLabel;
+        } else {
+            contentText = "Idle • Waiting for activity";
+        }
 
         Intent openAppIntent = new Intent(this, MainActivity.class);
         PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, openAppIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
