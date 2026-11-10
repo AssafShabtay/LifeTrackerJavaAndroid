@@ -11,6 +11,7 @@ import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 
 import com.example.myapplication.R;
+import com.example.myapplication.ui.statistics.askTimeline.AskTimelineBottomSheetFragment;
 
 public class ScreenTimeFragment extends Fragment {
 
@@ -29,6 +30,15 @@ public class ScreenTimeFragment extends Fragment {
 
         viewModel = new ViewModelProvider(this).get(ScreenTimeViewModel.class);
         screenTimeStatsManager = new ScreenTimeStatsManager(requireContext(), view, viewModel);
+
+        View askTimelineButton = view.findViewById(R.id.ask_timeline_button);
+        if (askTimelineButton != null) {
+            askTimelineButton.setOnClickListener(v -> {
+                AskTimelineBottomSheetFragment bottomSheet =
+                        AskTimelineBottomSheetFragment.newInstance();
+                bottomSheet.show(getChildFragmentManager(), "AskTimelineBottomSheet");
+            });
+        }
 
         setupObservers();
     }

@@ -149,4 +149,19 @@
             </LinearLayout>
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/ask_timeline_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_marginEnd="20dp"
+        android:layout_marginBottom="110dp"
+        android:contentDescription="Ask Your Timeline"
+        app:srcCompat="@drawable/ic_chat"
+        app:tint="?attr/colorPrimary"
+        app:backgroundTint="?attr/colorPrimaryContainer"
+        app:elevation="6dp"
+        app:shapeAppearanceOverlay="@style/ShapeAppearance.App.Circle" />
+
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

@@ -27,13 +27,14 @@ import com.example.myapplication.util.Logger;
 import com.example.myapplication.util.PermissionManager;
 import com.example.myapplication.ui.home.HomeFragment;
 import com.example.myapplication.ui.settings.SettingsFragment;
-import com.example.myapplication.ui.statistics.locationStatistics.StatisticsFragment;
+import com.example.myapplication.ui.statistics.screenTime.ScreenTimeFragment;
 import com.example.myapplication.tracking.location.LocationService;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.card.MaterialCardView;
 
 import java.util.Date;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.google.android.material.navigation.NavigationBarView;
 import com.google.android.material.progressindicator.LinearProgressIndicator;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.appcheck.FirebaseAppCheck;
@@ -53,7 +54,7 @@ public class MainActivity extends AppCompatActivity {
     private TextView permissionSubtitle;
 
     private HomeFragment homeFragment = new HomeFragment();
-    private StatisticsFragment statisticsFragment = new StatisticsFragment();
+    private ScreenTimeFragment screenTimeFragment = new ScreenTimeFragment();
     private SettingsFragment settingsFragment = new SettingsFragment();
     private Fragment activeFragment = homeFragment;
     private LinearProgressIndicator permissionProgressBar;
@@ -160,20 +161,20 @@ public class MainActivity extends AppCompatActivity {
         if (savedInstanceState == null) {
             // Initial load: add new fragments
             getSupportFragmentManager().beginTransaction().add(R.id.fragment_container, settingsFragment, "3").hide(settingsFragment).commit();
-            getSupportFragmentManager().beginTransaction().add(R.id.fragment_container, statisticsFragment, "2").hide(statisticsFragment).commit();
+            getSupportFragmentManager().beginTransaction().add(R.id.fragment_container, screenTimeFragment, "2").hide(screenTimeFragment).commit();
             getSupportFragmentManager().beginTransaction().add(R.id.fragment_container, homeFragment, "1").commit();
             activeFragment = homeFragment;
         } else {
             // Recreation (e.g., theme change): retrieve existing fragments
             homeFragment = (HomeFragment) getSupportFragmentManager().findFragmentByTag("1");
-            statisticsFragment = (StatisticsFragment) getSupportFragmentManager().findFragmentByTag("2");
+            screenTimeFragment = (ScreenTimeFragment) getSupportFragmentManager().findFragmentByTag("2");
             settingsFragment = (SettingsFragment) getSupportFragmentManager().findFragmentByTag("3");
 
             // Pull the manually saved tab ID from the bundle, defaulting to nav_home
             int selectedId = savedInstanceState.getInt("selected_nav_id", R.id.nav_home);
 
             if (selectedId == R.id.nav_statistics) {
-                activeFragment = statisticsFragment;
+                activeFragment = screenTimeFragment;
             } else if (selectedId == R.id.nav_settings) {
                 activeFragment = settingsFragment;
             } else {
@@ -238,8 +239,8 @@ public class MainActivity extends AppCompatActivity {
                     getSupportFragmentManager().beginTransaction().hide(activeFragment).show(homeFragment).commit();
                     activeFragment = homeFragment;
                 } else if (itemId == R.id.nav_statistics) {
-                    getSupportFragmentManager().beginTransaction().hide(activeFragment).show(statisticsFragment).commit();
-                    activeFragment = statisticsFragment;
+                    getSupportFragmentManager().beginTransaction().hide(activeFragment).show(screenTimeFragment).commit();
+                    activeFragment = screenTimeFragment;
                 } else if (itemId == R.id.nav_settings) {
                     getSupportFragmentManager().beginTransaction().hide(activeFragment).show(settingsFragment).commit();
                     activeFragment = settingsFragment;
@@ -336,9 +337,6 @@ public class MainActivity extends AppCompatActivity {
     public void navigateToScreenTimeStatistics() {
         if (bottomNav != null) {
             bottomNav.setSelectedItemId(R.id.nav_statistics);
-        }
-        if (statisticsFragment != null) {
-            statisticsFragment.selectScreenTimeTab();
         }
     }
 
