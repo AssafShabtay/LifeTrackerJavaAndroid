@@ -106,7 +106,15 @@ public class LocationService extends Service {
         activityMergeManager = new ActivityMergeManager(dao, this, locationProvider);
         createNotificationChannel();
 
-        ActivityTransitionManager.registerActivityTransitions(this);
+        // The service is the single owner of activity-transition registration.
+        ActivityTransitionManager.registerActivityTransitions(this, success -> {
+            if (!success) {
+                // The receiver is explicit and package-scoped; MainActivity handles this alert.
+                Intent permissionIntent = new Intent("com.example.myapplication.PERMISSION_REVOKED")
+                        .setPackage(getPackageName());
+                sendBroadcast(permissionIntent);
+            }
+        });
 
 
         app.getBackgroundWriteExecutor().execute(() -> {
