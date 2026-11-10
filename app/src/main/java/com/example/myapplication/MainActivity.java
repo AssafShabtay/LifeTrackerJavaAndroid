@@ -28,7 +28,6 @@ import com.example.myapplication.util.PermissionManager;
 import com.example.myapplication.ui.home.HomeFragment;
 import com.example.myapplication.ui.settings.SettingsFragment;
 import com.example.myapplication.ui.statistics.locationStatistics.StatisticsFragment;
-import com.example.myapplication.tracking.location.ActivityTransitionManager;
 import com.example.myapplication.tracking.location.LocationService;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.card.MaterialCardView;
@@ -52,7 +51,6 @@ public class MainActivity extends AppCompatActivity {
     private View permissionBlocker;
     private Button permissionAction;
     private TextView permissionSubtitle;
-    private boolean transitionsRegistered = false;
 
     private HomeFragment homeFragment = new HomeFragment();
     private StatisticsFragment statisticsFragment = new StatisticsFragment();
@@ -208,7 +206,6 @@ public class MainActivity extends AppCompatActivity {
         boolean hasAllPerms = permissionManager.hasAllPermissions();
         refreshPermissionUi(hasAllPerms);
         if (hasAllPerms) {
-            requestTransitions();
             startTrackingService();
         }
     }
@@ -318,27 +315,6 @@ public class MainActivity extends AppCompatActivity {
 
         permissionAction.setText("Grant Access");
         permissionAction.setOnClickListener(v -> requestPermissions());
-    }
-
-    private void requestTransitions() {
-        Logger.saveLog(this, TAG + ": requestTransitions called. Current transitionsRegistered: " + transitionsRegistered + ", hasAllPermissions: " + permissionManager.hasAllPermissions());
-        if (!permissionManager.hasAllPermissions()) { //check if permissions are granted
-            Logger.saveLog(this, TAG + ": Aborting requestTransitions: permissions not fully granted.");
-            return;
-        }
-
-        if (transitionsRegistered) {
-            Logger.saveLog(this, TAG + ": requestTransitions: Already registered, skipping.");
-            return;
-        }
-
-        ActivityTransitionManager.registerActivityTransitions(this, success -> {
-            transitionsRegistered = success;
-            if (!success) {
-                Intent permIntent = new Intent("com.example.myapplication.PERMISSION_REVOKED").setPackage(getPackageName());
-                sendBroadcast(permIntent);
-            }
-        });
     }
 
     private void startTrackingService() {
