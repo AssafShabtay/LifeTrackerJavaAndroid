@@ -23,6 +23,10 @@ import java.util.ArrayList;
 public class ActivityTransitionManager {
 
     private static final String TAG = "ActivityTransitionManager";
+    private static final Object registrationLock = new Object();
+    private static boolean registered = false;
+    private static boolean registrationInProgress = false;
+    private static final ArrayList<RegistrationCallback> pendingCallbacks = new ArrayList<>();
 
     public interface RegistrationCallback {
         void onResult(boolean success);
@@ -41,6 +45,18 @@ public class ActivityTransitionManager {
                 if (callback != null) callback.onResult(false);
                 return;
             }
+        }
+
+        synchronized (registrationLock) {
+            if (registered) {
+                if (callback != null) callback.onResult(true);
+                return;
+            }
+            if (callback != null) pendingCallbacks.add(callback);
+            if (registrationInProgress) {
+                return;
+            }
+            registrationInProgress = true;
         }
 
         ArrayList<ActivityTransition> transitions = new ArrayList<>();
@@ -74,20 +90,33 @@ public class ActivityTransitionManager {
                         String msg = TAG + ": Activity transitions registered successfully";
                         Log.d(TAG, msg);
                         Logger.saveLog(context, msg);
-                        if (callback != null) callback.onResult(true);
+                        completeRegistration(true);
                     })
                     .addOnFailureListener(e -> {
                         String msg = TAG + ": Activity transitions registration failed: " + e.getMessage();
                         Log.e(TAG, msg);
                         Logger.saveLog(context, msg);
-                        if (callback != null) callback.onResult(false);
+                        completeRegistration(false);
                     });
         } catch (SecurityException e) {
             ErrorLogger.logError(context, TAG, "SecurityException registering transitions", e);
-            if (callback != null) callback.onResult(false);
+            completeRegistration(false);
         } catch (Exception e) {
             ErrorLogger.logError(context, TAG, "Exception registering transitions", e);
-            if (callback != null) callback.onResult(false);
+            completeRegistration(false);
+        }
+    }
+
+    private static void completeRegistration(boolean success) {
+        ArrayList<RegistrationCallback> callbacks;
+        synchronized (registrationLock) {
+            registered = success;
+            registrationInProgress = false;
+            callbacks = new ArrayList<>(pendingCallbacks);
+            pendingCallbacks.clear();
+        }
+        for (RegistrationCallback callback : callbacks) {
+            callback.onResult(success);
         }
     }
 
@@ -96,7 +125,12 @@ public class ActivityTransitionManager {
         try {
             ActivityRecognition.getClient(context)
                     .removeActivityTransitionUpdates(pendingIntent)
-                    .addOnSuccessListener(unused -> Log.d(TAG, "Activity transitions unregistered successfully"))
+                    .addOnSuccessListener(unused -> {
+                        synchronized (registrationLock) {
+                            registered = false;
+                        }
+                        Log.d(TAG, "Activity transitions unregistered successfully");
+                    })
                     .addOnFailureListener(e -> Log.e(TAG, "Failed to unregister activity transitions: " + e.getMessage()));
         } catch (SecurityException e) {
             Log.e(TAG, "SecurityException unregistering transitions", e);
