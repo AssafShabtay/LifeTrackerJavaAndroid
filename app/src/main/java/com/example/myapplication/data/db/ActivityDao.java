@@ -158,8 +158,10 @@ public interface ActivityDao {
     default void updateStillAndSyncPlace(StillLocation still) {
         updateStillLocation(still);
         if (still.getPlaceId() != null) {
-            double lat = still.getLat() != null ? still.getLat() : 0.0;
-            double lng = still.getLng() != null ? still.getLng() : 0.0;
+            double lat = (still.getLat() != null) ? still.getLat()
+                                                  : 0.0;
+            double lng = (still.getLng() != null) ? still.getLng()
+                                                  : 0.0;
             updatePlaceInfo(still.getPlaceId(), still.getPlaceName(), still.getPlaceAddress(), lat, lng, still.getCategory(), still.getIcon(), still.getColor(), still.getGeofencePlaceId());
             updateStillsByPlaceId(still.getPlaceId(), still.getPlaceName(), still.getPlaceAddress(), still.getLat(), still.getLng(), still.getCategory(), still.getIcon(), still.getColor(), still.getGeofencePlaceId());
         }

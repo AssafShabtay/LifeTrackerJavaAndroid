@@ -84,7 +84,8 @@ public class PhoneUsageDonutView extends View {
     }
 
     public void setSegments(List<DonutSegment> newSegments, boolean animate) {
-        this.segments = newSegments != null ? newSegments : new ArrayList<>();
+        this.segments = (newSegments != null) ? newSegments
+                                             : new ArrayList<>();
         if (animate) {
             startAnimation();
         } else {
@@ -145,7 +146,8 @@ public class PhoneUsageDonutView extends View {
             }
         }
 
-        float totalGapsDegrees = validSegmentCount > 1 ? validSegmentCount * SEGMENT_GAP_DEGREES : 0f;
+        float totalGapsDegrees = (validSegmentCount > 1) ? validSegmentCount * SEGMENT_GAP_DEGREES
+                                                        : 0f;
         float availableDegrees = Math.max(0f, 360f - totalGapsDegrees);
 
         for (DonutSegment segment : segments) {

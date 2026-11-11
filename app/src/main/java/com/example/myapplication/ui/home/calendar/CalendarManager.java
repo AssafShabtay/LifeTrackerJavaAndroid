@@ -164,7 +164,11 @@ public class CalendarManager {
 
             boolean canGoNext = cal.before(today);
             btnNextDay.setEnabled(canGoNext);
-            btnNextDay.setAlpha(canGoNext ? 1f : 0.3f);
+            if (canGoNext) {
+                btnNextDay.setAlpha(1f);
+            } else {
+                btnNextDay.setAlpha(0.3f);
+            }
         }
     }
 
@@ -438,7 +442,11 @@ public class CalendarManager {
 
         boolean canGoNext = currentYear < thisYear || (currentYear == thisYear && currentMonth < thisMonth);
         btnNextMonth.setEnabled(canGoNext);
-        btnNextMonth.setAlpha(canGoNext ? 1f : 0.3f);
+        if (canGoNext) {
+            btnNextMonth.setAlpha(1f);
+        } else {
+            btnNextMonth.setAlpha(0.3f);
+        }
     }
 
     private void clearTime(Calendar cal) {
@@ -459,7 +467,8 @@ public class CalendarManager {
     private int getWeekStartDayPreference() {
         SharedPreferences preferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         int systemFirstDay = Calendar.getInstance().getFirstDayOfWeek();
-        int defaultFirstDay = (systemFirstDay == Calendar.SUNDAY) ? Calendar.SUNDAY : Calendar.MONDAY;
+        int defaultFirstDay = (systemFirstDay == Calendar.SUNDAY) ? Calendar.SUNDAY
+                                                                  : Calendar.MONDAY;
         return preferences.getInt(KEY_WEEK_START_DAY, defaultFirstDay);
     }
 }

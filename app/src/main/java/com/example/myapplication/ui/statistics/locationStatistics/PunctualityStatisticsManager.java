@@ -105,7 +105,8 @@ public class PunctualityStatisticsManager {
 
                 if (placeId == null || placeId.equals("null") || placeId.isEmpty() || "Home".equals(placeName)) continue;
 
-                tempNames.put(placeId, placeName != null ? placeName : "Unknown Place");
+                tempNames.put(placeId, (placeName != null) ? placeName
+                                                           : "Unknown Place");
 
                 if (item.getStartTimeDate() != null) {
                     Calendar cal = Calendar.getInstance();
@@ -202,8 +203,16 @@ public class PunctualityStatisticsManager {
         }
 
         // Update button visibilities depending on the current page
-        btnPrevPlace.setVisibility(currentPlaceIndex > 0 ? View.VISIBLE : View.INVISIBLE);
-        btnNextPlace.setVisibility(currentPlaceIndex < currentTopPlaceIds.size() - 1 ? View.VISIBLE : View.INVISIBLE);
+        if (currentPlaceIndex > 0) {
+            btnPrevPlace.setVisibility(View.VISIBLE);
+        } else {
+            btnPrevPlace.setVisibility(View.INVISIBLE);
+        }
+        if (currentPlaceIndex < currentTopPlaceIds.size() - 1) {
+            btnNextPlace.setVisibility(View.VISIBLE);
+        } else {
+            btnNextPlace.setVisibility(View.INVISIBLE);
+        }
 
         String currentPlaceId = currentTopPlaceIds.get(currentPlaceIndex);
         String currentPlaceName = currentPlaceNamesMap.get(currentPlaceId);
@@ -213,8 +222,10 @@ public class PunctualityStatisticsManager {
         List<Integer> currentArrivals = currentArrivalTimesMap.get(currentPlaceId);
         List<Integer> currentDepartures = currentDepartureTimesMap.get(currentPlaceId);
 
-        PrecisionResult arrivalStats = currentArrivals != null ? calculatePrecision(currentArrivals) : null;
-        PrecisionResult departureStats = currentDepartures != null ? calculatePrecision(currentDepartures) : null;
+        PrecisionResult arrivalStats = (currentArrivals != null) ? calculatePrecision(currentArrivals)
+                                                                 : null;
+        PrecisionResult departureStats = (currentDepartures != null) ? calculatePrecision(currentDepartures)
+                                                                     : null;
 
         boolean isNight = (context.getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
 
@@ -223,7 +234,8 @@ public class PunctualityStatisticsManager {
             drawHistogram(currentArrivals, arrivalStats.mean,
                     R.id.chart_arrival_container, R.id.tv_arrival_start,
                     R.id.tv_arrival_avg, R.id.tv_arrival_end,
-                    "#5C5CD6", "#8A8ADF", isNight ? "#282850" : "#E0E0F8");
+                    "#5C5CD6", "#8A8ADF", isNight ? "#282850"
+                                                : "#E0E0F8");
         } else {
             chartArrivalContainer.removeAllViews();
             tvArrivalAvg.setVisibility(View.INVISIBLE);
@@ -234,7 +246,8 @@ public class PunctualityStatisticsManager {
             drawHistogram(currentDepartures, departureStats.mean,
                     R.id.chart_departure_container, R.id.tv_departure_start,
                     R.id.tv_departure_avg, R.id.tv_departure_end,
-                    "#009688", "#4DB6AC", isNight ? "#1A3B38" : "#E0F2F1");
+                    "#009688", "#4DB6AC", isNight ? "#1A3B38"
+                                                : "#E0F2F1");
         } else {
             chartDepartureContainer.removeAllViews();
             tvDepartureAvg.setVisibility(View.INVISIBLE);
@@ -355,7 +368,8 @@ public class PunctualityStatisticsManager {
     private String formatMinutesToTime(int totalMinutes) {
         int hours = totalMinutes / 60;
         int mins = totalMinutes % 60;
-        String ampm = hours >= 12 ? "PM" : "AM";
+        String ampm = (hours >= 12) ? "PM"
+                                    : "AM";
         hours = hours % 12;
         if (hours == 0) hours = 12;
         return String.format(Locale.getDefault(), "%d:%02d %s", hours, mins, ampm);

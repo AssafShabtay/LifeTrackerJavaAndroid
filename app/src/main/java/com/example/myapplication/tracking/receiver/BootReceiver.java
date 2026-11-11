@@ -4,9 +4,9 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
-import android.util.Log;
 
 import com.example.myapplication.tracking.location.LocationService;
+import com.example.myapplication.util.ErrorLogger;
 import com.example.myapplication.util.Logger;
 
 public class BootReceiver extends BroadcastReceiver {
@@ -22,7 +22,6 @@ public class BootReceiver extends BroadcastReceiver {
             "android.intent.action.QUICKBOOT_POWERON".equals(action)) {
 
             String msg = TAG + ": Boot completed or package replaced, starting LocationService";
-            Log.d(TAG, msg);
             Logger.saveLog(context, msg);
 
             Intent serviceIntent = new Intent(context, LocationService.class);
@@ -34,7 +33,7 @@ public class BootReceiver extends BroadcastReceiver {
                 }
             } catch (Exception e) {
                 String errorMsg = TAG + ": Failed to start LocationService on boot: " + e.getMessage();
-                Log.e(TAG, errorMsg, e);
+                ErrorLogger.logError(context, TAG, errorMsg, e);
                 Logger.saveLog(context, errorMsg);
             }
 

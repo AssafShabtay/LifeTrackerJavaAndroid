@@ -98,24 +98,18 @@ public class AddressAutocompleteHelper {
         });
 
         // Automatically open dropdown when the AutoCompleteTextView gains focus
-        autoCompleteTextView.setOnFocusChangeListener(new View.OnFocusChangeListener() {
-            @Override
-            public void onFocusChange(View v, boolean hasFocus) {
-                if (hasFocus) {
-                    try {
-                        autoCompleteTextView.showDropDown();
-                    } catch (Exception ignored) {}
-                }
+        autoCompleteTextView.setOnFocusChangeListener((v, hasFocus) -> {
+            if (hasFocus) {
+                try {
+                    autoCompleteTextView.showDropDown();
+                } catch (Exception ignored) {}
             }
         });
 
-        autoCompleteTextView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                try {
-                    autoCompleteTextView.dismissDropDown();
-                } catch (Exception ignored) {}
-            }
+        autoCompleteTextView.setOnItemClickListener((parent, view, position, id) -> {
+            try {
+                autoCompleteTextView.dismissDropDown();
+            } catch (Exception ignored) {}
         });
     }
 

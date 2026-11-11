@@ -150,7 +150,11 @@ public class TimelineUsageBadgeHelper {
         applyUsageBadgeStyling(context, layoutUsageBadge, tvUsageBadgeText, ivUsageBadgeIcon, ivUsageBadgeExpand, badgeAccentColor);
 
         boolean isExpanded = expandedItemKeys.contains(itemKey);
-        ivUsageBadgeExpand.setRotation(isExpanded ? 180f : 0f);
+        if (isExpanded) {
+            ivUsageBadgeExpand.setRotation(180f);
+        } else {
+            ivUsageBadgeExpand.setRotation(0f);
+        }
 
         if (isExpanded) {
             renderMicroBreakdownContent(context, data, layoutMicroBreakdownContainer);

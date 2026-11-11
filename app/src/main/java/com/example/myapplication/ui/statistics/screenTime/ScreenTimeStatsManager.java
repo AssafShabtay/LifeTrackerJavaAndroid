@@ -178,7 +178,13 @@ public class ScreenTimeStatsManager {
     }
 
     public void renderLoadingState(boolean loading) {
-        if (loadingIndicator != null) loadingIndicator.setVisibility(loading ? View.VISIBLE : View.GONE);
+        if (loadingIndicator != null) {
+            if (loading) {
+                loadingIndicator.setVisibility(View.VISIBLE);
+            } else {
+                loadingIndicator.setVisibility(View.GONE);
+            }
+        }
         if (loading) {
             if (tvDailyCardTitle != null) tvDailyCardTitle.setText("Loading usage…");
             if (btnPrevDay != null) {
@@ -235,12 +241,20 @@ public class ScreenTimeStatsManager {
         if (btnPrevDay != null) {
             boolean hasPrev = currentDayIndex < 6;
             btnPrevDay.setEnabled(hasPrev);
-            btnPrevDay.setAlpha(hasPrev ? 1.0f : 0.35f);
+            if (hasPrev) {
+                btnPrevDay.setAlpha(1.0f);
+            } else {
+                btnPrevDay.setAlpha(0.35f);
+            }
         }
         if (btnNextDay != null) {
             boolean hasNext = currentDayIndex > 0;
             btnNextDay.setEnabled(hasNext);
-            btnNextDay.setAlpha(hasNext ? 1.0f : 0.35f);
+            if (hasNext) {
+                btnNextDay.setAlpha(1.0f);
+            } else {
+                btnNextDay.setAlpha(0.35f);
+            }
         }
 
         // Title and meta
@@ -251,8 +265,9 @@ public class ScreenTimeStatsManager {
             tvDailyCardTotalTime.setText(formatDuration(item.getTotalScreenTimeMs()));
         }
         if (tvDailyCardUnlocks != null) {
-            String peak = item.getPeakHour() != null && !item.getPeakHour().equals("N/A") && !item.getPeakHour().equals("--")
-                    ? " · Peak " + item.getPeakHour() : "";
+            String peak = (item.getPeakHour() != null && !item.getPeakHour().equals("N/A") && !item.getPeakHour().equals("--"))
+                    ? " · Peak " + item.getPeakHour()
+                    : "";
             tvDailyCardUnlocks.setText(String.format(Locale.getDefault(), "%d unlocks%s", item.getUnlockCount(), peak));
         }
         if (tvIdleScreenTime != null) {
@@ -286,12 +301,20 @@ public class ScreenTimeStatsManager {
         if (btnPrevDay != null) {
             boolean hasPrev = currentWeekIndex < 3;
             btnPrevDay.setEnabled(hasPrev);
-            btnPrevDay.setAlpha(hasPrev ? 1.0f : 0.35f);
+            if (hasPrev) {
+                btnPrevDay.setAlpha(1.0f);
+            } else {
+                btnPrevDay.setAlpha(0.35f);
+            }
         }
         if (btnNextDay != null) {
             boolean hasNext = currentWeekIndex > 0;
             btnNextDay.setEnabled(hasNext);
-            btnNextDay.setAlpha(hasNext ? 1.0f : 0.35f);
+            if (hasNext) {
+                btnNextDay.setAlpha(1.0f);
+            } else {
+                btnNextDay.setAlpha(0.35f);
+            }
         }
 
         // Title and meta
@@ -302,8 +325,9 @@ public class ScreenTimeStatsManager {
             tvDailyCardTotalTime.setText(formatDuration(item.getTotalScreenTimeMs()) + " (Avg " + formatDuration(item.getDailyAverageScreenTimeMs()) + "/d)");
         }
         if (tvDailyCardUnlocks != null) {
-            String peak = item.getPeakDayLabel() != null && !item.getPeakDayLabel().equals("N/A")
-                    ? " · Peak " + item.getPeakDayLabel() : "";
+            String peak = (item.getPeakDayLabel() != null && !item.getPeakDayLabel().equals("N/A"))
+                    ? " · Peak " + item.getPeakDayLabel()
+                    : "";
             tvDailyCardUnlocks.setText(String.format(Locale.getDefault(), "%d unlocks (Avg %d/d)%s", item.getTotalUnlockCount(), item.getDailyAverageUnlocks(), peak));
         }
         if (tvIdleScreenTime != null) {
@@ -327,7 +351,8 @@ public class ScreenTimeStatsManager {
             tvDeviceUnlocks.setText(String.valueOf(unlockCount));
         }
         if (tvPeakUsageHour != null) {
-            tvPeakUsageHour.setText(peakHour != null ? peakHour : "--");
+            tvPeakUsageHour.setText((peakHour != null) ? peakHour
+                                                       : "--");
         }
     }
 
@@ -381,7 +406,8 @@ public class ScreenTimeStatsManager {
 
         if (tvDoomscrollSessionCount != null) {
             int count = stats.getSessionCount();
-            tvDoomscrollSessionCount.setText(count == 1 ? "1 session" : count + " sessions");
+            tvDoomscrollSessionCount.setText((count == 1) ? "1 session"
+                                                          : count + " sessions");
         }
 
         if (tvDoomscrollLateNightTime != null) {
@@ -394,7 +420,8 @@ public class ScreenTimeStatsManager {
 
         if (tvDoomscrollLongestApp != null) {
             String app = stats.getLongestSessionAppName();
-            tvDoomscrollLongestApp.setText(app != null && !app.equals("N/A") ? "on " + app : "None");
+            tvDoomscrollLongestApp.setText((app != null && !app.equals("N/A")) ? "on " + app
+                                                                               : "None");
         }
 
         String riskLevel = stats.getRiskLevel();
@@ -425,7 +452,8 @@ public class ScreenTimeStatsManager {
                 : 0;
 
         if (tvDoomscrollRatioLabel != null) {
-            String periodText = isWeekly ? "this week" : "today";
+            String periodText = (isWeekly) ? "this week"
+                                           : "today";
             if (stats.getTotalDoomscrollTimeMs() > 0) {
                 tvDoomscrollRatioLabel.setText(String.format(Locale.getDefault(), "Doomscrolling made up %d%% of your total screen time %s.", percentage, periodText));
             } else {

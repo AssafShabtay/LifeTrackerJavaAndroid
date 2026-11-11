@@ -569,13 +569,18 @@ public abstract class BaseStillActivitySheet extends BottomSheetDialogFragment {
 
         boolean isOngoing = (editedEndTime == null);
         btnEndTime.setEnabled(!isOngoing);
-        btnEndTime.setAlpha(isOngoing ? 0.5f : 1.0f);
+        if (isOngoing) {
+            btnEndTime.setAlpha(0.5f);
+        } else {
+            btnEndTime.setAlpha(1.0f);
+        }
     }
 
     protected void showTimePickerDialog(boolean isStart) {
         if (!isStart && editedEndTime == null) return;
 
-        Date baseDate = isStart ? editedStartTime : editedEndTime;
+        Date baseDate = (isStart) ? editedStartTime
+                                  : editedEndTime;
         if (baseDate == null) baseDate = new Date();
 
         Calendar cal = Calendar.getInstance();
@@ -583,8 +588,10 @@ public abstract class BaseStillActivitySheet extends BottomSheetDialogFragment {
 
         TimePickerDialog picker = new TimePickerDialog(requireContext(), (view, hourOfDay, minute) -> {
             Calendar newCal = Calendar.getInstance();
-            Date currentVal = isStart ? editedStartTime : editedEndTime;
-            newCal.setTime(currentVal != null ? currentVal : new Date());
+            Date currentVal = (isStart) ? editedStartTime
+                                        : editedEndTime;
+            newCal.setTime((currentVal != null) ? currentVal
+                                                : new Date());
             newCal.set(Calendar.HOUR_OF_DAY, hourOfDay);
             newCal.set(Calendar.MINUTE, minute);
 

@@ -4,7 +4,6 @@ import com.example.myapplication.tracking.geofence.GeofenceUtilsManager;
 import static com.example.myapplication.tracking.location.ActivityTrackingUtils.distanceInMeters;
 
 import android.location.Location;
-import android.util.Log;
 
 import com.example.myapplication.data.db.ActivityDao;
 import com.example.myapplication.data.model.MovementActivity;
@@ -39,10 +38,9 @@ public class ActivityMergeManager {
                 float distance = distanceInMeters(currentLocation.getLatitude(), currentLocation.getLongitude(), activeStill.getLat(), activeStill.getLng());
                 if (distance < DISTANCE_THRESHOLD_FOR_STILL_MERGE_METERS) {
                     String msg = String.format(Locale.US, "DB Update from startStillTracking: Extending current active still %d (location-based merge at [%.6f, %.6f])", activeStill.getId(), currentLocation.getLatitude(), currentLocation.getLongitude());
-                    Log.d(TAG, msg);
                     Logger.saveLog(locationService, msg);
                     dao.updateStillEndTime(activeStill.getId(), null);
-                    Log.d(TAG, "STILL already active at similar location: ID=" + currentStillTrackingId);
+                    Logger.saveLog(locationService, "STILL already active at similar location: ID=" + currentStillTrackingId);
                     // If we successfully merged and the unactive still already has a location, stop any frequent updates
                     if (locationProvider.isRequestingStillLocationUpdates() && activeStill.getLat() != null) {
                         locationProvider.stopFrequentStillLocationUpdates();
@@ -69,14 +67,12 @@ public class ActivityMergeManager {
                     }
                 }
                 String msg = String.format(Locale.US, "2DB Update from startStillTracking: Extending current active still %d (location-based merge at [%.6f, %.6f])", activeStill.getId(), currentLocation.getLatitude(), currentLocation.getLongitude());
-                Log.d(TAG, msg);
                 Logger.saveLog(locationService, msg);
-                Log.d(TAG, "STILL already active (location missing). Merging ID=" + currentStillTrackingId);
+                Logger.saveLog(locationService, "STILL already active (location missing). Merging ID=" + currentStillTrackingId);
                 return true;
             }
         }
         String msg = String.format("not externding");
-        Log.d(TAG, msg);
         Logger.saveLog(locationService, msg);
         return false;
     }
@@ -114,22 +110,21 @@ public class ActivityMergeManager {
                 if (lastStill.getEndTimeDate() != null && startTime != null && dao.countMovementActivitiesBetween(lastStill.getEndTimeDate(), startTime) > 0) {
                     String msg = String.format(Locale.US, "Not merging with last still %d due to intervening movement activity between %s and %s",
                             lastStill.getId(), lastStill.getEndTimeDate().toString(), startTime);
-                    Log.d(TAG, msg);
                     Logger.saveLog(locationService, msg);
                     return false; // Do not merge if there was movement
                 }
 
                 String msg = String.format(Locale.US, "DB Update from startStillTracking: Merging with last still %d %s", currentStillTrackingId,
-                        (currentLocation == null ? "(Time-based fallback)" : String.format(Locale.US, "at [%.6f, %.6f]", currentLocation.getLatitude(), currentLocation.getLongitude())));
-                Log.d(TAG, msg);
+                        (currentLocation == null) ? "(Time-based fallback)"
+                                                  : String.format(Locale.US, "at [%.6f, %.6f]", currentLocation.getLatitude(), currentLocation.getLongitude()));
                 Logger.saveLog(locationService, msg);
 
                 if (currentStillTrackingId != null) {
                     dao.updateStillEndTime(currentStillTrackingId, null);
-                    Log.d(TAG, "STILL merged with last: ID=" + currentStillTrackingId);
+                    Logger.saveLog(locationService, "STILL merged with last: ID=" + currentStillTrackingId);
                 } else {
                     dao.updateStillEndTime(lastStill.getId(), null);
-                    Log.d(TAG, "STILL merged with last: ID=" + lastStill.getId());
+                    Logger.saveLog(locationService, "STILL merged with last: ID=" + lastStill.getId());
                 }
                 // If merged with a still that already has a location, stop location updates
                 if (locationProvider.isRequestingStillLocationUpdates() && lastStill.getLat() != null) {
@@ -149,10 +144,9 @@ public class ActivityMergeManager {
                 dao.deleteStillLocation(id);
                 long lastStillId = lastStill.getId();
                 String msg = String.format(Locale.US, "DB Update from endStillTracking: Merging with last still %d at [%.6f, %.6f]", id, currentLocation.getLatitude(), currentLocation.getLongitude());
-                Log.d(TAG, msg);
                 Logger.saveLog(locationService, msg);
                 dao.updateStillEndTime(lastStillId, null);
-                Log.d(TAG, "STILL merged with last: ID=" + lastStillId);
+                Logger.saveLog(locationService, "STILL merged with last: ID=" + lastStillId);
                 return true;
             }
         }
@@ -165,7 +159,6 @@ public class ActivityMergeManager {
         MovementActivity activeMovement = dao.getActiveMovementActivityByType(activityName);
         if (activeMovement != null) {
             String msg = "DB Update: Found active " + activityName + " activity " + activeMovement.getId() + ". Resuming.";
-            Log.d(TAG, msg);
             Logger.saveLog(locationService, msg);
             locationProvider.startRouteUpdates();
             return activeMovement.getId();
@@ -180,15 +173,51 @@ public class ActivityMergeManager {
             long gapMs = startTime.getTime() - lastMovement.getEndTimeDate().getTime();
             if (gapMs >= -20000 && gapMs < 180000) { // 3 minute threshold, allowing for small overlaps/jitter
                 String msg = "DB Update: Resuming recent " + activityName + " activity " + lastMovement.getId() + " (gap: " + (gapMs/1000) + "s)";
-                Log.d(TAG, msg);
                 Logger.saveLog(locationService, msg);
                 dao.resumeMovementActivity(lastMovement.getId());
                 locationProvider.startRouteUpdates();
                 return lastMovement.getId();
             } else {
-                Log.d(TAG, "Not merging " + activityName + ". Gap: " + gapMs + "ms");
+                Logger.saveLog(locationService, "Not merging " + activityName + ". Gap: " + gapMs + "ms");
             }
         }
         return null;
+    }
+
+    boolean attemptMergeFalseMovementWithPreviousStill(long id, MovementActivity movement, Location currentLocation, Date endTime) {
+        StillLocation lastStill = dao.getLastCompletedStillLocation();
+        if (lastStill != null && lastStill.getLat() != null && lastStill.getLng() != null && currentLocation != null) {
+            float distance = distanceInMeters(movement.getStartLat(), movement.getStartLng(), lastStill.getLat(), lastStill.getLng());
+            if (distance < 100f) {
+                // Extend instead of new record
+                String msg = String.format(Locale.US, "DB Update: Merging false movement %d into previous STILL %d. Start: [%.6f, %.6f], End: [%.6f, %.6f]", id, lastStill.getId(), movement.getStartLat(), movement.getStartLng(), currentLocation.getLatitude(), currentLocation.getLongitude());
+                Logger.saveLog(locationService, msg);
+                dao.deleteMovementAndExtendStill(id, lastStill.getId(), endTime);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    boolean attemptMergeFalseMovementWithActiveStill(long id, MovementActivity movement, Location currentLocation) {
+        StillLocation activeStill = dao.getActiveStillLocation();
+        if (activeStill != null && activeStill.getLat() != null && activeStill.getLng() != null && currentLocation != null) {
+            float dist = distanceInMeters(movement.getStartLat(), movement.getStartLng(), activeStill.getLat(), activeStill.getLng());
+            if (dist < 100f) {
+                String msg = String.format(Locale.US, "DB Update: Merging false movement %d into active STILL %d. Start: [%.6f, %.6f], End: [%.6f, %.6f]", id, activeStill.getId(), movement.getStartLat(), movement.getStartLng(), currentLocation.getLatitude(), currentLocation.getLongitude());
+                Logger.saveLog(locationService, msg);
+
+                if (activeStill.getWasSupposedToBeActivity() != null) {
+                    String msg2 = "DB Update: Reverting active still " + activeStill.getId() + " from 'stop' to 'normal still' as movement " + id + " ended.";
+                    Logger.saveLog(locationService, msg2);
+                    activeStill.setWasSupposedToBeActivity(null);
+                    dao.updateStillLocation(activeStill);
+                }
+
+                dao.deleteMovementAndPrependToStill(id, activeStill.getId(), movement.getStartTimeDate());
+                return true;
+            }
+        }
+        return false;
     }
 }

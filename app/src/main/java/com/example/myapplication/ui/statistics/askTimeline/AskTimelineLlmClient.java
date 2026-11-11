@@ -43,15 +43,14 @@ public class AskTimelineLlmClient {
     public static CompletableFuture<ChatMessage> askTimeline(Context context, String userQuery) {
         CompletableFuture<ChatMessage> future = new CompletableFuture<>();
 
-        Context appContext = context.getApplicationContext();
-        LifeTrackerApp app = (LifeTrackerApp) appContext;
+        LifeTrackerApp app = (LifeTrackerApp) context.getApplicationContext();
 
         app.getBackgroundTaskExecutor().execute(() -> {
             try {
                 // extract last 30 day data for the llm
-                String timelineContext = buildTimelineContext(appContext);
+                String timelineData = getTimelineData(app);
 
-                // Set low temperature for direct/fast responses and maxOutputTokens to prevent runaway generation
+                // Set low temperature for direct and fast responses and maxOutputTokens to prevent runaway generation
                 GenerationConfig config = new GenerationConfig.Builder()
                         .setTemperature(0.2f)
                         .setMaxOutputTokens(512)
@@ -74,7 +73,7 @@ public class AskTimelineLlmClient {
                         "2. Summarize activity patterns, locations, and durations as requested (1-3 paragraphs max).\n" +
                         "3. Whenever you reference or mention specific dates or days in your response, tag the exact date in format `[Date: YYYY-MM-DD]` (e.g. `[Date: 2025-02-18]`). You can write naturally like: \"On Wednesday, Feb 19 [Date: 2025-02-19], you visited...\"\n" +
                         "4. If the user asks about something not recorded in the timeline logs, politely explain what data is available.\n\n" +
-                        "### USER LOCAL TIMELINE DATA (Past 30 Days):\n" + timelineContext + "\n\n" +
+                        "### USER LOCAL TIMELINE DATA (Past 30 Days):\n" + timelineData + "\n\n" +
                         "### USER QUESTION:\n" + userQuery;
                 Content promptContent = new Content.Builder()
                         .setParts(Collections.singletonList(new TextPart(systemPrompt)))
@@ -96,7 +95,7 @@ public class AskTimelineLlmClient {
 
             } catch (Exception e) {
                 Log.e(TAG, "Error querying Gemini for timeline question", e);
-                ErrorLogger.logError(appContext, TAG, "Error querying Gemini", e);
+                ErrorLogger.logError(app, TAG, "Error querying Gemini", e);
 
                 // Provide a friendly local fallback if network/API fails
                 ChatMessage fallbackMessage = new ChatMessage(
@@ -114,12 +113,12 @@ public class AskTimelineLlmClient {
     }
 
     private static class TimelineEvent {
-        final long startTime;
-        long endTime;
+        final Date startTime;
+        Date endTime;
         final String description;
         final boolean isStill;
 
-        TimelineEvent(long startTime, long endTime, String description, boolean isStill) {
+        TimelineEvent(Date startTime, Date endTime, String description, boolean isStill) {
             this.startTime = startTime;
             this.endTime = endTime;
             this.description = description;
@@ -127,7 +126,7 @@ public class AskTimelineLlmClient {
         }
     }
 
-    private static String buildTimelineContext(Context context) {
+    private static String getTimelineData(Context context) {
         ActivityDatabase db = ActivityDatabase.getDatabase(context);
         ActivityDao dao = db.activityDao();
 
@@ -144,8 +143,8 @@ public class AskTimelineLlmClient {
 
         for (StillLocation s : stills) {
             if (s.getStartTimeDate() != null) {
-                long start = s.getStartTimeDate().getTime();
-                long end = (s.getEndTimeDate() != null) ? s.getEndTimeDate().getTime() : Long.MAX_VALUE;
+                Date start = s.getStartTimeDate();
+                Date end = s.getEndTimeDate();
                 String place;
                 if (s.getPlaceName() != null && !s.getPlaceName().trim().isEmpty()) {
                     place = s.getPlaceName();
@@ -160,9 +159,14 @@ public class AskTimelineLlmClient {
 
         for (MovementActivity m : movements) {
             if (m.getStartTimeDate() != null) {
-                long start = m.getStartTimeDate().getTime();
-                long end = m.getEndTimeDate() != null ? m.getEndTimeDate().getTime() : Long.MAX_VALUE;
-                String type = (m.getActivityTypeName() != null && !m.getActivityTypeName().trim().isEmpty()) ? m.getActivityTypeName() : "Moving";
+                Date start = m.getStartTimeDate();
+                Date end = m.getEndTimeDate();
+                String type;
+                if (m.getActivityTypeName() != null && !m.getActivityTypeName().trim().isEmpty()) {
+                    type = m.getActivityTypeName();
+                } else {
+                    type = "Moving";
+                }
                 rawEvents.add(new TimelineEvent(start, end, "Movement (" + type + ")", false));
             }
         }
@@ -172,9 +176,9 @@ public class AskTimelineLlmClient {
         }
 
         // Sort events chronologically
-        rawEvents.sort(Comparator.comparingLong(e -> e.startTime));
+        rawEvents.sort(Comparator.comparing(e -> e.startTime));
 
-        // Merge contiguous/overlapping identical still locations (e.g. fragmented Home logs within 5 min)
+        // Merge overlapping identical still locations
         List<TimelineEvent> mergedEvents = new ArrayList<>();
         long gapToleranceMs = 5 * 60 * 1000L; // 5 minutes
 
@@ -183,9 +187,21 @@ public class AskTimelineLlmClient {
                 mergedEvents.add(event);
             } else {
                 TimelineEvent last = mergedEvents.get(mergedEvents.size() - 1);
-                if (last.isStill && event.isStill && last.description.equalsIgnoreCase(event.description)
-                        && event.startTime <= last.endTime + gapToleranceMs) {
-                    last.endTime = Math.max(last.endTime, event.endTime);
+                boolean canMerge;
+                if (last.endTime == null) {
+                    canMerge = true;
+                } else {
+                    canMerge = event.startTime.getTime() <= last.endTime.getTime() + gapToleranceMs;
+                }
+
+                if (last.isStill && event.isStill && last.description.equalsIgnoreCase(event.description) && canMerge) {
+                    if (last.endTime != null) {
+                        if (event.endTime == null) {
+                            last.endTime = null;
+                        } else if (event.endTime.after(last.endTime)) {
+                            last.endTime = event.endTime;
+                        }
+                    }
                 } else {
                     mergedEvents.add(event);
                 }
@@ -199,16 +215,29 @@ public class AskTimelineLlmClient {
         Map<String, List<String>> dayMap = new LinkedHashMap<>();
 
         for (TimelineEvent event : mergedEvents) {
-            Date eventStartDate = new Date(event.startTime);
-            String dayHeader = dayHeaderFormat.format(eventStartDate);
 
-            String startStr = timeFormat.format(eventStartDate);
-            String endStr = (event.endTime != Long.MAX_VALUE) ? timeFormat.format(new Date(event.endTime)) : "Ongoing";
+            // Get the day and the start/end times as readable strings
+            String dayHeader = dayHeaderFormat.format(event.startTime);
+            String startTime = timeFormat.format(event.startTime);
 
-            String line = "- " + startStr + "-" + endStr + ": " + event.description;
+            String endTime;
+            if (event.endTime == null) {
+                endTime = "Ongoing";
+            } else {
+                endTime = timeFormat.format(event.endTime);
+            }
 
-            List<String> entries = dayMap.computeIfAbsent(dayHeader, k -> new ArrayList<>());
-            entries.add(line);
+            // Create a description of the event
+            String eventDescription = "- " + startTime + "-" + endTime
+                    + ": " + event.description;
+
+            // Check whether we already have a list for this day
+            if (!dayMap.containsKey(dayHeader)) {
+                dayMap.put(dayHeader, new ArrayList<>());
+            }
+
+            // Add the event to that day's list
+            dayMap.get(dayHeader).add(eventDescription);
         }
 
         StringBuilder sb = new StringBuilder();
@@ -220,7 +249,11 @@ public class AskTimelineLlmClient {
             sb.append("\n");
         }
 
-        return sb.length() > 0 ? sb.toString().trim() : "No timeline activities recorded in the last 30 days.";
+        if (sb.length() > 0) {
+            return sb.toString().trim();
+        } else {
+            return "No timeline activities recorded in the last 30 days.";
+        }
     }
 
     private static ChatMessage processResponseWithDateLinks(String rawAnswer) {
@@ -248,7 +281,7 @@ public class AskTimelineLlmClient {
             }
         }
 
-        // Clean up the `[Date: YYYY-MM-DD]` tags from display content
+        // Clean up the `[Date: YYYY-MM-DD]`s from the output answer
         String cleanContent = rawAnswer.replaceAll("\\[Date:\\s*\\d{4}-\\d{2}-\\d{2}]", "").trim();
 
         return new ChatMessage(

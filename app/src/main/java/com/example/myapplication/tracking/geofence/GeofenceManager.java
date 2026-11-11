@@ -5,12 +5,13 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.util.Log;
 
 import androidx.core.content.ContextCompat;
 
 import com.example.myapplication.data.model.Place;
 import com.example.myapplication.tracking.receiver.GeofenceBroadcastReceiver;
+import com.example.myapplication.util.ErrorLogger;
+import com.example.myapplication.util.Logger;
 import com.google.android.gms.location.Geofence;
 import com.google.android.gms.location.GeofencingClient;
 import com.google.android.gms.location.GeofencingRequest;
@@ -33,7 +34,7 @@ public class GeofenceManager {
 
     public void addGeofence(String requestId, double lat, double lng, float radius) {
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            Log.e(TAG, "Fine location permission not granted, cannot add geofence.");
+            ErrorLogger.logError(context, TAG, "Fine location permission not granted, cannot add geofence.");
             return;
         }
 
@@ -53,8 +54,8 @@ public class GeofenceManager {
                 .build();
 
         geofencingClient.addGeofences(request, getGeofencePendingIntent())
-                .addOnSuccessListener(aVoid -> Log.d(TAG, "Geofence added: " + requestId))
-                .addOnFailureListener(e -> Log.e(TAG, "Failed to add geofence: " + requestId, e));
+                .addOnSuccessListener(aVoid -> Logger.saveLog(context, "Geofence added: " + requestId))
+                .addOnFailureListener(e -> ErrorLogger.logError(context, TAG, "Failed to add geofence: " + requestId, e));
     }
 
     private PendingIntent getGeofencePendingIntent() {

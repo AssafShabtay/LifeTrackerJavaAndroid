@@ -4,7 +4,6 @@ import com.example.myapplication.tracking.geofence.GeofenceUtilsManager;
 
 import static com.example.myapplication.tracking.location.ActivityTrackingUtils.checkIfMovementIsStill;
 import static com.example.myapplication.tracking.location.ActivityTrackingUtils.checkIfStillIsMovement;
-import static com.example.myapplication.tracking.location.ActivityTrackingUtils.distanceInMeters;
 import static com.example.myapplication.tracking.location.ActivityTrackingUtils.getActivityName;
 import static com.example.myapplication.tracking.location.ActivityTrackingUtils.getActivityTypeFromName;
 
@@ -98,8 +97,7 @@ public class LocationService extends Service {
         if (!Places.isInitialized()) {
             Places.initializeWithNewPlacesApiEnabled(getApplicationContext(), BuildConfig.GOOGLE_API_KEY);
         }
-        placesClient = Places.createClient(this); // Initialize the member variable
-
+        placesClient = Places.createClient(this);
         geofenceUtilsManager = new GeofenceUtilsManager(placeDao, this, placesClient, geofenceManager);
 
         locationProvider = new LocationProvider(this, fusedLocationClient, dao, app.getBackgroundWriteExecutor(), geofenceUtilsManager, this);
@@ -118,7 +116,6 @@ public class LocationService extends Service {
                 // Restore the previous active still
                 currentStillTrackingId = activeStill.getId();
                 currentActivityType = DetectedActivity.STILL;
-                Log.d(TAG, "Recovered active still tracking ID: " + currentStillTrackingId);
 
                 // If a still was recovered and had no location, start frequent updates
                 if (activeStill.getLat() == null || activeStill.getLng() == null) {
@@ -202,7 +199,6 @@ public class LocationService extends Service {
     }
 
     private void handleGeofenceUpdate(String geofenceId, int transitionType) {
-        Log.d(TAG, "Geofence update: " + geofenceId + " transition: " + transitionType);
         Date now = new Date();
 
         if (transitionType == Geofence.GEOFENCE_TRANSITION_ENTER || transitionType == Geofence.GEOFENCE_TRANSITION_DWELL) {
@@ -254,7 +250,7 @@ public class LocationService extends Service {
                 still.setLat(place.getLat());
                 still.setLng(place.getLng());
                 String msg = String.format(Locale.US, "DB Update from updateActiveStillWithPlace: Updating still location %d with place %s at [%.6f, %.6f]", still.getId(), place.getName(), place.getLat(), place.getLng());
-                Log.d(TAG, msg);
+                
                 Logger.saveLog(this, msg);
                 dao.updateStillLocation(still);
             }
@@ -276,15 +272,6 @@ public class LocationService extends Service {
             Date eventTime = new Date(timestampMs);
             Logger.saveLog(this, "1");
             if (transitionType == ActivityTransition.ACTIVITY_TRANSITION_ENTER) {
-                //TODOString previousActivityName = null;
-                //TODOif (activityType == DetectedActivity.STILL) {
-                //TODO    if (!currentMovementTrackingIds.isEmpty()) {
-                //TODO        // Transitioning from a movement activity to STILL
-                //TODO        int prevType = currentMovementTrackingIds.keySet().iterator().next();
-                //TODO        previousActivityName = getActivityName(prevType);
-                //TODO    }
-                //TODO}
-
                 if (currentStillTrackingId != null && activityType != DetectedActivity.STILL) {
                     endStillTracking(eventTime);
                 }
@@ -376,14 +363,14 @@ public class LocationService extends Service {
 
         try {
             String msg = String.format("DB Update from startStillTracking: Inserting new still location %s",
-                    (currentLocation != null ? String.format(Locale.US, "at [%.6f, %.6f]", currentLocation.getLatitude(), currentLocation.getLongitude()) : "(no location)"));
-            Log.d(TAG, msg);
+                    (currentLocation != null) ? String.format(Locale.US, "at [%.6f, %.6f]", currentLocation.getLatitude(), currentLocation.getLongitude())
+                                              : "(no location)");
+            
             Logger.saveLog(this, msg);
             currentStillTrackingId = dao.insertStillLocation(still);
-            Log.d(TAG, "STILL started: ID=" + currentStillTrackingId);
+
         } catch (Exception e) {
             ErrorLogger.logError(this, TAG, "Error", e);
-            Log.d(TAG, "Error:" + e);
             Logger.saveLog(this, "Error:" + e);
             currentStillTrackingId = null;
         }
@@ -407,41 +394,46 @@ public class LocationService extends Service {
             return;
         }
 
-        Double startLat = still.getLat(); Double startLng = still.getLng(); Date startTime = still.getStartTimeDate();
+        Double startLat = still.getLat();
+        Double startLng = still.getLng();
+        Date startTime = still.getStartTimeDate();
         if (startLat == null || startLng == null) {
             // if there is no location
 
-            if (currentLocation != null) {
-                //if there is currentLocation update the still location
-                still.setLat(currentLocation.getLatitude());
-                still.setLng(currentLocation.getLongitude());
-                dao.updateStillLocation(still);
+            if (currentLocation == null) {
+                Log.w(TAG, "No location available for still activity " + id);
+                Logger.saveLog(
+                        this,
+                        "Ending still activity " + id +
+                                " without location coordinates"
+                );
+                dao.endStillLocation(id, endTime);
+                locationProvider.stopFrequentStillLocationUpdates();
+                return;
             }
-            else{
-                //TODO HANDLE NULL CURRENT LOCATION, IDK HOW TO IMPLEMENT SO FUTURE ME SHOULD REALLY FIGURE IT OUT
-            }
+            //if there is currentLocation update the still location
+            still.setLat(currentLocation.getLatitude());
+            still.setLng(currentLocation.getLongitude());
+            dao.updateStillLocation(still);
 
             locationProvider.stopFrequentStillLocationUpdates(); // stop frequent still location updates because location was found
 
-            // try to Merge with last still if close enough
+            // try to merge with last still if close enough in distance
             StillLocation lastStill = dao.getLastCompletedStillLocation();
             if(activityMergeManager.attemptMergeWithLastCompletedStillEnd(id, currentLocation, lastStill)){
                 currentStillTrackingId = lastStill.getId();
                 return;
             }
 
-            if (currentLocation != null) {
-                // Try to find geofence
-                geofenceUtilsManager.findPlaceAndUpdateStill(currentLocation, still);
-            }
+            // Try to find geofence
+            geofenceUtilsManager.findPlaceAndUpdateStill(currentLocation, still);
 
             String msg = String.format(Locale.US, "DB Update from endStillTracking: Ending still location %d %s (no initial location info)", id,
-                    (currentLocation != null ? String.format(Locale.US, "at [%.6f, %.6f]", currentLocation.getLatitude(), currentLocation.getLongitude()) : ""));
-            Log.d(TAG, msg);
+                    String.format(Locale.US, "at [%.6f, %.6f]", currentLocation.getLatitude(), currentLocation.getLongitude()));
+            
             Logger.saveLog(this, msg);
             dao.endStillLocation(id, endTime);
             currentStillTrackingId = null;
-            Log.d(TAG, "STILL ended: ID=" + id);
             return;
 
         }
@@ -449,7 +441,7 @@ public class LocationService extends Service {
             String resolved = checkIfStillIsMovement(startLat, startLng, startTime, endTime, currentLocation.getLatitude(), currentLocation.getLongitude(), this);
             if ("Still".equalsIgnoreCase(resolved)) {
                 String msg = String.format(Locale.US, "DB Update from endStillTracking: Ending still location %d. Start: [%.6f, %.6f], End: [%.6f, %.6f]", id, startLat, startLng, currentLocation.getLatitude(), currentLocation.getLongitude());
-                Log.d(TAG, msg);
+                
                 Logger.saveLog(this, msg);
 
                 dao.endStillLocation(id, endTime);
@@ -464,19 +456,18 @@ public class LocationService extends Service {
                 movement.setStartTimeDate(startTime);
                 movement.setEndTimeDate(endTime);
                 String msg = String.format(Locale.US, "DB Update from endStillTracking: Replacing still %d with movement %s. Start: [%.6f, %.6f], End: [%.6f, %.6f]", id, resolved, startLat, startLng, currentLocation.getLatitude(), currentLocation.getLongitude());
-                Log.d(TAG, msg);
+                
                 Logger.saveLog(this, msg);
                 dao.replaceStillWithMovement(id, movement);
             }
         }
         else {
             String msg = String.format(Locale.US, "DB Update from endStillTracking: Ending still location %d (fallback, no location info)", id);
-            Log.d(TAG, msg);
+            
             Logger.saveLog(this, msg);
             dao.endStillLocation(id, endTime);
         }
         currentStillTrackingId = null;
-        Log.d(TAG, "STILL ended: ID=" + id);
         locationProvider.stopFrequentStillLocationUpdates();
     }
 
@@ -510,7 +501,7 @@ public class LocationService extends Service {
         try {
             String msg = String.format("DB Update from startMovementTracking: Inserting movement activity %s %s", movement.getActivityTypeName(),
                     (currentLocation != null ? String.format(Locale.US, "at [%.6f, %.6f]", currentLocation.getLatitude(), currentLocation.getLongitude()) : "(no location)"));
-            Log.d(TAG, msg);
+            
             Logger.saveLog(this, msg);
             long id = dao.insertMovementActivity(movement);
             currentMovementTrackingIds.put(activityType, id);
@@ -531,89 +522,59 @@ public class LocationService extends Service {
             MovementActivity movement = dao.getMovementActivityById(id);
             if (movement != null && movement.getStartLat() != null && movement.getStartLng() != null && currentLocation != null) {
                 List<RoutePoint> routePoints = dao.getRoutePointsForMovement(id);
-                boolean resolved = checkIfMovementIsStill(routePoints, movement.getStartLat(), movement.getStartLng(), currentLocation.getLatitude(), currentLocation.getLongitude());
+                boolean isStill = checkIfMovementIsStill(routePoints, movement.getStartLat(), movement.getStartLng(), currentLocation.getLatitude(), currentLocation.getLongitude());
 
 
-                if (resolved) {
-
+                if (isStill) {
                     // Check if we can merge with a previous still activity
-                    StillLocation lastStill = dao.getLastCompletedStillLocation();
-                    if (lastStill != null && lastStill.getLat() != null && lastStill.getLng() != null) {
-                        float dist = distanceInMeters(movement.getStartLat(), movement.getStartLng(), lastStill.getLat(), lastStill.getLng());
-                        if (dist < 100f) {
-                            // Extend instead of new record
-                            String msg = String.format(Locale.US, "DB Update: Merging false movement %d into previous STILL %d. Start: [%.6f, %.6f], End: [%.6f, %.6f]", id, lastStill.getId(), movement.getStartLat(), movement.getStartLng(), currentLocation.getLatitude(), currentLocation.getLongitude());
-                            Log.d(TAG, msg);
-                            Logger.saveLog(this, msg);
-                            dao.deleteMovementAndExtendStill(id, lastStill.getId(), endTime);
-                            return;
-                        }
+                    if (activityMergeManager.attemptMergeFalseMovementWithPreviousStill(id, movement, currentLocation, endTime)) {
+                        return;
                     }
 
                     // Check if we can merge with a CURRENT active still activity
-                    StillLocation activeStill = dao.getActiveStillLocation();
-                    if (activeStill != null && activeStill.getLat() != null && activeStill.getLng() != null) {
-                        float dist = distanceInMeters(movement.getStartLat(), movement.getStartLng(), activeStill.getLat(), activeStill.getLng());
-                        if (dist < 100f) {
-                            String msg = String.format(Locale.US, "DB Update: Merging false movement %d into active STILL %d. Start: [%.6f, %.6f], End: [%.6f, %.6f]", id, activeStill.getId(), movement.getStartLat(), movement.getStartLng(), currentLocation.getLatitude(), currentLocation.getLongitude());
-                            Log.d(TAG, msg);
-                            Logger.saveLog(this, msg);
-
-
-                            if (activeStill.getWasSupposedToBeActivity() != null) {
-                                String msg2 = "DB Update: Reverting active still " + activeStill.getId() + " from \'stop\' to \'normal still\' as movement " + id + " ended.";
-                                Log.d(TAG, msg2);
-                                Logger.saveLog(this, msg2);
-                                activeStill.setWasSupposedToBeActivity(null);
-                                dao.updateStillLocation(activeStill);
-                            }
-
-                            dao.deleteMovementAndPrependToStill(id, activeStill.getId(), movement.getStartTimeDate());
-                            return;
-                        }
+                    if (activityMergeManager.attemptMergeFalseMovementWithActiveStill(id, movement, currentLocation)) {
+                        return;
                     }
 
-                    // Fallback: Create new still as before
+                    // no merge, create new still
                     StillLocation still = new StillLocation();
                     still.setLat(movement.getStartLat());
-                    still.setLng(movement.getStartLng()); // Fixed: Was movement.getStartLng() which could be null
+                    still.setLng(movement.getStartLng());
                     still.setStartTimeDate(movement.getStartTimeDate());
                     still.setEndTimeDate(endTime);
                     still.setWasSupposedToBeActivity(movement.getActivityTypeName());
 
-                    if (currentLocation != null) {
-                        // Try to find geofence
-                        geofenceUtilsManager.findPlaceAndUpdateStill(currentLocation, still);
-                    }
+                    // Try to find geofence
+                    geofenceUtilsManager.findPlaceAndUpdateStill(currentLocation, still);
+
 
                     String msg = String.format(Locale.US, "DB Update from endMovementTracking: Replacing movement %d with new still location (Stop). Start: [%.6f, %.6f], End: [%.6f, %.6f]", id, movement.getStartLat(), movement.getStartLng(), currentLocation.getLatitude(), currentLocation.getLongitude());
-                    Log.d(TAG, msg);
+                    
                     Logger.saveLog(this, msg);
                     dao.replaceMovementWithStill(id, still);
-                    Log.d(TAG, "Movement " + id + " re-classified as STILL (Stop)");
                 } else {
                     long durationMs = endTime.getTime() - movement.getStartTimeDate().getTime();
-                    if (durationMs < 120000) {
+                    if (durationMs < 120000) { // 2 minutes
                         String msg = String.format(Locale.US, "DB Update: Deleting short movement activity %d (%s) - duration: %d s", id, movement.getActivityTypeName(), durationMs / 1000);
-                        Log.d(TAG, msg);
+                        
                         Logger.saveLog(this, msg);
                         dao.deleteMovementActivity(id);
                         return;
                     }
 
                     String msg = String.format(Locale.US, "DB Update from endMovementTracking: Ending movement activity %d. Start: [%.6f, %.6f], End: [%.6f, %.6f]", id, movement.getStartLat(), movement.getStartLng(), currentLocation.getLatitude(), currentLocation.getLongitude());
-                    Log.d(TAG, msg);
+                    
                     Logger.saveLog(this, msg);
                     dao.endMovementActivity(id, currentLocation.getLatitude(), currentLocation.getLongitude(), endTime);
                 }
             }
             else {
                 String msg = String.format(Locale.US, "DB Update from endMovementTracking: Ending movement activity %d (no location info)", id);
-                Log.d(TAG, msg);
+                
                 Logger.saveLog(this, msg);
                 dao.endMovementActivity(id,
-                        currentLocation != null ? currentLocation.getLatitude() : null,
-                        currentLocation != null ? currentLocation.getLongitude() : null,
+                        (currentLocation != null) ? currentLocation.getLatitude() : null,
+                        (currentLocation != null) ? currentLocation.getLongitude() : null,
                         endTime);
             }
         } catch (Exception e) {
@@ -667,7 +628,8 @@ public class LocationService extends Service {
     }
 
     private Notification buildNotification() {
-        String activityLabel = (currentActivityType == DetectedActivity.UNKNOWN) ? "Waiting..." : getActivityName(currentActivityType);
+        String activityLabel = (currentActivityType == DetectedActivity.UNKNOWN) ? "Waiting..."
+                                                                                  : getActivityName(currentActivityType);
         boolean activelyTracking = currentStillTrackingId != null || !currentMovementTrackingIds.isEmpty();
         String contentText;
         if (isInitializing) {

@@ -21,7 +21,8 @@ public class DailyUsageItem {
         this.date = date;
         this.totalScreenTimeMs = totalScreenTimeMs;
         this.unlockCount = unlockCount;
-        this.hourlyUsageMs = hourlyUsageMs != null ? hourlyUsageMs : new long[24];
+        this.hourlyUsageMs = (hourlyUsageMs != null) ? hourlyUsageMs
+                                                     : new long[24];
         this.topApps = topApps;
         this.peakHour = peakHour;
         this.idleScreenTimeMs = idleScreenTimeMs;

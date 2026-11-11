@@ -107,15 +107,18 @@ public class ScreenTimeViewModel extends AndroidViewModel {
     }
 
     public void navigatePrevious() {
-        int period = selectedPeriod.getValue() != null ? selectedPeriod.getValue() : PERIOD_DAILY;
+        int period = (selectedPeriod.getValue() != null) ? selectedPeriod.getValue()
+                                                         : PERIOD_DAILY;
         if (period == PERIOD_DAILY) {
-            int day = currentDayIndex.getValue() != null ? currentDayIndex.getValue() : 0;
+            int day = (currentDayIndex.getValue() != null) ? currentDayIndex.getValue()
+                                                           : 0;
             if (day < 6) {
                 currentDayIndex.setValue(day + 1);
                 updatePeriodView();
             }
         } else {
-            int week = currentWeekIndex.getValue() != null ? currentWeekIndex.getValue() : 0;
+            int week = (currentWeekIndex.getValue() != null) ? currentWeekIndex.getValue()
+                                                             : 0;
             if (week < 3) {
                 currentWeekIndex.setValue(week + 1);
                 updatePeriodView();
@@ -124,15 +127,18 @@ public class ScreenTimeViewModel extends AndroidViewModel {
     }
 
     public void navigateNext() {
-        int period = selectedPeriod.getValue() != null ? selectedPeriod.getValue() : PERIOD_DAILY;
+        int period = (selectedPeriod.getValue() != null) ? selectedPeriod.getValue()
+                                                         : PERIOD_DAILY;
         if (period == PERIOD_DAILY) {
-            int day = currentDayIndex.getValue() != null ? currentDayIndex.getValue() : 0;
+            int day = (currentDayIndex.getValue() != null) ? currentDayIndex.getValue()
+                                                           : 0;
             if (day > 0) {
                 currentDayIndex.setValue(day - 1);
                 updatePeriodView();
             }
         } else {
-            int week = currentWeekIndex.getValue() != null ? currentWeekIndex.getValue() : 0;
+            int week = (currentWeekIndex.getValue() != null) ? currentWeekIndex.getValue()
+                                                             : 0;
             if (week > 0) {
                 currentWeekIndex.setValue(week - 1);
                 updatePeriodView();
@@ -142,12 +148,15 @@ public class ScreenTimeViewModel extends AndroidViewModel {
         private void updatePeriodView() {
         //// update screen time stats
         cancelPendingLoad();
-        int period = selectedPeriod.getValue() != null ? selectedPeriod.getValue() : PERIOD_DAILY;
+        int period = (selectedPeriod.getValue() != null) ? selectedPeriod.getValue()
+                                                         : PERIOD_DAILY;
         int index;
         if (period == PERIOD_DAILY) {
-            index = (currentDayIndex.getValue() != null) ? currentDayIndex.getValue() : 0;
+            index = (currentDayIndex.getValue() != null) ? currentDayIndex.getValue()
+                                                         : 0;
         } else {
-            index = (currentWeekIndex.getValue() != null) ? currentWeekIndex.getValue() : 0;
+            index = (currentWeekIndex.getValue() != null) ? currentWeekIndex.getValue()
+                                                          : 0;
         }
 
         loadError.setValue(false);
@@ -177,13 +186,16 @@ public class ScreenTimeViewModel extends AndroidViewModel {
 
     private void loadSelectedUsage() {
         final int version = ++loadVersion;
-        final int period = selectedPeriod.getValue() != null ? selectedPeriod.getValue() : PERIOD_DAILY;
+        final int period = (selectedPeriod.getValue() != null) ? selectedPeriod.getValue()
+                                                                : PERIOD_DAILY;
         // period offset is how far back in time the user has navigated
         final int periodOffset;
         if (period == PERIOD_DAILY) {
-            periodOffset = (currentDayIndex.getValue() != null) ? currentDayIndex.getValue() : 0;
+            periodOffset = (currentDayIndex.getValue() != null) ? currentDayIndex.getValue()
+                                                                : 0;
         } else {
-            periodOffset = (currentWeekIndex.getValue() != null) ? currentWeekIndex.getValue() : 0;
+            periodOffset = (currentWeekIndex.getValue() != null) ? currentWeekIndex.getValue()
+                                                                 : 0;
         }
 
         isLoading.setValue(true);
@@ -192,8 +204,10 @@ public class ScreenTimeViewModel extends AndroidViewModel {
         pendingLoad = app.getBackgroundTaskExecutor().submit(() -> {
             Map<String, Long> packageUsage = new HashMap<>();
             try {
-                DailyUsageItem day = period == PERIOD_DAILY ? loadDailyUsage(periodOffset, packageUsage) : null;
-                WeeklyUsageItem week = period == PERIOD_WEEKLY ? loadWeeklyUsage(periodOffset, packageUsage) : null;
+                DailyUsageItem day = (period == PERIOD_DAILY) ? loadDailyUsage(periodOffset, packageUsage)
+                                                              : null;
+                WeeklyUsageItem week = (period == PERIOD_WEEKLY) ? loadWeeklyUsage(periodOffset, packageUsage)
+                                                                 : null;
 
                 if (Thread.currentThread().isInterrupted()) return;
 
@@ -300,7 +314,8 @@ public class ScreenTimeViewModel extends AndroidViewModel {
 
         // week start day preference
         int systemFirstDay = Calendar.getInstance().getFirstDayOfWeek();
-        int defaultFirstDay = (systemFirstDay == Calendar.SUNDAY) ? Calendar.SUNDAY : Calendar.MONDAY;
+        int defaultFirstDay = (systemFirstDay == Calendar.SUNDAY) ? Calendar.SUNDAY
+                                                                  : Calendar.MONDAY;
         int firstDayOfWeek = context.getSharedPreferences("MyPrefs", Context.MODE_PRIVATE)
                 .getInt("week_start_day", defaultFirstDay);
 

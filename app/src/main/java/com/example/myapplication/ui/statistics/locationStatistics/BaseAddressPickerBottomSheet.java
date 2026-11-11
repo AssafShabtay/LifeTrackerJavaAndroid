@@ -115,7 +115,8 @@ public abstract class BaseAddressPickerBottomSheet extends BottomSheetDialogFrag
 
         if (btnSaveAddress != null) {
             btnSaveAddress.setOnClickListener(v -> {
-                String address = etAddress != null ? etAddress.getText().toString().trim() : "";
+                String address = (etAddress != null) ? etAddress.getText().toString().trim()
+                                                     : "";
                 if (address.isEmpty()) {
                     if (tilAddress != null) {
                         tilAddress.setError(getEmptyErrorMessage());

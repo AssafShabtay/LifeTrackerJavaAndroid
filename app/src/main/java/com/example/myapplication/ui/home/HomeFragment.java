@@ -79,7 +79,8 @@ public class HomeFragment extends Fragment {
                 popup.getMenu().add(0, 2, 0, "Add Movement");
 
                 popup.setOnMenuItemClickListener(item -> {
-                    Date date = calendarManager != null ? calendarManager.getSelectedDate() : new Date();
+                    Date date = (calendarManager != null) ? calendarManager.getSelectedDate()
+                                                          : new Date();
 
                     if (item.getItemId() == 1) {
                         AddCustomStillActivitySheet sheet = AddCustomStillActivitySheet.newInstance(date, () -> {

@@ -261,8 +261,10 @@ public class WorkStatisticsManager {
         if (endTime == null) endTime = new Date(); // If still active, end should be now
 
         // if the start is before the range start or the end is after the range end, then adjust accordingly
-        Date actualStart = startTime.before(rangeStart) ? rangeStart : startTime;
-        Date actualEnd = endTime.after(rangeEnd) ? rangeEnd : endTime;
+        Date actualStart = startTime.before(rangeStart) ? rangeStart
+                                                         : startTime;
+        Date actualEnd = endTime.after(rangeEnd) ? rangeEnd
+                                                 : endTime;
 
         if (actualStart.after(actualEnd)) {
             return 0;
@@ -274,7 +276,8 @@ public class WorkStatisticsManager {
     private int getWeekStartDayPreference() {
         SharedPreferences preferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         int systemFirstDay = Calendar.getInstance().getFirstDayOfWeek();
-        int defaultFirstDay = (systemFirstDay == Calendar.SUNDAY) ? Calendar.SUNDAY : Calendar.MONDAY;
+        int defaultFirstDay = (systemFirstDay == Calendar.SUNDAY) ? Calendar.SUNDAY
+                                                                  : Calendar.MONDAY;
         return preferences.getInt(KEY_WEEK_START_DAY, defaultFirstDay);
     }
 
@@ -296,7 +299,8 @@ public class WorkStatisticsManager {
 
         boolean isNight = (context.getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
         int colorDark = Color.parseColor("#4CAF50");
-        int colorLight = Color.parseColor(isNight ? "#233825" : "#DCEDC8");
+        int colorLight = Color.parseColor(isNight ? "#233825"
+                                                  : "#DCEDC8");
 
         String[] allDays = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
         String[] days = new String[7];

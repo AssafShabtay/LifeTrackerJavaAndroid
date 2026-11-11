@@ -9,7 +9,6 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.Looper;
-import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.WorkerThread;
@@ -102,7 +101,6 @@ public class LocationProvider {
                             // User is still within the stationary radius,  check the time.
                             if (currentTime - anchorLocationTime >= LINGER_TIME_THRESHOLD_MS) {
                                 // if user is still for over 10 minutes, stop tracking
-                                Log.i(TAG, "User lingered for over 10 minutes. Stopping tracking.");
                                 Logger.saveLog(context, "User lingered for over 10 minutes. Stopping tracking.");
 
                                 Date endTime = new Date(currentTime);
@@ -144,8 +142,7 @@ public class LocationProvider {
         try {
             fusedLocationClient.requestLocationUpdates(locationRequest, routeLocationCallback, Looper.getMainLooper());
         } catch (SecurityException e) {
-            ErrorLogger.logError(context, TAG, "Error", e);
-            Log.e(TAG, "Location permission missing", e);
+            ErrorLogger.logError(context, TAG, "Location permission missing", e);
             stopRouteUpdates();
             Intent PermIntent = new Intent("com.example.myapplication.PERMISSION_REVOKED").setPackage(context.getPackageName());;
             context.sendBroadcast(PermIntent);
@@ -168,7 +165,6 @@ public class LocationProvider {
         if (stillLocationCallback != null) return;
         if (LocationService.currentStillTrackingId == null) return;
 
-        Log.d(TAG, "Starting frequent still location updates for ID=" + LocationService.currentStillTrackingId);
         Logger.saveLog(context, "Starting frequent still location updates");
 
         LocationRequest locationRequest = new LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 30000) // Every 5 seconds
@@ -193,7 +189,6 @@ public class LocationProvider {
                                 dao.updateStillLocation(still);
 
                                 String msg = String.format(Locale.US, "DB Update from frequentStillLocation: Updated still %d with location [%.6f, %.6f]", still.getId(), still.getLat(), still.getLng());
-                                Log.d(TAG, msg);
                                 Logger.saveLog(context, msg);
 
                                 stopFrequentStillLocationUpdates(); // Stop updates once location is acquired
@@ -209,8 +204,7 @@ public class LocationProvider {
             fusedLocationClient.requestLocationUpdates(locationRequest, stillLocationCallback, Looper.getMainLooper());
             isRequestingStillLocationUpdates = true;
         } catch (SecurityException e) {
-            ErrorLogger.logError(context, TAG, "Error", e);
-            Log.e(TAG, "Location permission missing for frequent still updates", e);
+            ErrorLogger.logError(context, TAG, "Location permission missing for frequent still updates", e);
             Logger.saveLog(context, "Location permission missing for frequent still updates");
             Intent PermIntent = new Intent("com.example.myapplication.PERMISSION_REVOKED").setPackage(context.getPackageName());;
             context.sendBroadcast(PermIntent);
@@ -221,7 +215,6 @@ public class LocationProvider {
     // Stop frequent location updates for still activities
     void stopFrequentStillLocationUpdates() {
         if (stillLocationCallback != null && isRequestingStillLocationUpdates) {
-            Log.d(TAG, "Stopping frequent still location updates.");
             Logger.saveLog(context, TAG + ": Stopping frequent still location updates");
             fusedLocationClient.removeLocationUpdates(stillLocationCallback);
             stillLocationCallback = null;
@@ -240,7 +233,6 @@ public class LocationProvider {
         //Try Balanced Accuracy
         if (!isValidAccuracy(loc, STILL_RADIUS_THRESHOLD)) {
             String msg = String.format(TAG + ": High accuracy failed or too inaccurate. Trying Balanced Power...");
-            Log.d(TAG, msg);
             Logger.saveLog(context, msg);
             loc = tryCurrentLocation(Priority.PRIORITY_BALANCED_POWER_ACCURACY, 8);
         }
@@ -248,7 +240,6 @@ public class LocationProvider {
         //Fallback to Last Known Location
         if (!isValidAccuracy(loc, STILL_RADIUS_THRESHOLD * 1.6f)) {
             String msg = String.format(TAG + ": Fresh locations failed. Attempting getLastLocation fallback.");
-            Log.d(TAG, msg);
             Logger.saveLog(context, msg);
         }
 
@@ -271,15 +262,13 @@ public class LocationProvider {
                     TimeUnit.SECONDS
             );
         } catch (TimeoutException e) {
-            ErrorLogger.logError(context, TAG, "Error", e);
             String msg = String.format(TAG + ": getCurrentLocation timed out for priority: " + priority);
-            Log.w(TAG, msg);
+            ErrorLogger.logError(context, TAG, msg, e);
             Logger.saveLog(context, msg);
             cancellationTokenSource.cancel();
         } catch (Exception e) {
-            ErrorLogger.logError(context, TAG, "Error", e);
-            String msg = String.format(TAG + ": Exception in getCurrentLocation", e);
-            Log.e(TAG, msg);
+            String msg = String.format(TAG + ": Exception in getCurrentLocation");
+            ErrorLogger.logError(context, TAG, msg, e);
             Logger.saveLog(context, msg);
             cancellationTokenSource.cancel();
         }

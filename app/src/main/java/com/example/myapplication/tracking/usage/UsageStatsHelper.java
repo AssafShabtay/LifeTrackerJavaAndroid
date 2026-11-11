@@ -267,8 +267,10 @@ public class  UsageStatsHelper {
             return "N/A";
         }
 
-        int hour12 = maxHour % 12 == 0 ? 12 : maxHour % 12;
-        String amPm = maxHour >= 12 ? "PM" : "AM";
+        int hour12 = (maxHour % 12 == 0) ? 12
+                                         : maxHour % 12;
+        String amPm = (maxHour >= 12) ? "PM"
+                                      : "AM";
         return String.format(Locale.getDefault(), "%d:00 %s", hour12, amPm);
     }
 
@@ -371,10 +373,11 @@ public class  UsageStatsHelper {
     private static String cleanPackageNameToAppName(String pkg) {
         if (pkg == null) return "App";
         int lastDot = pkg.lastIndexOf('.');
-        String name = (lastDot >= 0 && lastDot < pkg.length() - 1) ? pkg.substring(lastDot + 1) : pkg;
+        String name = (lastDot >= 0 && lastDot < pkg.length() - 1) ? pkg.substring(lastDot + 1)
+                                                                    : pkg;
         // Capitalize first letter
         if (!name.isEmpty()) {
-            return Character.toUpperCase(name.charAt(0)) + (name.length() > 1 ? name.substring(1) : "");
+            return Character.toUpperCase(name.charAt(0)) + ((name.length() > 1) ? name.substring(1) : "");
         }
         return pkg;
     }
@@ -416,8 +419,10 @@ public class  UsageStatsHelper {
             this.sessionCount = sessionCount;
             this.lateNightDoomscrollTimeMs = lateNightDoomscrollTimeMs;
             this.longestSessionMs = longestSessionMs;
-            this.longestSessionAppName = longestSessionAppName != null ? longestSessionAppName : "N/A";
-            this.topDoomscrollApps = topDoomscrollApps != null ? topDoomscrollApps : new ArrayList<>();
+            this.longestSessionAppName = (longestSessionAppName != null) ? longestSessionAppName
+                                                                         : "N/A";
+            this.topDoomscrollApps = (topDoomscrollApps != null) ? topDoomscrollApps
+                                                                 : new ArrayList<>();
         }
 
         public long getTotalDoomscrollTimeMs() { return totalDoomscrollTimeMs; }
@@ -555,7 +560,8 @@ public class  UsageStatsHelper {
                     long sessionDuration = currentSessionEnd - currentSessionStart;
                     boolean isLateNight = isLateNightWindow(currentSessionStart, currentSessionEnd, cal);
                     // Late night threshold is 10 min, daytime threshold is 15 mins
-                    long minThreshold = isLateNight ? 10 * 60 * 1000L : 15 * 60 * 1000L;
+                    long minThreshold = isLateNight ? 10 * 60 * 1000L
+                                                    : 15 * 60 * 1000L;
 
                     if (sessionDuration >= minThreshold) {
                         totalDoomscrollTimeMs += sessionDuration;
@@ -592,7 +598,8 @@ public class  UsageStatsHelper {
         if (currentSessionStart != -1) {
             long sessionDuration = currentSessionEnd - currentSessionStart;
             boolean isLateNight = isLateNightWindow(currentSessionStart, currentSessionEnd, cal);
-            long minThreshold = isLateNight ? 10 * 60 * 1000L : 15 * 60 * 1000L;
+            long minThreshold = isLateNight ? 10 * 60 * 1000L
+                                            : 15 * 60 * 1000L;
 
             if (sessionDuration >= minThreshold) {
                 totalDoomscrollTimeMs += sessionDuration;

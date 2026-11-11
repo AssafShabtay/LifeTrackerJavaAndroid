@@ -136,10 +136,14 @@ public class DailyUsageGraphView extends BaseUsageGraphView {
         // Draw interactive tooltip when an hour is selected
         if (selectedIndex >= 0 && selectedCenterX >= 0) {
             int minutes = (int) Math.round((double) selectedDuration / 60000.0);
-            int hour12 = selectedIndex % 12 == 0 ? 12 : selectedIndex % 12;
-            String amPm = selectedIndex >= 12 ? "PM" : "AM";
-            String nextAmPm = ((selectedIndex + 1) % 24) >= 12 ? "PM" : "AM";
-            int nextHour12 = (selectedIndex + 1) % 12 == 0 ? 12 : (selectedIndex + 1) % 12;
+            int hour12 = (selectedIndex % 12 == 0) ? 12
+                                                   : selectedIndex % 12;
+            String amPm = (selectedIndex >= 12) ? "PM"
+                                                : "AM";
+            String nextAmPm = (((selectedIndex + 1) % 24) >= 12) ? "PM"
+                                                                 : "AM";
+            int nextHour12 = ((selectedIndex + 1) % 12 == 0) ? 12
+                                                             : (selectedIndex + 1) % 12;
 
             // Format duration
             String tooltipText = String.format(Locale.getDefault(), "%d%s-%d%s: %dm",

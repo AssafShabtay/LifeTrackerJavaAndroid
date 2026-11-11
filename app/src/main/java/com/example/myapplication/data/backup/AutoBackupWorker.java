@@ -22,6 +22,7 @@ public class AutoBackupWorker extends Worker {
         }
 
         boolean success = BackupManager.backupSync(getApplicationContext());
-        return success ? Result.success() : Result.retry();
+        return success ? Result.success()
+                       : Result.retry();
     }
 }
