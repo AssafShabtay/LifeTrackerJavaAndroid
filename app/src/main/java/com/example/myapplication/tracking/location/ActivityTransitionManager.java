@@ -49,8 +49,7 @@ public class ActivityTransitionManager {
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACTIVITY_RECOGNITION) != PackageManager.PERMISSION_GRANTED) {
-                String msg = TAG + ": Cannot register activity transitions - ACTIVITY_RECOGNITION permission not granted.";
-                Logger.saveLog(context, msg);
+                Logger.saveLog(context, TAG + ": Cannot register activity transitions - ACTIVITY_RECOGNITION permission not granted.");
                 finishRegistration(false);
                 return;
             }
@@ -111,7 +110,7 @@ public class ActivityTransitionManager {
             callbacks = new ArrayList<>(pendingCallbacks);
             pendingCallbacks.clear();
         }
-        for (RegistrationCallback callback : callbacks) callback.onResult(success);
+        for (RegistrationCallback callback : callbacks) callback.onResult(success); // update all pending callbacks with the result
     }
 
     public static void unregisterActivityTransitions(Context context) {

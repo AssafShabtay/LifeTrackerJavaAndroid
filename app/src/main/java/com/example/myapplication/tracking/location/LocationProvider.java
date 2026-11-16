@@ -1,6 +1,7 @@
 package com.example.myapplication.tracking.location;
 import com.example.myapplication.tracking.geofence.GeofenceUtilsManager;
 
+import static com.example.myapplication.tracking.location.ActivityTrackingUtils.STILL_RADIUS_THRESHOLD;
 import static com.example.myapplication.tracking.location.ActivityTrackingUtils.isValidAccuracy;
 
 import android.Manifest;
@@ -49,7 +50,6 @@ public class LocationProvider {
     private volatile boolean isRequestingStillLocationUpdates = false;
     private static final long LINGER_TIME_THRESHOLD_MS = 10 * 60 * 1000;
 
-    private static final float STILL_RADIUS_THRESHOLD = 75.0f;
     private Location anchorLocation = null;
     private long anchorLocationTime = 0;
     private final LocationService locationService;
@@ -97,7 +97,7 @@ public class LocationProvider {
                         float distance = currentLocation.distanceTo(anchorLocation);
 
                         // Check if the user is inside the stationary radius
-                        if (distance <= STILL_RADIUS_THRESHOLD) { // 50 meters
+                        if (distance <= STILL_RADIUS_THRESHOLD) {
                             // User is still within the stationary radius,  check the time.
                             if (currentTime - anchorLocationTime >= LINGER_TIME_THRESHOLD_MS) {
                                 // if user is still for over 10 minutes, stop tracking

@@ -184,20 +184,69 @@ public class ActivityMergeManager {
         return null;
     }
 
-    boolean attemptMergeFalseMovementWithPreviousStill(long id, MovementActivity movement, Location currentLocation, Date endTime) {
+
+    boolean attemptMergeFalseMovementWithLastCompletedStill(long id, MovementActivity movement, Location currentLocation, Date endTime) {
         StillLocation lastStill = dao.getLastCompletedStillLocation();
-        if (lastStill != null && lastStill.getLat() != null && lastStill.getLng() != null && currentLocation != null) {
-            float distance = distanceInMeters(movement.getStartLat(), movement.getStartLng(), lastStill.getLat(), lastStill.getLng());
-            if (distance < 100f) {
-                // Extend instead of new record
-                String msg = String.format(Locale.US, "DB Update: Merging false movement %d into previous STILL %d. Start: [%.6f, %.6f], End: [%.6f, %.6f]", id, lastStill.getId(), movement.getStartLat(), movement.getStartLng(), currentLocation.getLatitude(), currentLocation.getLongitude());
+
+        if (lastStill != null) {
+            boolean shouldMerge = false;
+
+            // If the last still is close enough, merge
+            if (lastStill.getLat() != null && lastStill.getLng() != null
+                    && movement.getStartLat() != null && movement.getStartLng() != null
+                    && currentLocation != null) {
+
+                float distance = distanceInMeters(
+                        movement.getStartLat(), movement.getStartLng(),
+                        lastStill.getLat(), lastStill.getLng());
+
+                if (distance < DISTANCE_THRESHOLD_FOR_STILL_MERGE_METERS) {
+                    shouldMerge = true;
+                }
+            }
+            //else if ((lastStill.lat != null || lastStill.lng == null) && currentLocation == null) {
+            //    //TODO IMPLEMENT FALLBACK TO NOT HAVING A LOCATION
+            //}
+            //else if ((lastStill.lat == null || lastStill.lng == null) & currentLocation !=null) {
+            //    //TODO IMPLEMENT FALLBACK TO NOT HAVING A LOCATION
+            //}
+            
+            // If there is no location but the last still is close enough in time, merge
+            else if (lastStill.getEndTimeDate() != null && movement.getStartTimeDate() != null) {
+                long gapMs = movement.getStartTimeDate().getTime() - lastStill.getEndTimeDate().getTime();
+
+                // If the gap is less than the max threshold, merge
+                if (gapMs >= -20000 && gapMs < 180000) { // 180000 = 3 minutes
+                    shouldMerge = true;
+                }
+            }
+
+            if (shouldMerge) {
+                String msg;
+
+                if (currentLocation != null && movement.getStartLat() != null
+                        && movement.getStartLng() != null) {
+                    msg = String.format(Locale.US,
+                            "DB Update: Merging false movement %d into previous STILL %d. Start: [%.6f, %.6f], End: [%.6f, %.6f]",
+                            id, lastStill.getId(),
+                            movement.getStartLat(), movement.getStartLng(),
+                            currentLocation.getLatitude(), currentLocation.getLongitude());
+                } else {
+                    msg = String.format(Locale.US,
+                            "DB Update: Merging false movement %d into previous STILL %d (Time-based fallback)",
+                            id, lastStill.getId());
+                }
+
                 Logger.saveLog(locationService, msg);
+
                 dao.deleteMovementAndExtendStill(id, lastStill.getId(), endTime);
                 return true;
             }
         }
+
         return false;
     }
+
 
     boolean attemptMergeFalseMovementWithActiveStill(long id, MovementActivity movement, Location currentLocation) {
         StillLocation activeStill = dao.getActiveStillLocation();

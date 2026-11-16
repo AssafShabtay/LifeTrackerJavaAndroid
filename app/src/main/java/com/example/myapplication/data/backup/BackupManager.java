@@ -25,28 +25,16 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
-/**
- * Handles database backup to and restore from Firebase Storage.
- */
 public class BackupManager {
 
-    /**
-     * Callback for asynchronous operations.
-     */
     public interface Callback {
         void onDone(boolean ok, String message);
     }
 
-    /**
-     * Callback for backup info metadata query.
-     */
     public interface BackupInfoCallback {
         void onInfo(boolean ok, long updatedTimeMillis, long sizeBytes, String message);
     }
 
-    /**
-     * Current Room schema version. Must match @Database(version = 4) in ActivityDatabase.
-     */
     public static final int CURRENT_SCHEMA_VERSION = 4;
 
     private static final String TAG = "BackupManager";
@@ -86,27 +74,40 @@ public class BackupManager {
             return false;
         }
 
-        File tempFile = new File(appContext.getCacheDir(), "backup_temp_" + System.currentTimeMillis() + ".db");
+        File copyDbFile = new File(appContext.getCacheDir(), "backup_temp_" + System.currentTimeMillis() + ".db");
 
         try {
-            // 1. Force WAL checkpoint
+            // Merge WAL changes into the main database before backup
             ActivityDatabase db = ActivityDatabase.getDatabase(appContext);
             Cursor cursor = db.getOpenHelper().getWritableDatabase().query("PRAGMA wal_checkpoint(TRUNCATE);");
-            if (cursor != null) {
-                cursor.moveToFirst();
+            try {
+                if (cursor.moveToFirst()) {
+                    int busy = cursor.getInt(0);
+                    int log = cursor.getInt(1);
+                    int checkpointed = cursor.getInt(2);
+                    if (busy != 0 || log == -1 || checkpointed == -1) {
+                        throw new Exception();
+                    }
+                } else {
+                    throw new Exception();
+                }
+
+            } catch (Exception e) {
+                ErrorLogger.logError(appContext, TAG, "WAL checkpoint failed", e);
+                return false;
+            } finally {
                 cursor.close();
             }
 
-            // 2. Copy database file to cache temp file
-            copyFile(dbFile, tempFile);
+            // Copy database file
+            copyFile(dbFile, copyDbFile);
 
-            // 3. Upload to Firebase Storage
+            // Upload to Firebase Storage
             StorageReference storageRef = FirebaseStorage.getInstance().getReference()
                     .child("users").child(uid).child("backup.db");
+            Tasks.await(storageRef.putFile(Uri.fromFile(copyDbFile)));
 
-            Tasks.await(storageRef.putFile(Uri.fromFile(tempFile)));
-
-            // 4. Record last backup time
+            // Record last backup time
             long now = System.currentTimeMillis();
             SharedPreferences prefs = appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
             prefs.edit().putLong(KEY_LAST_BACKUP, now).apply();
@@ -117,9 +118,8 @@ public class BackupManager {
             ErrorLogger.logError(appContext, TAG, "Backup failed: " + e.getMessage(), e);
             return false;
         } finally {
-            if (tempFile.exists()) {
-                //noinspection ResultOfMethodCallIgnored
-                tempFile.delete();
+            if (copyDbFile.exists()) {
+                copyDbFile.delete();
             }
         }
     }
@@ -138,22 +138,20 @@ public class BackupManager {
         StorageReference storageRef = FirebaseStorage.getInstance().getReference()
                 .child("users").child(uid).child("backup.db");
 
-        File tempFile = new File(appContext.getCacheDir(), "restore_temp_" + System.currentTimeMillis() + ".db");
+        File RestoredDbFile = new File(appContext.getCacheDir(), "restore_temp_" + System.currentTimeMillis() + ".db");
 
-        storageRef.getFile(tempFile)
+        storageRef.getFile(RestoredDbFile)
                 .addOnSuccessListener(taskSnapshot -> {
                     app.getBackgroundWriteExecutor().execute(() -> {
-                        processRestore(appContext, tempFile, callback);
+                        processRestore(appContext, RestoredDbFile, callback);
                     });
                 })
                 .addOnFailureListener(e -> {
-                    if (tempFile.exists()) {
-                        //noinspection ResultOfMethodCallIgnored
-                        tempFile.delete();
+                    if (RestoredDbFile.exists()) {
+                        RestoredDbFile.delete();
                     }
                     ErrorLogger.logError(appContext, TAG, "Download backup failed", e);
-                    if (e instanceof StorageException &&
-                            ((StorageException) e).getErrorCode() == StorageException.ERROR_OBJECT_NOT_FOUND) {
+                    if (e instanceof StorageException && ((StorageException) e).getErrorCode() == StorageException.ERROR_OBJECT_NOT_FOUND) {
                         callback.onDone(false, "No backup found for this account");
                     } else {
                         callback.onDone(false, "Failed to download backup: " + e.getMessage());
@@ -161,26 +159,25 @@ public class BackupManager {
                 });
     }
 
-    private static void processRestore(Context appContext, File tempFile, Callback callback) {
-        SQLiteDatabase checkDb = null;
+    private static void processRestore(Context appContext, File RestoredDbFile, Callback callback) {
+        SQLiteDatabase db = null;
         int backupVersion = -1;
         try {
-            checkDb = SQLiteDatabase.openDatabase(tempFile.getAbsolutePath(), null, SQLiteDatabase.OPEN_READONLY);
-            backupVersion = checkDb.getVersion();
+            db = SQLiteDatabase.openDatabase(RestoredDbFile.getAbsolutePath(), null, SQLiteDatabase.OPEN_READONLY);
+            backupVersion = db.getVersion();
         } catch (Exception e) {
             ErrorLogger.logError(appContext, TAG, "Failed to open downloaded database for version check", e);
         } finally {
-            if (checkDb != null && checkDb.isOpen()) {
-                checkDb.close();
+            if (db != null && db.isOpen()) {
+                db.close();
             }
         }
 
         if (backupVersion != CURRENT_SCHEMA_VERSION) {
-            if (tempFile.exists()) {
-                //noinspection ResultOfMethodCallIgnored
-                tempFile.delete();
+            if (RestoredDbFile.exists()) {
+                RestoredDbFile.delete();
             }
-            callback.onDone(false, "Backup was made by a different app version");
+            callback.onDone(false, "Backup is incompatible with the current database version.");
             return;
         }
 
@@ -204,16 +201,16 @@ public class BackupManager {
                 shmFile.delete();
 
             // 4. Copy downloaded file over the database file
-            copyFile(tempFile, dbFile);
+            copyFile(RestoredDbFile, dbFile);
 
             callback.onDone(true, "Restore successful");
         } catch (Exception e) {
             ErrorLogger.logError(appContext, TAG, "Restore replacement failed", e);
             callback.onDone(false, "Restore failed: " + e.getMessage());
         } finally {
-            if (tempFile.exists()) {
+            if (RestoredDbFile.exists()) {
                 //noinspection ResultOfMethodCallIgnored
-                tempFile.delete();
+                RestoredDbFile.delete();
             }
         }
     }

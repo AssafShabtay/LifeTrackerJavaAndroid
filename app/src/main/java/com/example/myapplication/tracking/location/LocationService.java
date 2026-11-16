@@ -165,6 +165,7 @@ public class LocationService extends Service {
         Logger.saveLog(this, "LocationService onDestroy");
         locationProvider.stopRouteUpdates();
         locationProvider.stopFrequentStillLocationUpdates();
+        ActivityTransitionManager.unregisterActivityTransitions(this);
         if (placesClient != null) {
             placesClient = null;
         }
@@ -527,7 +528,7 @@ public class LocationService extends Service {
 
                 if (isStill) {
                     // Check if we can merge with a previous still activity
-                    if (activityMergeManager.attemptMergeFalseMovementWithPreviousStill(id, movement, currentLocation, endTime)) {
+                    if (activityMergeManager.attemptMergeFalseMovementWithLastCompletedStill(id, movement, currentLocation, endTime)) {
                         return;
                     }
 

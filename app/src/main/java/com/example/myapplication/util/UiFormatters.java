@@ -21,21 +21,9 @@ public class UiFormatters {
         return format.format(date);
     }
 
-    public static String dayOfWeek(Date date) {
-        if (date == null) return "—";
-        SimpleDateFormat format = new SimpleDateFormat("EEEE", Locale.getDefault());
-        return format.format(date);
-    }
-
     public static String monthYear(Date date) {
         if (date == null) return "—";
         SimpleDateFormat format = new SimpleDateFormat("MMMM yyyy", Locale.getDefault());
-        return format.format(date);
-    }
-
-    public static String fullDate(Date date) {
-        if (date == null) return "—";
-        SimpleDateFormat format = new SimpleDateFormat("MMMM d, yyyy", Locale.getDefault());
         return format.format(date);
     }
 
