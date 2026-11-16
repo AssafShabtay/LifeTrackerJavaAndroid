@@ -175,7 +175,8 @@ public class AskTimelineBottomSheetFragment extends BottomSheetDialogFragment im
             return;
         }
 
-        String text = etMessageInput.getText() != null ? etMessageInput.getText().toString().trim() : "";
+        String text = (etMessageInput.getText() != null) ? etMessageInput.getText().toString().trim()
+                                                         : "";
         if (TextUtils.isEmpty(text)) {
             return;
         }

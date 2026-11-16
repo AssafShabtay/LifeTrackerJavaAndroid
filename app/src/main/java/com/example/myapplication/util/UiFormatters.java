@@ -21,28 +21,17 @@ public class UiFormatters {
         return format.format(date);
     }
 
-    public static String dayOfWeek(Date date) {
-        if (date == null) return "—";
-        SimpleDateFormat format = new SimpleDateFormat("EEEE", Locale.getDefault());
-        return format.format(date);
-    }
-
     public static String monthYear(Date date) {
         if (date == null) return "—";
         SimpleDateFormat format = new SimpleDateFormat("MMMM yyyy", Locale.getDefault());
         return format.format(date);
     }
 
-    public static String fullDate(Date date) {
-        if (date == null) return "—";
-        SimpleDateFormat format = new SimpleDateFormat("MMMM d, yyyy", Locale.getDefault());
-        return format.format(date);
-    }
-
     public static String duration(Date start, Date end) {
         if (start == null) return "—";
 
-        Date effectiveEnd = (end != null) ? end : new Date();
+        Date effectiveEnd = (end != null) ? end
+                                          : new Date();
         long diffMs = Math.max(0, effectiveEnd.getTime() - start.getTime());
         long totalMinutes = diffMs / 60000;
         long hours = totalMinutes / 60;

@@ -7,7 +7,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
 import android.os.SystemClock;
-import android.util.Log;
 
 import com.example.myapplication.tracking.location.LocationService;
 import com.example.myapplication.util.ErrorLogger;
@@ -27,7 +26,6 @@ public class ActivityTransitionReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
         String msg = "onReceive: Activity transitions broadcast received";
-        Log.d(TAG, msg);
         Logger.saveLog(context, msg);
 
         if (ActivityTransitionResult.hasResult(intent)) {
@@ -38,7 +36,6 @@ public class ActivityTransitionReceiver extends BroadcastReceiver {
                     long ageMs = (SystemClock.elapsedRealtimeNanos() - eventElapsedNanos) / 1_000_000L;
                     long eventTimestampMs = System.currentTimeMillis() - ageMs;
                     String eventMsg = "onReceive: Processing transition for " + getActivityName(event.getActivityType()) + " (" + getTransitionName(event.getTransitionType()) + ")";
-                    Log.d(TAG, eventMsg);
                     Logger.saveLog(context, eventMsg);
                     notifyService(context, event.getActivityType(), event.getTransitionType(), eventTimestampMs);
                 }
@@ -56,7 +53,6 @@ public class ActivityTransitionReceiver extends BroadcastReceiver {
 
     private void notifyService(Context context, int activityType, int transitionType, long timestampMs) {
         String msg = "notifyService: Sending activity update to LocationService for DB processing";
-        Log.d(TAG, msg);
         Logger.saveLog(context, msg);
 
         Intent serviceIntent = new Intent(context, LocationService.class);
@@ -70,16 +66,15 @@ public class ActivityTransitionReceiver extends BroadcastReceiver {
                 try {
                     context.startForegroundService(serviceIntent);
                 } catch (IllegalStateException e) {
-                    Log.w(TAG, "Cannot start foreground service from background receiver, falling back to startService", e);
+                    Logger.saveLog(context, "Cannot start foreground service from background receiver, falling back to startService");
                     context.startService(serviceIntent);
                 }
             } else {
                 context.startService(serviceIntent);
             }
         } catch (Exception e) {
-            ErrorLogger.logError(context, TAG, "Error notifying service", e);
             String errorMsg = "notifyService: Failed to start service from receiver: " + e.getMessage();
-            Log.e(TAG, errorMsg);
+            ErrorLogger.logError(context, TAG, errorMsg, e);
             Logger.saveLog(context, errorMsg);
         }
     }

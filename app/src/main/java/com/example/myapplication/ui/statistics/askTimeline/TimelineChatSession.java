@@ -14,7 +14,7 @@ public class TimelineChatSession {
     private TimelineChatSession() {
         chatHistory.add(new ChatMessage(
                 UUID.randomUUID().toString(),
-                "Hi! Ask me anything about your timeline history, places you've visited, or activity patterns.",
+                "Hi! Ask me anything about your timeline history, places you've visited, or habits.",
                 false,
                 System.currentTimeMillis(),
                 new ArrayList<>()
@@ -56,7 +56,7 @@ public class TimelineChatSession {
         chatHistory.clear();
         chatHistory.add(new ChatMessage(
                 UUID.randomUUID().toString(),
-                "Hi! Ask me anything about your timeline history, places you've visited, or activity patterns.",
+                "Hi! Ask me anything about your timeline history, places you've visited, or habits.",
                 false,
                 System.currentTimeMillis(),
                 new ArrayList<>()

@@ -54,8 +54,10 @@ public class StillLocation implements TimelineItem {
         copy.id = this.id;
         copy.lat = this.lat;
         copy.lng = this.lng;
-        copy.startTimeDate = this.startTimeDate != null ? new Date(this.startTimeDate.getTime()) : null;
-        copy.endTimeDate = this.endTimeDate != null ? new Date(this.endTimeDate.getTime()) : null;
+        copy.startTimeDate = (this.startTimeDate != null) ? new Date(this.startTimeDate.getTime())
+                                                          : null;
+        copy.endTimeDate = (this.endTimeDate != null) ? new Date(this.endTimeDate.getTime())
+                                                      : null;
         copy.wasSupposedToBeActivity = this.wasSupposedToBeActivity;
         copy.placeId = this.placeId;
         copy.placeName = this.placeName;

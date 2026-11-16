@@ -13,7 +13,8 @@ public class TimelineItemUsageData {
         this.screenTimeMs = screenTimeMs;
         this.durationMs = durationMs;
         this.percentage = percentage;
-        this.topApps = topApps != null ? topApps : new ArrayList<>();
+        this.topApps = (topApps != null) ? topApps
+                                         : new ArrayList<>();
     }
 
     public long getScreenTimeMs() {

@@ -97,8 +97,10 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private void handleLogin() {
-        String email = etEmail.getText() != null ? etEmail.getText().toString().trim() : "";
-        String password = etPassword.getText() != null ? etPassword.getText().toString().trim() : "";
+        String email = (etEmail.getText() != null) ? etEmail.getText().toString().trim()
+                                                   : "";
+        String password = (etPassword.getText() != null) ? etPassword.getText().toString().trim()
+                                                         : "";
 
         if (!validateInput(email, password, true)) return;
 
@@ -114,8 +116,10 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private void handleSignUp() {
-        String email = etEmail.getText() != null ? etEmail.getText().toString().trim() : "";
-        String password = etPassword.getText() != null ? etPassword.getText().toString().trim() : "";
+        String email = (etEmail.getText() != null) ? etEmail.getText().toString().trim()
+                                                   : "";
+        String password = (etPassword.getText() != null) ? etPassword.getText().toString().trim()
+                                                         : "";
 
         if (!validateInput(email, password, true)) return;
 
@@ -131,7 +135,8 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private void handleForgotPassword() {
-        String email = etEmail.getText() != null ? etEmail.getText().toString().trim() : "";
+        String email = (etEmail.getText() != null) ? etEmail.getText().toString().trim()
+                                                   : "";
 
         // Only validate email for password reset
         if (!validateInput(email, "", false)) return;
@@ -161,7 +166,11 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private void setLoading(boolean loading) {
-        progressIndicator.setVisibility(loading ? View.VISIBLE : View.GONE);
+        if (loading) {
+            progressIndicator.setVisibility(View.VISIBLE);
+        } else {
+            progressIndicator.setVisibility(View.GONE);
+        }
         btnLogin.setEnabled(!loading);
         btnSignUp.setEnabled(!loading);
         btnForgotPassword.setEnabled(!loading);
@@ -181,6 +190,7 @@ public class LoginActivity extends AppCompatActivity {
         } else if (e.getMessage() != null && e.getMessage().contains("network")) {
             return "Network error. Please check your connection and try again.";
         }
-        return e.getLocalizedMessage() != null ? e.getLocalizedMessage() : e.getMessage();
+        return (e.getLocalizedMessage() != null) ? e.getLocalizedMessage()
+                                                 : e.getMessage();
     }
 }

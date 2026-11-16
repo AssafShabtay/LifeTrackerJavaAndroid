@@ -6,7 +6,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Build;
-import android.util.Log;
 
 import androidx.core.content.ContextCompat;
 
@@ -50,9 +49,7 @@ public class ActivityTransitionManager {
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACTIVITY_RECOGNITION) != PackageManager.PERMISSION_GRANTED) {
-                String msg = TAG + ": Cannot register activity transitions - ACTIVITY_RECOGNITION permission not granted.";
-                Log.w(TAG, msg);
-                Logger.saveLog(context, msg);
+                Logger.saveLog(context, TAG + ": Cannot register activity transitions - ACTIVITY_RECOGNITION permission not granted.");
                 finishRegistration(false);
                 return;
             }
@@ -87,13 +84,12 @@ public class ActivityTransitionManager {
                     .requestActivityTransitionUpdates(request, pendingIntent)
                     .addOnSuccessListener(unused -> {
                         String msg = TAG + ": Activity transitions registered successfully";
-                        Log.d(TAG, msg);
                         Logger.saveLog(context, msg);
                         finishRegistration(true);
                     })
                     .addOnFailureListener(e -> {
                         String msg = TAG + ": Activity transitions registration failed: " + e.getMessage();
-                        Log.e(TAG, msg);
+                        ErrorLogger.logError(context, TAG, msg, e);
                         Logger.saveLog(context, msg);
                         finishRegistration(false);
                     });
@@ -114,7 +110,7 @@ public class ActivityTransitionManager {
             callbacks = new ArrayList<>(pendingCallbacks);
             pendingCallbacks.clear();
         }
-        for (RegistrationCallback callback : callbacks) callback.onResult(success);
+        for (RegistrationCallback callback : callbacks) callback.onResult(success); // update all pending callbacks with the result
     }
 
     public static void unregisterActivityTransitions(Context context) {
@@ -125,10 +121,10 @@ public class ActivityTransitionManager {
         try {
             ActivityRecognition.getClient(context)
                     .removeActivityTransitionUpdates(pendingIntent)
-                    .addOnSuccessListener(unused -> Log.d(TAG, "Activity transitions unregistered successfully"))
-                    .addOnFailureListener(e -> Log.e(TAG, "Failed to unregister activity transitions: " + e.getMessage()));
+                    .addOnSuccessListener(unused -> Logger.saveLog(context, "Activity transitions unregistered successfully"))
+                    .addOnFailureListener(e -> ErrorLogger.logError(context, TAG, "Failed to unregister activity transitions: " + e.getMessage(), e));
         } catch (SecurityException e) {
-            Log.e(TAG, "SecurityException unregistering transitions", e);
+            ErrorLogger.logError(context, TAG, "SecurityException unregistering transitions", e);
         }
     }
 

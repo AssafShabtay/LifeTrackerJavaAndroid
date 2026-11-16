@@ -84,14 +84,17 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<ChatMessageAdapter.
 
         public void bind(ChatMessage message, OnDateLinkClickListener dateLinkClickListener) {
             if (message.isUser()) {
+                // Show user message layout and hide assistant container
                 layoutUserContainer.setVisibility(View.VISIBLE);
                 layoutAssistantContainer.setVisibility(View.GONE);
                 tvUserMessage.setText(message.getContent());
             } else {
+                // Show assistant message layout and hide user container
                 layoutUserContainer.setVisibility(View.GONE);
                 layoutAssistantContainer.setVisibility(View.VISIBLE);
                 tvAssistantMessage.setText(message.getContent());
 
+                // Populate referenced dates as clickable chips if present
                 List<DateLink> dates = message.getReferencedDates();
                 chipGroupReferencedDates.removeAllViews();
 

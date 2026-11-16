@@ -22,6 +22,8 @@ public class ActivityTrackingUtils {
 
     private static final double ALLOWED_RADIUS_METERS = 50.0;
     private static final double MIN_REQUIRED_INSIDE_RATIO = 0.50; // percentage of points inside the radius
+    public static final float STILL_RADIUS_THRESHOLD = 75.0f;
+
     public static boolean isValidAccuracy(Location location, float maxAllowedMeters) {
         if (location == null) return false;
         // Some devices occasionally return locations without accuracy details
@@ -29,16 +31,16 @@ public class ActivityTrackingUtils {
         return location.getAccuracy() <= maxAllowedMeters;
     }
 
-    public static boolean checkIfMovementIsStill (List<RoutePoint> routePoints, double startLat, double startLng, double endLat, double endLng) {
+    public static boolean checkIfMovementIsStill(List<RoutePoint> routePoints, double startLat, double startLng, double endLat, double endLng) {
 
         if (routePoints == null || routePoints.size() <= 1) {
-            if (distanceInMeters(startLat, startLng, endLat, endLng) <  75f){
+            if (distanceInMeters(startLat, startLng, endLat, endLng) <  STILL_RADIUS_THRESHOLD){
                 return true;
             }
             return false;
         }
         // finds the center of all the route points
-        // Calculate the centroid (Average Lat and Lng)
+        // Calculate the centroid (Average lat and lng)
         double sumLat = 0;
         double sumLng = 0;
         for (RoutePoint point : routePoints) {
@@ -54,7 +56,7 @@ public class ActivityTrackingUtils {
         for (int i = 0; i < routePoints.size(); i++) {
             RoutePoint currentPoint = routePoints.get(i);
             // Calculate radius (Distance from centroid to current point)
-            double distanceFromCentroid = (double) distanceInMeters(centroidLat, centroidLng, currentPoint.getLat(), currentPoint.getLng());
+            double distanceFromCentroid = distanceInMeters(centroidLat, centroidLng, currentPoint.getLat(), currentPoint.getLng());
 
             if (distanceFromCentroid <= ALLOWED_RADIUS_METERS) {
                 pointsInsideRadius++;
@@ -83,7 +85,7 @@ public class ActivityTrackingUtils {
         final float MAX_RUN_SPEED = 7.5f;
         final float MAX_REALISTIC_SPEED = 50.0f;
 
-        // Impossible speeds usually indicate a GPS drift
+        // gps drift
         if (speed > MAX_REALISTIC_SPEED) {
             String msg = String.format(Locale.US, "Sanity check failed: Speed %.2f m/s exceeds realistic limits. Flagged as drift.", speed);
 

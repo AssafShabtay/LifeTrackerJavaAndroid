@@ -128,7 +128,13 @@ public class DetailedPhoneUsageCardManager {
             if (layoutCategoriesContainer != null) layoutCategoriesContainer.setVisibility(View.GONE);
             if (layoutTopAppsContainer != null) layoutTopAppsContainer.setVisibility(View.VISIBLE);
             if (layoutLocationsContainer != null) layoutLocationsContainer.setVisibility(View.GONE);
-            if (tvHeaderTitle != null) tvHeaderTitle.setText(isWeekly ? "Top Apps for this Week" : "Top Apps for this Day");
+            if (tvHeaderTitle != null) {
+                if (isWeekly) {
+                    tvHeaderTitle.setText("Top Apps for this Week");
+                } else {
+                    tvHeaderTitle.setText("Top Apps for this Day");
+                }
+            }
         }
     }
 
@@ -182,7 +188,11 @@ public class DetailedPhoneUsageCardManager {
                 pendingLocationsCalc = null;
                 locationsLoaded = true;
                 if (tvDailyCardNoLocations != null) {
-                    tvDailyCardNoLocations.setText(isWeekly ? "No location data for this week." : "No location data for this day.");
+                    if (isWeekly) {
+                        tvDailyCardNoLocations.setText("No location data for this week.");
+                    } else {
+                        tvDailyCardNoLocations.setText("No location data for this day.");
+                    }
                 }
                 renderLocationRanks(ranks, layoutDailyLocationsList, tvDailyCardNoLocations);
             });
@@ -253,7 +263,8 @@ public class DetailedPhoneUsageCardManager {
                 //extract start and end time
                 long stayStart = Math.max(still.getStartTimeDate().getTime(), startTime);
                 long stayEnd = Math.min(
-                        still.getEndTimeDate() != null ? still.getEndTimeDate().getTime() : System.currentTimeMillis(),
+                        (still.getEndTimeDate() != null) ? still.getEndTimeDate().getTime()
+                                                         : System.currentTimeMillis(),
                         endTime
                 );
 
@@ -427,7 +438,11 @@ public class DetailedPhoneUsageCardManager {
 
             if (categories.isEmpty() || totalMs <= 0) {
                 TextView emptyTv = new TextView(context);
-                emptyTv.setText(isWeekly ? "No usage recorded for this week." : "No usage recorded for this day.");
+                if (isWeekly) {
+                    emptyTv.setText("No usage recorded for this week.");
+                } else {
+                    emptyTv.setText("No usage recorded for this day.");
+                }
                 emptyTv.setTextSize(12);
                 emptyTv.setTextColor(ContextCompat.getColor(context, R.color.secondary));
                 emptyTv.setPadding(0, 16, 0, 16);

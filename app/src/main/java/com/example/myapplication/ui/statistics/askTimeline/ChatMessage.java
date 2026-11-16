@@ -15,7 +15,8 @@ public class ChatMessage {
         this.content = content;
         this.isUser = isUser;
         this.timestamp = timestamp;
-        this.referencedDates = referencedDates != null ? referencedDates : new ArrayList<>();
+        this.referencedDates = (referencedDates != null) ? referencedDates
+                                                         : new ArrayList<>();
     }
 
     public String getId() {

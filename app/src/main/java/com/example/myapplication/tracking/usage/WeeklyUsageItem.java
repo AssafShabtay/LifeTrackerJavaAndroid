@@ -33,8 +33,10 @@ public class WeeklyUsageItem {
         this.totalUnlockCount = totalUnlockCount;
         this.dailyAverageUnlocks = dailyAverageUnlocks;
         this.idleScreenTimeMs = idleScreenTimeMs;
-        this.dailyUsageMs = dailyUsageMs != null ? dailyUsageMs : new long[7];
-        this.dayLabels = dayLabels != null ? dayLabels : new String[]{"Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"};
+        this.dailyUsageMs = (dailyUsageMs != null) ? dailyUsageMs
+                                                   : new long[7];
+        this.dayLabels = (dayLabels != null) ? dayLabels
+                                             : new String[]{"Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"};
         this.peakDayLabel = peakDayLabel;
         this.topApps = topApps;
         this.doomscrollStats = doomscrollStats;

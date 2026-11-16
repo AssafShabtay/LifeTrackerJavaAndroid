@@ -6,7 +6,6 @@ import static com.example.myapplication.tracking.location.ActivityTrackingUtils.
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.location.Location;
-import android.util.Log;
 
 import com.example.myapplication.data.model.Place;
 import com.example.myapplication.data.db.PlaceDao;
@@ -121,12 +120,10 @@ public class GeofenceUtilsManager {
                 geofenceManager.addGeofence(newPlace);
 
                 String msg = String.format(Locale.US, "Google Places detected and new Place created: %s at [%.6f, %.6f]", still.getPlaceName(), location.getLatitude(), location.getLongitude());
-                Log.d(TAG, msg);
                 Logger.saveLog(context, msg);
             }
         } catch (Exception e) {
-            ErrorLogger.logError(context, TAG, "Error", e);
-            Log.e(TAG, "Failed to detect Google Place", e);
+            ErrorLogger.logError(context, TAG, "Failed to detect Google Place", e);
         }
     }
 

@@ -8,7 +8,6 @@ import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
-//code genertate dby Gemini
 public final class Logger {
     private static final String TAG = "Logger";
     private Logger() {}

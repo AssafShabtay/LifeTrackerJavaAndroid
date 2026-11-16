@@ -78,7 +78,8 @@ public class EditStillActivitySheet extends BaseStillActivitySheet {
 
         selectedColor = getStillColor(still, requireContext());
         selectedCategory = still.getCategory();
-        selectedIcon = still.getIcon() != null ? still.getIcon() : "Still";
+        selectedIcon = (still.getIcon() != null) ? still.getIcon()
+                                                 : "Still";
         selectedGeofenceId = still.getGeofencePlaceId();
 
         // Fetch linked Place entity if it exists
@@ -135,7 +136,8 @@ public class EditStillActivitySheet extends BaseStillActivitySheet {
                 still.setPlaceId(selectedPlace.getId());
             } else {
                 // Create and save a new Place
-                Place newPlace = selectedPlace != null ? selectedPlace : new Place();
+                Place newPlace = (selectedPlace != null) ? selectedPlace
+                                                         : new Place();
                 newPlace.setName(name);
                 newPlace.setAddress(address);
                 if (still.getLat() != null && still.getLng() != null) {

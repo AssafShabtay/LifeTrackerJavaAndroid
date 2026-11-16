@@ -158,7 +158,8 @@ public class SettingsFragment extends Fragment {
 
         toggleGroup.addOnButtonCheckedListener((group, checkedId, isChecked) -> {
             if (isChecked) {
-                int weekStartDay = (checkedId == R.id.btn_week_monday) ? Calendar.MONDAY : Calendar.SUNDAY;
+                int weekStartDay = (checkedId == R.id.btn_week_monday) ? Calendar.MONDAY
+                                                                       : Calendar.SUNDAY;
                 saveWeekStartDayPreference(weekStartDay);
             }
         });
@@ -176,7 +177,8 @@ public class SettingsFragment extends Fragment {
 
     private int getSystemFirstDayOfWeek() {
         int systemFirstDay = Calendar.getInstance().getFirstDayOfWeek();
-        return (systemFirstDay == Calendar.SUNDAY) ? Calendar.SUNDAY : Calendar.MONDAY;
+        return (systemFirstDay == Calendar.SUNDAY) ? Calendar.SUNDAY
+                                                   : Calendar.MONDAY;
     }
 
     private void setupPermissionsSection(View itemLocation, View itemUsage) {
@@ -204,12 +206,20 @@ public class SettingsFragment extends Fragment {
         PermissionManager permissionManager = new PermissionManager(requireActivity());
         boolean hasLocation = permissionManager.hasAllPermissions();
         if (tvLocationPermissionStatus != null) {
-            tvLocationPermissionStatus.setText(hasLocation ? "Granted" : "Not Granted — Tap to manage in settings");
+            if (hasLocation) {
+                tvLocationPermissionStatus.setText("Granted");
+            } else {
+                tvLocationPermissionStatus.setText("Not Granted — Tap to manage in settings");
+            }
         }
 
         boolean hasUsage = UsageStatsHelper.hasUsageAccessPermission(requireContext());
         if (tvUsagePermissionStatus != null) {
-            tvUsagePermissionStatus.setText(hasUsage ? "Granted" : "Not Granted — Tap to allow access");
+            if (hasUsage) {
+                tvUsagePermissionStatus.setText("Granted");
+            } else {
+                tvUsagePermissionStatus.setText("Not Granted — Tap to allow access");
+            }
         }
     }
 
@@ -376,7 +386,8 @@ public class SettingsFragment extends Fragment {
                 setBackupButtonsEnabled(true);
 
                 if (!ok) {
-                    Toast.makeText(getContext(), message != null ? message : "No backup found for this account.", Toast.LENGTH_LONG).show();
+                    Toast.makeText(getContext(), (message != null) ? message
+                                                                   : "No backup found for this account.", Toast.LENGTH_LONG).show();
                     return;
                 }
 

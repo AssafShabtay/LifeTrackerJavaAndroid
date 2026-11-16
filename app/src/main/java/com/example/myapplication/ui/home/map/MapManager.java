@@ -277,7 +277,8 @@ public class MapManager implements OnMapReadyCallback {
     private void addStillToMap(StillLocation still, int number, boolean useIcon) {
         if (still.getLat() != null && still.getLng() != null) {
             LatLng pos = new LatLng(still.getLat(), still.getLng());
-            String title = (still.getPlaceName() != null) ? still.getPlaceName() : "Still Location";
+            String title = (still.getPlaceName() != null) ? still.getPlaceName()
+                                                          : "Still Location";
 
             // Determine the color for the still location
             int color = getStillColor(still, fragment.requireContext());
@@ -295,7 +296,7 @@ public class MapManager implements OnMapReadyCallback {
 
             mMap.addMarker(new MarkerOptions()
                     .position(pos)
-                    .title((useIcon ? "" : (number + ". ")) + title)
+                    .title(((useIcon) ? "" : (number + ". ")) + title)
                     .icon(icon));
         }
     }
@@ -381,7 +382,7 @@ public class MapManager implements OnMapReadyCallback {
 
             mMap.addMarker(new MarkerOptions()
                     .position(start)
-                    .title((useIcon ? "" : (number + ". ")) + "Start: " + movement.getActivityTypeName())
+                    .title(((useIcon) ? "" : (number + ". ")) + "Start: " + movement.getActivityTypeName())
                     .icon(icon));
             builder.include(start);
             hasPoints = true;
@@ -416,7 +417,8 @@ public class MapManager implements OnMapReadyCallback {
             for (StillLocation stop : movement.getStops()) {
                 if (stop.getLat() != null && stop.getLng() != null) {
                     LatLng stopPos = new LatLng(stop.getLat(), stop.getLng());
-                    String stopTitle = (stop.getPlaceName() != null) ? stop.getPlaceName() : "Stop";
+                    String stopTitle = (stop.getPlaceName() != null) ? stop.getPlaceName()
+                                                                     : "Stop";
 
                     // Determine the color for the stop location
                     int stopColor = getStillColor(stop, fragment.requireContext());
@@ -446,13 +448,14 @@ public class MapManager implements OnMapReadyCallback {
 
             mMap.addMarker(new MarkerOptions()
                     .position(end)
-                    .title((useIcon ? "" : (number + ". ")) + "End: " + movement.getActivityTypeName())
+                    .title(((useIcon) ? "" : (number + ". ")) + "End: " + movement.getActivityTypeName())
                     .icon(icon));
             builder.include(end);
             hasPoints = true;
         }
 
-        return hasPoints ? builder.build() : null;
+        return hasPoints ? builder.build()
+                         : null;
     }
 
     private int getMovementColor(String type) {
