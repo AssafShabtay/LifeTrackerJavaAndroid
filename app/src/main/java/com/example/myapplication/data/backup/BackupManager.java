@@ -182,25 +182,25 @@ public class BackupManager {
         }
 
         try {
-            // 1. Stop LocationService
+            // stop location service, so it doesn't write while you change the database
             appContext.stopService(new Intent(appContext, LocationService.class));
 
-            // 2. Close Room database instance
+            // close room database
             ActivityDatabase.closeInstance();
 
-            // 3. Delete existing database, WAL, and SHM files
+            // Delete database, WAL, and SHM files
             File dbFile = appContext.getDatabasePath("activity_database");
             File walFile = new File(dbFile.getPath() + "-wal");
             File shmFile = new File(dbFile.getPath() + "-shm");
 
-            if (dbFile.exists()) //noinspection ResultOfMethodCallIgnored
+            if (dbFile.exists())
                 dbFile.delete();
-            if (walFile.exists()) //noinspection ResultOfMethodCallIgnored
+            if (walFile.exists())
                 walFile.delete();
-            if (shmFile.exists()) //noinspection ResultOfMethodCallIgnored
+            if (shmFile.exists())
                 shmFile.delete();
 
-            // 4. Copy downloaded file over the database file
+            // copy restored file to the database file
             copyFile(RestoredDbFile, dbFile);
 
             callback.onDone(true, "Restore successful");
@@ -209,7 +209,6 @@ public class BackupManager {
             callback.onDone(false, "Restore failed: " + e.getMessage());
         } finally {
             if (RestoredDbFile.exists()) {
-                //noinspection ResultOfMethodCallIgnored
                 RestoredDbFile.delete();
             }
         }
@@ -276,8 +275,8 @@ public class BackupManager {
     }
 
     private static void copyFile(File src, File dst) throws IOException {
+        /// copy file(1st parameter) to destination(2nd parameter)
         if (dst.getParentFile() != null && !dst.getParentFile().exists()) {
-            //noinspection ResultOfMethodCallIgnored
             dst.getParentFile().mkdirs();
         }
         try (InputStream in = new FileInputStream(src);
