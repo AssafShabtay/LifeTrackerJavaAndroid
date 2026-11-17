@@ -122,13 +122,27 @@
             android:id="@+id/permission_subtitle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="48dp"
+            android:layout_marginBottom="24dp"
             android:gravity="center"
             android:lineSpacingExtra="4dp"
             android:textColor="?attr/colorOnSurfaceVariant"
             android:textSize="15sp"
-            app:layout_constraintBottom_toTopOf="@+id/permission_action"
+            app:layout_constraintBottom_toTopOf="@+id/permission_skip"
             tools:text="Timeline needs location permissions to automatically track your daily movements." />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/permission_skip"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginBottom="8dp"
+            android:fontFamily="sans-serif-medium"
+            android:text="Skip for now"
+            android:textColor="?attr/colorOnSurfaceVariant"
+            android:textSize="14sp"
+            android:visibility="gone"
+            app:layout_constraintBottom_toTopOf="@+id/permission_action"
+            tools:visibility="visible" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/permission_action"

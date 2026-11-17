@@ -25,6 +25,7 @@ import androidx.fragment.app.Fragment;
 import com.example.myapplication.util.ErrorLogger;
 import com.example.myapplication.util.Logger;
 import com.example.myapplication.util.PermissionManager;
+import com.example.myapplication.tracking.usage.UsageStatsHelper;
 import com.example.myapplication.ui.home.HomeFragment;
 import com.example.myapplication.ui.settings.SettingsFragment;
 import com.example.myapplication.ui.statistics.locationStatistics.StatisticsFragment;
@@ -50,6 +51,7 @@ public class MainActivity extends AppCompatActivity {
 
     private View permissionBlocker;
     private Button permissionAction;
+    private Button permissionSkip;
     private TextView permissionSubtitle;
 
     private HomeFragment homeFragment = new HomeFragment();
@@ -140,6 +142,7 @@ public class MainActivity extends AppCompatActivity {
         );
         permissionBlocker = findViewById(R.id.permission_blocker);
         permissionAction = findViewById(R.id.permission_action);
+        permissionSkip = findViewById(R.id.permission_skip);
         permissionSubtitle = findViewById(R.id.permission_subtitle);
         permissionProgressBar = findViewById(R.id.permission_progress_bar);
         permissionStepText = findViewById(R.id.permission_step_text);
@@ -250,7 +253,10 @@ public class MainActivity extends AppCompatActivity {
 
     private void refreshPermissionUi(boolean hasPerms) {
         Logger.saveLog(this, TAG + ": refreshPermissionUi called with hasPerms: " + hasPerms);
-        if (hasPerms) {
+        boolean hasUsageAccess = UsageStatsHelper.hasUsageAccessPermission(this) || permissionManager.isUsageAccessSkipped();
+        boolean isFullyGranted = hasPerms && hasUsageAccess;
+
+        if (isFullyGranted) {
             permissionBlocker.setVisibility(View.GONE);
             if (bottomNav != null) bottomNav.setVisibility(View.VISIBLE);
             getSupportFragmentManager().beginTransaction().show(activeFragment).commit();
@@ -271,6 +277,9 @@ public class MainActivity extends AppCompatActivity {
                 permissionSubtitle.setText("Permissions were denied permanently. Please enable them in Settings to continue.");
                 permissionAction.setText("Open Settings");
                 permissionAction.setOnClickListener(v -> permissionManager.openAppSettings());
+                if (permissionSkip != null) {
+                    permissionSkip.setVisibility(View.GONE);
+                }
             } else {
                 // Update the dynamic steps
                 updatePermissionStepUI();
@@ -291,17 +300,23 @@ public class MainActivity extends AppCompatActivity {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !permissionManager.hasPermission(Manifest.permission.POST_NOTIFICATIONS)) {
             setupStep(1, totalSteps, "Notifications",
                     "We need notifications to keep you updated on your timeline status.",
-                    android.R.drawable.ic_dialog_info); // Changed this line to use a default built-in icon
+                    android.R.drawable.ic_dialog_info, false);
         }
         // Step 2: Foreground Location
         else if (!permissionManager.hasPermission(Manifest.permission.ACCESS_FINE_LOCATION)) {
             setupStep(2, totalSteps, "Location Access",
                     "Timeline needs location to track your visits while the app is open.",
-                    android.R.drawable.ic_menu_mylocation);
+                    android.R.drawable.ic_menu_mylocation, false);
+        }
+        // Step 3: App Usage Access (Optional)
+        else if (!UsageStatsHelper.hasUsageAccessPermission(this) && !permissionManager.isUsageAccessSkipped()) {
+            setupStep(3, totalSteps, "App Usage Access",
+                    "Timeline can track your screen time and app usage statistics alongside location visits. This permission is optional.",
+                    android.R.drawable.ic_menu_recent_history, true);
         }
     }
 
-    private void setupStep(int currentStep, int totalSteps, String title, String subtitle, int iconRes) {
+    private void setupStep(int currentStep, int totalSteps, String title, String subtitle, int iconRes, boolean isOptional) {
         permissionProgressBar.setProgress(currentStep, true);
         permissionStepText.setText("Step " + currentStep + " of " + totalSteps);
 
@@ -314,7 +329,21 @@ public class MainActivity extends AppCompatActivity {
         permissionIcon.setImageResource(iconRes);
 
         permissionAction.setText("Grant Access");
-        permissionAction.setOnClickListener(v -> requestPermissions());
+        if (isOptional) {
+            permissionAction.setOnClickListener(v -> UsageStatsHelper.openUsageAccessSettings(this));
+            if (permissionSkip != null) {
+                permissionSkip.setVisibility(View.VISIBLE);
+                permissionSkip.setOnClickListener(v -> {
+                    permissionManager.setUsageAccessSkipped(true);
+                    refreshPermissionUi(permissionManager.hasAllPermissions());
+                });
+            }
+        } else {
+            permissionAction.setOnClickListener(v -> requestPermissions());
+            if (permissionSkip != null) {
+                permissionSkip.setVisibility(View.GONE);
+            }
+        }
     }
 
     private void startTrackingService() {

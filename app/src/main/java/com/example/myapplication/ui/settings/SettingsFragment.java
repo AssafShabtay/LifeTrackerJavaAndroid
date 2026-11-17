@@ -57,7 +57,7 @@ public class SettingsFragment extends Fragment {
     private TextView tvUsagePermissionStatus;
 
     private TextView tvAccountStatus;
-    private MaterialButton btnAccountAction;
+    private MaterialButton btnAccountSignInOut;
     private TextView tvLastBackup;
     private TextView tvBackupDisabledReason;
     private LinearProgressIndicator progressBackup;
@@ -87,9 +87,8 @@ public class SettingsFragment extends Fragment {
         tvUsagePermissionStatus = view.findViewById(R.id.tv_usage_permission_status);
         View btnDeleteHistory = view.findViewById(R.id.btn_delete_history);
 
-        // Bind Cloud Backup UI
         tvAccountStatus = view.findViewById(R.id.tv_account_status);
-        btnAccountAction = view.findViewById(R.id.btn_account_action);
+        btnAccountSignInOut = view.findViewById(R.id.btn_account_sign_in_out);
         tvLastBackup = view.findViewById(R.id.tv_last_backup);
         tvBackupDisabledReason = view.findViewById(R.id.tv_backup_disabled_reason);
         progressBackup = view.findViewById(R.id.progress_backup);
@@ -110,13 +109,14 @@ public class SettingsFragment extends Fragment {
     public void onResume() {
         super.onResume();
         updatePermissionStatuses();
-        updateAccountAndBackupUi();
+        updateAccountAndBackupInfo();
     }
 
     private void setupThemePreferences(MaterialButtonToggleGroup themeToggleGroup) {
         SharedPreferences preferences = requireContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         int currentMode = preferences.getInt("theme_mode", AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
 
+        // set current mode
         switch (currentMode) {
             case AppCompatDelegate.MODE_NIGHT_YES:
                 themeToggleGroup.check(R.id.btn_theme_dark);
@@ -129,6 +129,7 @@ public class SettingsFragment extends Fragment {
                 break;
         }
 
+        // set up toggle button
         themeToggleGroup.addOnButtonCheckedListener((group, checkedId, isChecked) -> {
             if (isChecked) {
                 int selectedMode;
@@ -149,6 +150,7 @@ public class SettingsFragment extends Fragment {
     }
 
     private void setupWeekStartDayPreference(MaterialButtonToggleGroup toggleGroup) {
+        // set current mode
         int savedWeekStartDay = getWeekStartDayPreference();
         if (savedWeekStartDay == Calendar.MONDAY) {
             toggleGroup.check(R.id.btn_week_monday);
@@ -156,6 +158,7 @@ public class SettingsFragment extends Fragment {
             toggleGroup.check(R.id.btn_week_sunday);
         }
 
+        // set up toggle button
         toggleGroup.addOnButtonCheckedListener((group, checkedId, isChecked) -> {
             if (isChecked) {
                 int weekStartDay = (checkedId == R.id.btn_week_monday) ? Calendar.MONDAY
@@ -182,6 +185,7 @@ public class SettingsFragment extends Fragment {
     }
 
     private void setupPermissionsSection(View itemLocation, View itemUsage) {
+        // Location permissions
         itemLocation.setOnClickListener(v -> {
             PermissionManager permissionManager = new PermissionManager(requireActivity());
             if (!permissionManager.hasAllPermissions()) {
@@ -191,6 +195,7 @@ public class SettingsFragment extends Fragment {
             }
         });
 
+        // Usage access permissions
         itemUsage.setOnClickListener(v -> {
             if (!UsageStatsHelper.hasUsageAccessPermission(requireContext())) {
                 UsageStatsHelper.openUsageAccessSettings(requireContext());
@@ -202,7 +207,7 @@ public class SettingsFragment extends Fragment {
 
     private void updatePermissionStatuses() {
         if (getContext() == null || getActivity() == null) return;
-
+        // Location permissions
         PermissionManager permissionManager = new PermissionManager(requireActivity());
         boolean hasLocation = permissionManager.hasAllPermissions();
         if (tvLocationPermissionStatus != null) {
@@ -213,6 +218,7 @@ public class SettingsFragment extends Fragment {
             }
         }
 
+        // Usage access permissions
         boolean hasUsage = UsageStatsHelper.hasUsageAccessPermission(requireContext());
         if (tvUsagePermissionStatus != null) {
             if (hasUsage) {
@@ -224,7 +230,7 @@ public class SettingsFragment extends Fragment {
     }
 
     private void setupCloudBackupSection() {
-        btnAccountAction.setOnClickListener(v -> handleAccountAction());
+        btnAccountSignInOut.setOnClickListener(v -> handleAccountSignInOut());
         btnBackupNow.setOnClickListener(v -> handleBackupNow());
         btnRestoreBackup.setOnClickListener(v -> handleRestoreBackup());
         btnDeleteCloudBackup.setOnClickListener(v -> handleDeleteCloudBackup());
@@ -238,15 +244,16 @@ public class SettingsFragment extends Fragment {
         });
     }
 
-    private void updateAccountAndBackupUi() {
+    private void updateAccountAndBackupInfo() {
         if (getContext() == null || getActivity() == null) return;
 
         FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
         SharedPreferences preferences = requireContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
 
+        // if is signed in
         if (currentUser != null) {
             tvAccountStatus.setText("Signed in as " + currentUser.getEmail());
-            btnAccountAction.setText("Sign out");
+            btnAccountSignInOut.setText("Sign out");
             btnBackupNow.setEnabled(true);
             btnRestoreBackup.setEnabled(true);
             btnDeleteCloudBackup.setEnabled(true);
@@ -260,7 +267,7 @@ public class SettingsFragment extends Fragment {
                 tvLastBackup.setText("Last backup: Never");
             }
 
-            // Fetch backup metadata asynchronously to refresh info
+            // get backup info
             BackupManager.getBackupInfo(requireContext(), (ok, updatedTimeMillis, sizeBytes, message) -> {
                 if (!isAdded() || getActivity() == null) return;
                 getActivity().runOnUiThread(() -> {
@@ -272,8 +279,9 @@ public class SettingsFragment extends Fragment {
             });
 
         } else {
+            // not logged in
             tvAccountStatus.setText("Offline mode");
-            btnAccountAction.setText("Sign in");
+            btnAccountSignInOut.setText("Sign in");
             btnBackupNow.setEnabled(false);
             btnRestoreBackup.setEnabled(false);
             btnDeleteCloudBackup.setEnabled(false);
@@ -287,7 +295,7 @@ public class SettingsFragment extends Fragment {
         switchAutoBackup.setChecked(autoBackupEnabled);
     }
 
-    private void handleAccountAction() {
+    private void handleAccountSignInOut() {
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user == null) {
             Intent intent = new Intent(requireContext(), LoginActivity.class);
@@ -322,14 +330,14 @@ public class SettingsFragment extends Fragment {
                     getActivity().runOnUiThread(() -> {
                         FirebaseAuth.getInstance().signOut();
                         progressBackup.setVisibility(View.GONE);
-                        updateAccountAndBackupUi();
+                        updateAccountAndBackupInfo();
                         Toast.makeText(requireContext(), "Signed out successfully", Toast.LENGTH_SHORT).show();
                     });
                 }
             });
         } else {
             FirebaseAuth.getInstance().signOut();
-            updateAccountAndBackupUi();
+            updateAccountAndBackupInfo();
             Toast.makeText(requireContext(), "Signed out successfully", Toast.LENGTH_SHORT).show();
         }
     }
@@ -369,7 +377,7 @@ public class SettingsFragment extends Fragment {
                 setBackupButtonsEnabled(true);
                 Toast.makeText(getContext(), message, Toast.LENGTH_LONG).show();
                 if (ok) {
-                    updateAccountAndBackupUi();
+                    updateAccountAndBackupInfo();
                 }
             });
         });
@@ -450,7 +458,7 @@ public class SettingsFragment extends Fragment {
                             setBackupButtonsEnabled(true);
                             Toast.makeText(getContext(), message, Toast.LENGTH_LONG).show();
                             if (ok) {
-                                updateAccountAndBackupUi();
+                                updateAccountAndBackupInfo();
                             }
                         });
                     });
@@ -463,7 +471,7 @@ public class SettingsFragment extends Fragment {
         if (btnBackupNow != null) btnBackupNow.setEnabled(enabled);
         if (btnRestoreBackup != null) btnRestoreBackup.setEnabled(enabled);
         if (btnDeleteCloudBackup != null) btnDeleteCloudBackup.setEnabled(enabled);
-        if (btnAccountAction != null) btnAccountAction.setEnabled(enabled);
+        if (btnAccountSignInOut != null) btnAccountSignInOut.setEnabled(enabled);
     }
 
     private void updateAutoBackupWorker(boolean enabled) {
