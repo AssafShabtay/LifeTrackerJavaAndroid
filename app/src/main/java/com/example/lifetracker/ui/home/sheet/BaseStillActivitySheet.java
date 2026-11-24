@@ -108,7 +108,7 @@ public abstract class BaseStillActivitySheet extends BottomSheetDialogFragment {
                         if (tvAddressStatus != null) {
                             tvAddressStatus.setText("Location picked from map");
                             tvAddressStatus.setVisibility(View.VISIBLE);
-                            tvAddressStatus.setTextColor(requireContext().getColor(android.R.color.holo_green_dark));
+                            tvAddressStatus.setTextColor(androidx.core.content.ContextCompat.getColor(requireContext(), R.color.green));
                         }
                     }
                 }
@@ -241,7 +241,7 @@ public abstract class BaseStillActivitySheet extends BottomSheetDialogFragment {
                                 if (tvAddressStatus != null) {
                                     tvAddressStatus.setVisibility(View.VISIBLE);
                                     tvAddressStatus.setText("Valid Address");
-                                    tvAddressStatus.setTextColor(Color.parseColor("#4CAF50"));
+                                    tvAddressStatus.setTextColor(androidx.core.content.ContextCompat.getColor(requireContext(), R.color.green));
                                 }
                                 if (btnSave != null) {
                                     btnSave.setEnabled(true);

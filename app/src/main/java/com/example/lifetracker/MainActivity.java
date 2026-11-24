@@ -169,8 +169,13 @@ public class MainActivity extends AppCompatActivity {
         } else {
             // Recreation (e.g., theme change): retrieve existing fragments
             homeFragment = (HomeFragment) getSupportFragmentManager().findFragmentByTag("1");
+            if (homeFragment == null) homeFragment = new HomeFragment();
+
             statisticsFragment = (StatisticsFragment) getSupportFragmentManager().findFragmentByTag("2");
+            if (statisticsFragment == null) statisticsFragment = new StatisticsFragment();
+
             settingsFragment = (SettingsFragment) getSupportFragmentManager().findFragmentByTag("3");
+            if (settingsFragment == null) settingsFragment = new SettingsFragment();
 
             // Pull the manually saved tab ID from the bundle, defaulting to nav_home
             int selectedId = savedInstanceState.getInt("selected_nav_id", R.id.nav_home);
@@ -182,6 +187,14 @@ public class MainActivity extends AppCompatActivity {
             } else {
                 activeFragment = homeFragment;
             }
+
+            // Ensure proper visibility: hide inactive fragments and show active fragment
+            getSupportFragmentManager().beginTransaction()
+                    .hide(homeFragment)
+                    .hide(statisticsFragment)
+                    .hide(settingsFragment)
+                    .show(activeFragment)
+                    .commit();
         }
 
         refreshPermissionUi(permissionManager.hasAllPermissions());

@@ -114,7 +114,7 @@ public class SettingsFragment extends Fragment {
 
     private void setupThemePreferences(MaterialButtonToggleGroup themeToggleGroup) {
         SharedPreferences preferences = requireContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-        int currentMode = preferences.getInt("theme_mode", AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
+        int currentMode = preferences.getInt("theme_mode", AppCompatDelegate.MODE_NIGHT_NO);
 
         // set current mode
         switch (currentMode) {
