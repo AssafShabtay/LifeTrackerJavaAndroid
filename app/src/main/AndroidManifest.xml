@@ -26,9 +26,9 @@
     <application
         android:name=".LifeTrackerApp"
         android:allowBackup="true"
-        android:label="MyApplication"
+        android:label="@string/app_name"
         android:supportsRtl="true"
-        android:theme="@style/Theme.MyApplication">
+        android:theme="@style/Theme.LifeTracker">
 
 
         <meta-data
@@ -38,19 +38,19 @@
         <activity
             android:name=".ui.home.map.MapPickerActivity"
             android:exported="false"
-            android:theme="@style/Theme.MyApplication"
+            android:theme="@style/Theme.LifeTracker"
             android:label="Pick Location" />
 
         <activity
             android:name=".ui.auth.LoginActivity"
             android:exported="false"
-            android:theme="@style/Theme.MyApplication"
+            android:theme="@style/Theme.LifeTracker"
             android:windowSoftInputMode="adjustResize" />
 
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:theme="@style/Theme.MyApplication">
+            android:theme="@style/Theme.LifeTracker">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

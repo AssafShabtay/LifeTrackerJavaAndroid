@@ -10,11 +10,11 @@ secrets {
     defaultPropertiesFileName = "local.defaults.properties"
 }
 android {
-    namespace = "com.example.myapplication"
+    namespace = "com.example.lifetracker"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.example.myapplication"
+        applicationId = "com.example.lifetracker"
         minSdk = 24
         targetSdk = 36
         versionCode = 1
