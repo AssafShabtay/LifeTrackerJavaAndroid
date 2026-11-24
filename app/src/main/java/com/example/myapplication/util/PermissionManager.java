@@ -56,6 +56,14 @@ public class PermissionManager {
         return true;
     }
 
+    public boolean isUsageAccessSkipped() {
+        return getPermissionPrefs().getBoolean("usage_access_skipped", false);
+    }
+
+    public void setUsageAccessSkipped(boolean skipped) {
+        getPermissionPrefs().edit().putBoolean("usage_access_skipped", skipped).apply();
+    }
+
     private SharedPreferences getPermissionPrefs() {
         return prefs;
     }
