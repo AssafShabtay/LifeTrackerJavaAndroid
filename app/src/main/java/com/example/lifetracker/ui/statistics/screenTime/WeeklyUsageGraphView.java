@@ -6,6 +6,10 @@ import android.util.AttributeSet;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
+
+import com.example.lifetracker.R;
+import com.example.lifetracker.tracking.usage.AppCategoryHelper;
 
 public class WeeklyUsageGraphView extends BaseUsageGraphView {
 
@@ -39,8 +43,21 @@ public class WeeklyUsageGraphView extends BaseUsageGraphView {
         return 7;
     }
 
+    public void setTopCategory(String categoryName) {
+        if (categoryName != null && !categoryName.isEmpty()) {
+            this.barColorPeak = ContextCompat.getColor(getContext(), AppCategoryHelper.getCategoryColorRes(categoryName));
+        } else {
+            this.barColorPeak = ContextCompat.getColor(getContext(), R.color.primary);
+        }
+        invalidate();
+    }
 
     public void setWeeklyData(long[] data, String[] labels) {
+        setWeeklyData(data, labels, null);
+    }
+
+    public void setWeeklyData(long[] data, String[] labels, String topCategoryName) {
+        setTopCategory(topCategoryName);
         this.selectedIndex = -1;
         if (data != null && data.length == 7) {
             this.dailyUsageMs = data.clone();

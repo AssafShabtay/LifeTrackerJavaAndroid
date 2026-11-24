@@ -6,6 +6,10 @@ import android.util.AttributeSet;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
+
+import com.example.lifetracker.R;
+import com.example.lifetracker.tracking.usage.AppCategoryHelper;
 
 import java.util.Locale;
 
@@ -35,7 +39,18 @@ public class DailyUsageGraphView extends BaseUsageGraphView {
         return 24;
     }
 
-    public void setHourlyData(long[] data) {
+    public void setTopCategory(String categoryName) {
+        if (categoryName != null && !categoryName.isEmpty()) {
+            this.barColorPeak = ContextCompat.getColor(getContext(), AppCategoryHelper.getCategoryColorRes(categoryName));
+        } else {
+            this.barColorPeak = ContextCompat.getColor(getContext(), R.color.primary);
+        }
+        invalidate();
+    }
+
+
+    public void setHourlyData(long[] data, String topCategoryName) {
+        setTopCategory(topCategoryName);
         this.selectedIndex = -1;
         if (data != null && data.length == 24) {
             this.hourlyUsageMs = data.clone();

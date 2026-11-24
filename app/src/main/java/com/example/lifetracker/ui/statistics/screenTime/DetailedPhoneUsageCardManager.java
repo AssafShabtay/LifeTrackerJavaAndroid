@@ -58,7 +58,7 @@ public class DetailedPhoneUsageCardManager {
 
     private PhoneUsageDonutView donutView;
     private TextView tvTotalTime;
-    private TextView tvPeakCategory;
+    private TextView tvTopCategory;
 
     private TextView tvHeaderTitle;
     private MaterialButton btnToggleTopApps;
@@ -97,7 +97,7 @@ public class DetailedPhoneUsageCardManager {
 
         donutView = cardView.findViewById(R.id.screen_time_donut_view);
         tvTotalTime = cardView.findViewById(R.id.tv_screen_time_total_time);
-        tvPeakCategory = cardView.findViewById(R.id.tv_screen_time_peak_category);
+        tvTopCategory = cardView.findViewById(R.id.tv_screen_time_peak_category);
 
         tvHeaderTitle = cardView.findViewById(R.id.tv_breakdown_header_title);
         layoutCategoriesContainer = cardView.findViewById(R.id.layout_categories_container);
@@ -453,11 +453,11 @@ public class DetailedPhoneUsageCardManager {
             peakPrecentage = (int) (categories.get(0).totalMs * 100 / totalMs);
         }
 
-        if (tvPeakCategory != null) {
+        if (tvTopCategory != null) {
             if (totalMs > 0 && !categories.isEmpty()) {
-                tvPeakCategory.setText(String.format(Locale.getDefault(), "Top Category: %s (%d%%)", peakName, peakPrecentage));
+                tvTopCategory.setText(String.format(Locale.getDefault(), "Top Category: %s (%d%%)", peakName, peakPrecentage));
             } else {
-                tvPeakCategory.setText("No Usage Recorded");
+                tvTopCategory.setText("No Usage Recorded");
             }
         }
 
@@ -478,11 +478,10 @@ public class DetailedPhoneUsageCardManager {
                 layoutCategoriesContainer.addView(emptyTv);
             } else {
                 LayoutInflater inflater = LayoutInflater.from(context);
-                int[] colorResIds = AppCategoryHelper.CATEGORY_COLOR_RES_IDS;
 
                 for (int i = 0; i < categories.size(); i++) {
                     CategoryUsage cat = categories.get(i);
-                    int color = ContextCompat.getColor(context, colorResIds[i % colorResIds.length]);
+                    int color = ContextCompat.getColor(context, AppCategoryHelper.getCategoryColorRes(cat.name));
 
                     View rowView = inflater.inflate(R.layout.item_category_breakdown_row, layoutCategoriesContainer, false);
 
@@ -537,11 +536,10 @@ public class DetailedPhoneUsageCardManager {
         // Donut segments
         List<PhoneUsageDonutView.DonutSegment> segments = new ArrayList<>();
         if (totalMs > 0) {
-            int[] colorResIds = AppCategoryHelper.CATEGORY_COLOR_RES_IDS;
             for (int i = 0; i < categories.size(); i++) {
                 CategoryUsage cat = categories.get(i);
                 if (cat.totalMs > 0) {
-                    int color = ContextCompat.getColor(context, colorResIds[i % colorResIds.length]);
+                    int color = ContextCompat.getColor(context, AppCategoryHelper.getCategoryColorRes(cat.name));
                     segments.add(new PhoneUsageDonutView.DonutSegment((float) cat.totalMs / totalMs, color, cat.name));
                 }
             }
@@ -834,26 +832,8 @@ public class DetailedPhoneUsageCardManager {
 
             holder.tvCategory.setText(category + " · " + percentage + "%");
             holder.progressBar.setProgress(percentage);
-            int catColor = ContextCompat.getColor(context, getCategoryColorRes(category));
+            int catColor = ContextCompat.getColor(context, AppCategoryHelper.getCategoryColorRes(category));
             holder.progressBar.setIndicatorColor(catColor);
-        }
-
-        private int getCategoryColorRes(String categoryName) {
-            if (categoryName == null) return R.color.purple;
-            return switch (categoryName) {
-                case "Social" -> R.color.purple;
-                case "Entertainment", "Video & Movies" -> R.color.pink;
-                case "Games" -> R.color.orange;
-                case "Productivity" -> R.color.blue;
-                case "Browser" -> R.color.mint;
-                case "Shopping" -> R.color.yellow;
-                case "News & Reading" -> R.color.green;
-                case "Audio & Music" -> R.color.purple;
-                case "Photos & Images" -> R.color.pink;
-                case "Maps & Navigation" -> R.color.green;
-                case "System", "Accessibility" -> R.color.secondary;
-                default -> R.color.purple;
-            };
         }
 
         @Override

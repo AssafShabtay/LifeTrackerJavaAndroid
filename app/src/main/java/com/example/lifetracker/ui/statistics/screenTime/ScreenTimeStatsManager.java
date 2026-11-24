@@ -1,6 +1,7 @@
 package com.example.lifetracker.ui.statistics.screenTime;
 
 import android.content.Context;
+import android.content.pm.PackageManager;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageButton;
@@ -9,6 +10,7 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import com.example.lifetracker.R;
+import com.example.lifetracker.tracking.usage.AppCategoryHelper;
 import com.example.lifetracker.tracking.usage.DailyUsageItem;
 import com.example.lifetracker.tracking.usage.UsageStatsHelper;
 import com.example.lifetracker.tracking.usage.WeeklyUsageItem;
@@ -276,7 +278,12 @@ public class ScreenTimeStatsManager {
 
         // Graph data
         if (graphDailyHourlyUsage != null) {
-            graphDailyHourlyUsage.setHourlyData(item.getHourlyUsageMs());
+            String topCategory = null;
+            if (item.getTopApps() != null && !item.getTopApps().isEmpty()) {
+                PackageManager pm = context.getPackageManager();
+                topCategory = AppCategoryHelper.getCategoryName(pm, item.getTopApps().get(0).getPackageName());
+            }
+            graphDailyHourlyUsage.setHourlyData(item.getHourlyUsageMs(), topCategory);
         }
 
         // Render Doomscrolling Radar Card
@@ -336,7 +343,12 @@ public class ScreenTimeStatsManager {
 
         // Weekly Graph
         if (graphWeeklyDailyUsage != null) {
-            graphWeeklyDailyUsage.setWeeklyData(item.getDailyUsageMs(), item.getDayLabels());
+            String topCategory = null;
+            if (item.getTopApps() != null && !item.getTopApps().isEmpty()) {
+                PackageManager pm = context.getPackageManager();
+                topCategory = AppCategoryHelper.getCategoryName(pm, item.getTopApps().get(0).getPackageName());
+            }
+            graphWeeklyDailyUsage.setWeeklyData(item.getDailyUsageMs(), item.getDayLabels(), topCategory);
         }
 
         // Doomscrolling Card

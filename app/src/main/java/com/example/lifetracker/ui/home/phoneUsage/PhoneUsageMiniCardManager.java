@@ -215,11 +215,10 @@ public class PhoneUsageMiniCardManager {
 
             if (categories != null && !categories.isEmpty() && totalMs > 0) {
                 LayoutInflater inflater = LayoutInflater.from(context);
-                int[] colorResIds = AppCategoryHelper.CATEGORY_COLOR_RES_IDS;
 
                 for (int i = 0; i < categories.size(); i++) {
                     DetailedPhoneUsageCardManager.CategoryUsage cat = categories.get(i);
-                    int color = ContextCompat.getColor(context, colorResIds[i % colorResIds.length]);
+                    int color = ContextCompat.getColor(context, AppCategoryHelper.getCategoryColorRes(cat.name));
 
                     View legendView = inflater.inflate(R.layout.item_phone_usage_legend, legendContainer, false);
                     View dotView = legendView.findViewById(R.id.dot_legend_color);
@@ -242,11 +241,10 @@ public class PhoneUsageMiniCardManager {
         // Donut segments
         List<PhoneUsageDonutView.DonutSegment> segments = new ArrayList<>();
         if (totalMs > 0 && categories != null) {
-            int[] colorResIds = AppCategoryHelper.CATEGORY_COLOR_RES_IDS;
             for (int i = 0; i < categories.size(); i++) {
                 DetailedPhoneUsageCardManager.CategoryUsage cat = categories.get(i);
                 if (cat.totalMs > 0) {
-                    int color = ContextCompat.getColor(context, colorResIds[i % colorResIds.length]);
+                    int color = ContextCompat.getColor(context, AppCategoryHelper.getCategoryColorRes(cat.name));
                     segments.add(new PhoneUsageDonutView.DonutSegment((float) cat.totalMs / totalMs, color, cat.name));
                 }
             }

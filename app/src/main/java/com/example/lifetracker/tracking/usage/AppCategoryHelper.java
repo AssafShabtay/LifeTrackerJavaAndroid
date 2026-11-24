@@ -10,17 +10,6 @@ import java.util.Locale;
 
 public class AppCategoryHelper {
 
-    public static final int[] CATEGORY_COLOR_RES_IDS = new int[]{
-            R.color.purple,
-            R.color.blue,
-            R.color.green,
-            R.color.orange,
-            R.color.mint,
-            R.color.pink,
-            R.color.yellow,
-            R.color.red
-    };
-
     public static String getCategoryName(PackageManager pm, String pkg) {
         if (pkg == null || pkg.isEmpty()) return "Other";
 
@@ -102,6 +91,24 @@ public class AppCategoryHelper {
             case "Maps & Navigation" -> R.drawable.ic_cat_maps;
             case "System", "Accessibility" -> R.drawable.ic_cat_system;
             default -> R.drawable.ic_cat_other;
+        };
+    }
+
+    public static int getCategoryColorRes(String categoryName) {
+        if (categoryName == null) return R.color.purple;
+        return switch (categoryName) {
+            case "Social" -> R.color.pink;
+            case "Entertainment", "Video & Movies" -> R.color.purple;
+            case "Games" -> R.color.orange;
+            case "Productivity" -> R.color.blue;
+            case "Browser" -> R.color.mint;
+            case "Shopping" -> R.color.yellow;
+            case "News & Reading" -> R.color.blue;
+            case "Audio & Music" -> R.color.purple;
+            case "Photos & Images" -> R.color.pink;
+            case "Maps & Navigation" -> R.color.green;
+            case "System", "Accessibility" -> R.color.secondary;
+            default -> R.color.gray;
         };
     }
 

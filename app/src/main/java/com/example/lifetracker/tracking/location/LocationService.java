@@ -33,6 +33,7 @@ import com.example.lifetracker.data.model.Place;
 import com.example.lifetracker.data.db.PlaceDao;
 import com.example.lifetracker.data.model.RoutePoint;
 import com.example.lifetracker.data.model.StillLocation;
+import com.example.lifetracker.tracking.receiver.GeofenceBroadcastReceiver;
 import com.example.lifetracker.util.ErrorLogger;
 import com.example.lifetracker.util.Logger;
 import com.example.lifetracker.tracking.receiver.ActivityTransitionReceiver;
@@ -187,13 +188,13 @@ public class LocationService extends Service {
                     app.getBackgroundWriteExecutor().execute(() -> {
                         handleActivityUpdate(activityType, transitionType, timestampMs);
                     });
-//TODO                } else if (GeofenceBroadcastReceiver.ACTION_GEOFENCE_UPDATE.equals(action)) { // checks if the intent came from geofence
-//TODO                    // Extracts the geofence data
-//TODO                    String geofenceId = intent.getStringExtra(GeofenceBroadcastReceiver.EXTRA_GEOFENCE_ID);
-//TODO                    int transitionType = intent.getIntExtra(GeofenceBroadcastReceiver.EXTRA_TRANSITION_TYPE, -1);
-//TODO                    // calling handleGeofenceUpdate in background
-//TODO                    app.getBackgroundWriteExecutor().execute(() -> handleGeofenceUpdate(geofenceId, transitionType));
-//TODO
+               } else if (GeofenceBroadcastReceiver.ACTION_GEOFENCE_UPDATE.equals(action)) { // checks if the intent came from geofence
+                   // Extracts the geofence data
+                   String geofenceId = intent.getStringExtra(GeofenceBroadcastReceiver.EXTRA_GEOFENCE_ID);
+                   int transitionType = intent.getIntExtra(GeofenceBroadcastReceiver.EXTRA_TRANSITION_TYPE, -1);
+                   // calling handleGeofenceUpdate in background
+                   app.getBackgroundWriteExecutor().execute(() -> handleGeofenceUpdate(geofenceId, transitionType));
+
                 }
             }
         return START_STICKY;
