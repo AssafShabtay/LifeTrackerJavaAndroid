@@ -284,8 +284,7 @@ public class ScreenTimeViewModel extends AndroidViewModel {
 
         // compute data for the day
         appUsageMap.putAll(UsageStatsHelper.getUsageTimePerPackage(context, dayStartMs, dayEndMs));
-        long totalScreenTimeMs = 0;
-        for (long duration : appUsageMap.values()) totalScreenTimeMs += duration;
+        long totalScreenTimeMs = UsageStatsHelper.getTotalScreenTimeMs(context, dayStartMs, dayEndMs);
         int unlockCount = UsageStatsHelper.getDeviceUnlockCount(context, dayStartMs, dayEndMs);
         long[] hourlyUsage = UsageStatsHelper.getHourlyUsageArray(context, dayStartMs, dayEndMs);
         String peakHour = UsageStatsHelper.getPeakUsageHour(hourlyUsage);
@@ -356,8 +355,7 @@ public class ScreenTimeViewModel extends AndroidViewModel {
 
         // compute data for the week
         appUsageMap.putAll(UsageStatsHelper.getUsageTimePerPackage(context, weekStartMs, weekEndMs));
-        long totalScreenTimeMs = 0;
-        for (long duration : appUsageMap.values()) totalScreenTimeMs += duration;
+        long totalScreenTimeMs = UsageStatsHelper.getTotalScreenTimeMs(context, weekStartMs, weekEndMs);
         int totalUnlocks = UsageStatsHelper.getDeviceUnlockCount(context, weekStartMs, weekEndMs);
         long totalIdleTimeMs = UsageStatsHelper.getIdleHomeScreenTimeMs(context, appUsageMap);
 
