@@ -9,7 +9,7 @@
       "client_info": {
         "mobilesdk_app_id": "1:38815641718:android:4660458b3db06184a7ef57",
         "android_client_info": {
-          "package_name": "com.example.myapplication"
+          "package_name": "com.example.lifetracker"
         }
       },
       "oauth_client": [],
