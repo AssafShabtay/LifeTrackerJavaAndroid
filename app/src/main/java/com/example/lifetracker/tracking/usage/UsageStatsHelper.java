@@ -39,6 +39,10 @@ public class  UsageStatsHelper {
             this.totalTimeInForegroundMs = totalTimeInForegroundMs;
         }
 
+        public String getPackageName() {
+            return packageName;
+        }
+
         public String getAppName() {
             return appName;
         }

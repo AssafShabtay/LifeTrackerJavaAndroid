@@ -7,14 +7,21 @@ import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.os.Handler;
 import android.os.Looper;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
+import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
 import androidx.core.graphics.ColorUtils;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.lifetracker.R;
 import com.example.lifetracker.data.db.ActivityDatabase;
@@ -25,6 +32,8 @@ import com.example.lifetracker.ui.general.ColorAndIcons;
 import com.example.lifetracker.ui.home.phoneUsage.PhoneUsageDonutView;
 import com.example.lifetracker.LifeTrackerApp;
 import com.example.lifetracker.util.ErrorLogger;
+import com.google.android.material.bottomsheet.BottomSheetBehavior;
+import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.progressindicator.LinearProgressIndicator;
@@ -55,6 +64,10 @@ public class DetailedPhoneUsageCardManager {
     private MaterialButton btnToggleTopApps;
     private MaterialButton btnToggleCategories;
     private MaterialButton btnToggleLocations;
+    private MaterialButton btnViewAllApps;
+
+    private List<UsageStatsHelper.AppUsageInfo> allAppsList = new ArrayList<>();
+    private long totalScreenTimeMs = 0;
 
     private LinearLayout layoutCategoriesContainer;
     private View layoutTopAppsContainer;
@@ -96,12 +109,16 @@ public class DetailedPhoneUsageCardManager {
         btnToggleTopApps = cardView.findViewById(R.id.btn_toggle_top_apps);
         btnToggleCategories = cardView.findViewById(R.id.btn_toggle_categories);
         btnToggleLocations = cardView.findViewById(R.id.btn_toggle_locations);
+        btnViewAllApps = cardView.findViewById(R.id.btn_view_all_apps);
 
         View.OnClickListener clickListener = v -> selectMode(v.getId());
 
         if (btnToggleTopApps != null) btnToggleTopApps.setOnClickListener(clickListener);
         if (btnToggleCategories != null) btnToggleCategories.setOnClickListener(clickListener);
         if (btnToggleLocations != null) btnToggleLocations.setOnClickListener(clickListener);
+        if (btnViewAllApps != null) {
+            btnViewAllApps.setOnClickListener(v -> showAllAppsBottomSheet());
+        }
 
         selectMode(R.id.btn_toggle_top_apps);
     }
@@ -135,6 +152,17 @@ public class DetailedPhoneUsageCardManager {
                     tvHeaderTitle.setText("Top Apps for this Day");
                 }
             }
+        }
+        updateViewAllAppsButton();
+    }
+
+    private void updateViewAllAppsButton() {
+        if (btnViewAllApps == null) return;
+        if (selectedMode == R.id.btn_toggle_top_apps && allAppsList != null && !allAppsList.isEmpty()) {
+            btnViewAllApps.setVisibility(View.VISIBLE);
+            btnViewAllApps.setText("View All Apps (" + allAppsList.size() + ")");
+        } else {
+            btnViewAllApps.setVisibility(View.GONE);
         }
     }
 
@@ -397,10 +425,14 @@ public class DetailedPhoneUsageCardManager {
 
         final long finalTotalMs = totalMs;
         final List<CategoryUsage> finalCategories = displayCategories;
+        final List<UsageStatsHelper.AppUsageInfo> sortedApps = UsageStatsHelper.getSortedAppUsageList(context, packageUsage);
 
         mainHandler.post(() -> {
             if (version != usageCalcVersion) return;
+            this.allAppsList = sortedApps;
+            this.totalScreenTimeMs = finalTotalMs;
             renderUi(finalTotalMs, finalCategories, customTotalText);
+            updateViewAllAppsButton();
         });
     }
 
@@ -663,6 +695,199 @@ public class DetailedPhoneUsageCardManager {
             return String.format(Locale.getDefault(), "%dh %dm", hours, minutes);
         } else {
             return String.format(Locale.getDefault(), "%dm", minutes);
+        }
+    }
+
+    private void showAllAppsBottomSheet() {
+        if (context == null || allAppsList == null || allAppsList.isEmpty()) return;
+
+        BottomSheetDialog dialog = new BottomSheetDialog(context);
+        View sheetView = LayoutInflater.from(context).inflate(R.layout.bottom_sheet_all_apps_usage, null, false);
+        dialog.setContentView(sheetView);
+
+        TextView tvTitle = sheetView.findViewById(R.id.tv_all_apps_sheet_title);
+        TextView tvSubtitle = sheetView.findViewById(R.id.tv_all_apps_sheet_subtitle);
+        EditText etSearch = sheetView.findViewById(R.id.et_search_all_apps);
+        ImageView btnClearSearch = sheetView.findViewById(R.id.btn_clear_app_search);
+        RecyclerView recyclerView = sheetView.findViewById(R.id.recycler_all_apps);
+        TextView tvNoMatching = sheetView.findViewById(R.id.tv_no_matching_apps);
+
+        if (tvSubtitle != null) {
+            tvSubtitle.setText(String.format(Locale.getDefault(), "%d apps recorded · Total: %s",
+                    allAppsList.size(), formatDuration(totalScreenTimeMs)));
+        }
+
+        AllAppsAdapter adapter = new AllAppsAdapter(context, allAppsList, totalScreenTimeMs);
+        if (recyclerView != null) {
+            recyclerView.setLayoutManager(new LinearLayoutManager(context));
+            recyclerView.setAdapter(adapter);
+        }
+
+        if (etSearch != null) {
+            etSearch.addTextChangedListener(new TextWatcher() {
+                @Override
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+                @Override
+                public void onTextChanged(CharSequence s, int start, int before, int count) {
+                    String query = s != null ? s.toString() : "";
+                    if (btnClearSearch != null) {
+                        btnClearSearch.setVisibility(query.isEmpty() ? View.GONE : View.VISIBLE);
+                    }
+                    adapter.filter(query);
+                    if (recyclerView != null && tvNoMatching != null) {
+                        if (adapter.getFilteredCount() == 0) {
+                            recyclerView.setVisibility(View.GONE);
+                            tvNoMatching.setVisibility(View.VISIBLE);
+                        } else {
+                            recyclerView.setVisibility(View.VISIBLE);
+                            tvNoMatching.setVisibility(View.GONE);
+                        }
+                    }
+                }
+
+                @Override
+                public void afterTextChanged(Editable s) {}
+            });
+        }
+
+        if (btnClearSearch != null) {
+            btnClearSearch.setOnClickListener(v -> {
+                if (etSearch != null) {
+                    etSearch.setText("");
+                }
+            });
+        }
+
+        dialog.setOnShowListener(dialogInterface -> {
+            BottomSheetDialog bsd = (BottomSheetDialog) dialogInterface;
+            View bottomSheetInternal = bsd.findViewById(com.google.android.material.R.id.design_bottom_sheet);
+            if (bottomSheetInternal != null) {
+                BottomSheetBehavior<View> behavior = BottomSheetBehavior.from(bottomSheetInternal);
+                behavior.setState(BottomSheetBehavior.STATE_EXPANDED);
+                behavior.setSkipCollapsed(true);
+            }
+        });
+
+        dialog.show();
+    }
+
+    public static class AllAppsAdapter extends RecyclerView.Adapter<AllAppsAdapter.ViewHolder> {
+        private final Context context;
+        private final List<UsageStatsHelper.AppUsageInfo> fullList;
+        private final List<UsageStatsHelper.AppUsageInfo> filteredList;
+        private final long totalMs;
+        private final PackageManager pm;
+
+        public AllAppsAdapter(Context context, List<UsageStatsHelper.AppUsageInfo> fullList, long totalMs) {
+            this.context = context;
+            this.fullList = fullList != null ? fullList : new ArrayList<>();
+            this.filteredList = new ArrayList<>(this.fullList);
+            this.totalMs = totalMs;
+            this.pm = context.getPackageManager();
+        }
+
+        public void filter(String query) {
+            filteredList.clear();
+            if (query == null || query.trim().isEmpty()) {
+                filteredList.addAll(fullList);
+            } else {
+                String q = query.trim().toLowerCase(Locale.ROOT);
+                for (UsageStatsHelper.AppUsageInfo item : fullList) {
+                    String appName = item.getAppName() != null ? item.getAppName().toLowerCase(Locale.ROOT) : "";
+                    String category = AppCategoryHelper.getCategoryName(pm, item.getPackageName()).toLowerCase(Locale.ROOT);
+                    if (appName.contains(q) || category.contains(q) || item.getPackageName().toLowerCase(Locale.ROOT).contains(q)) {
+                        filteredList.add(item);
+                    }
+                }
+            }
+            notifyDataSetChanged();
+        }
+
+        public int getFilteredCount() {
+            return filteredList.size();
+        }
+
+        @NonNull
+        @Override
+        public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            View view = LayoutInflater.from(context).inflate(R.layout.item_all_app_usage_row, parent, false);
+            return new ViewHolder(view);
+        }
+
+        @Override
+        public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
+            UsageStatsHelper.AppUsageInfo app = filteredList.get(position);
+            holder.tvAppName.setText(app.getAppName());
+            if (app.getAppIcon() != null) {
+                holder.ivIcon.setImageDrawable(app.getAppIcon());
+            } else {
+                holder.ivIcon.setImageResource(R.drawable.ic_phone_android);
+            }
+
+            long durationMs = app.getTotalTimeInForegroundMs();
+            holder.tvDuration.setText(formatDurationStatic(durationMs));
+
+            String category = AppCategoryHelper.getCategoryName(pm, app.getPackageName());
+            int percentage = (totalMs > 0) ? (int) Math.round((double) durationMs * 100 / totalMs) : 0;
+            percentage = Math.min(100, Math.max(0, percentage));
+
+            holder.tvCategory.setText(category + " · " + percentage + "%");
+            holder.progressBar.setProgress(percentage);
+            int catColor = ContextCompat.getColor(context, getCategoryColorRes(category));
+            holder.progressBar.setIndicatorColor(catColor);
+        }
+
+        private int getCategoryColorRes(String categoryName) {
+            if (categoryName == null) return R.color.purple;
+            return switch (categoryName) {
+                case "Social" -> R.color.purple;
+                case "Entertainment", "Video & Movies" -> R.color.pink;
+                case "Games" -> R.color.orange;
+                case "Productivity" -> R.color.blue;
+                case "Browser" -> R.color.mint;
+                case "Shopping" -> R.color.yellow;
+                case "News & Reading" -> R.color.green;
+                case "Audio & Music" -> R.color.purple;
+                case "Photos & Images" -> R.color.pink;
+                case "Maps & Navigation" -> R.color.green;
+                case "System", "Accessibility" -> R.color.secondary;
+                default -> R.color.purple;
+            };
+        }
+
+        @Override
+        public int getItemCount() {
+            return filteredList.size();
+        }
+
+        private static String formatDurationStatic(long durationMs) {
+            if (durationMs <= 0) return "0m";
+            long totalMinutes = durationMs / (1000 * 60);
+            long hours = totalMinutes / 60;
+            long minutes = totalMinutes % 60;
+            if (hours > 0) {
+                return String.format(Locale.getDefault(), "%dh %dm", hours, minutes);
+            } else {
+                return String.format(Locale.getDefault(), "%dm", minutes);
+            }
+        }
+
+        static class ViewHolder extends RecyclerView.ViewHolder {
+            ImageView ivIcon;
+            TextView tvAppName;
+            TextView tvCategory;
+            TextView tvDuration;
+            LinearProgressIndicator progressBar;
+
+            ViewHolder(@NonNull View itemView) {
+                super(itemView);
+                ivIcon = itemView.findViewById(R.id.iv_app_icon);
+                tvAppName = itemView.findViewById(R.id.tv_app_name);
+                tvCategory = itemView.findViewById(R.id.tv_app_category);
+                tvDuration = itemView.findViewById(R.id.tv_app_duration);
+                progressBar = itemView.findViewById(R.id.progress_app_usage);
+            }
         }
     }
 }
