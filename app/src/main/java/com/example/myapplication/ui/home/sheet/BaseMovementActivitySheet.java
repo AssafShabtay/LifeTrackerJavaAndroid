@@ -20,7 +20,7 @@ import androidx.core.content.ContextCompat;
 
 import com.example.myapplication.LifeTrackerApp;
 import com.example.myapplication.R;
-import com.example.myapplication.ui.general.ColorAndIcons;
+import com.example.myapplication.data.model.MovementActivity;
 import com.example.myapplication.util.UiFormatters;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
 
@@ -108,10 +108,9 @@ public abstract class BaseMovementActivitySheet extends BottomSheetDialogFragmen
 
     protected void updateIconAndColorUi() {
         if (selectedActivityName == null) return;
-        int[] iconRes = ColorAndIcons.getMovementColorAndIcon(selectedActivityName.toLowerCase());
-
-        selectedColor = ContextCompat.getColor(requireContext(), iconRes[0]);
-        selectedIcon = iconRes[1];
+        MovementActivity preview = MovementActivity.createFromTypeName(selectedActivityName);
+        selectedColor = ContextCompat.getColor(requireContext(), preview.getColorRes());
+        selectedIcon = preview.getIconRes();
 
         // Update color preview
         if (viewSelectedColor != null) {

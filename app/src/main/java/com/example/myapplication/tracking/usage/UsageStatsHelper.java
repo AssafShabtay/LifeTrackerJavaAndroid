@@ -89,6 +89,105 @@ public class  UsageStatsHelper {
     }
 
 
+    public static boolean isIgnoredPackage(String pkg) {
+        if (pkg == null || pkg.trim().isEmpty()) return true;
+        String lower = pkg.trim().toLowerCase(Locale.ROOT);
+        return lower.equals("android") ||
+                lower.equals("com.google.android.gms") ||
+                lower.equals("com.google.android.googlequicksearchbox:search") ||
+                lower.equals("com.google.android.projection.gearhead");
+    }
+
+    public static class TimeRange {
+        public final long start;
+        public final long end;
+
+        public TimeRange(long start, long end) {
+            this.start = start;
+            this.end = end;
+        }
+    }
+
+    public static long calculateUnionDuration(List<TimeRange> ranges) {
+        if (ranges == null || ranges.isEmpty()) return 0;
+
+        List<TimeRange> valid = new ArrayList<>();
+        for (TimeRange r : ranges) {
+            if (r != null && r.start < r.end) {
+                valid.add(r);
+            }
+        }
+        if (valid.isEmpty()) return 0;
+
+        valid.sort(Comparator.comparingLong(r -> r.start));
+
+        long totalUnionMs = 0;
+        long currentStart = -1;
+        long currentEnd = -1;
+
+        for (TimeRange range : valid) {
+            if (currentStart == -1) {
+                currentStart = range.start;
+                currentEnd = range.end;
+            } else if (range.start <= currentEnd) {
+                currentEnd = Math.max(currentEnd, range.end);
+            } else {
+                totalUnionMs += (currentEnd - currentStart);
+                currentStart = range.start;
+                currentEnd = range.end;
+            }
+        }
+
+        if (currentStart != -1) {
+            totalUnionMs += (currentEnd - currentStart);
+        }
+
+        return totalUnionMs;
+    }
+
+    public static List<TimeRange> getActiveTimeRanges(Context context, long startTime, long endTime) {
+        List<TimeRange> ranges = new ArrayList<>();
+        if (!hasUsageAccessPermission(context) || startTime >= endTime) return ranges;
+
+        UsageStatsManager usageStatsManager = (UsageStatsManager) context.getSystemService(Context.USAGE_STATS_SERVICE);
+        if (usageStatsManager == null) return ranges;
+
+        UsageEvents usageEvents = usageStatsManager.queryEvents(startTime, endTime);
+        if (usageEvents == null) return ranges;
+
+        UsageEvents.Event currentEvent = new UsageEvents.Event();
+        Map<String, Long> lastAppStart = new HashMap<>();
+
+        while (usageEvents.hasNextEvent()) {
+            if (Thread.currentThread().isInterrupted()) throw new CancellationException();
+            usageEvents.getNextEvent(currentEvent);
+            String pkg = currentEvent.getPackageName();
+            if (pkg == null || isIgnoredPackage(pkg)) continue;
+
+            int eventType = currentEvent.getEventType();
+            long timestamp = currentEvent.getTimeStamp();
+
+            if (eventType == UsageEvents.Event.ACTIVITY_RESUMED) {
+                lastAppStart.put(pkg, timestamp);
+            } else if (eventType == UsageEvents.Event.ACTIVITY_PAUSED) {
+                Long start = lastAppStart.remove(pkg);
+                if (start != null && timestamp > start) {
+                    ranges.add(new TimeRange(Math.max(start, startTime), Math.min(timestamp, endTime)));
+                }
+            }
+        }
+
+        // Account for any app that doesn't have an endtime
+        for (Map.Entry<String, Long> entry : lastAppStart.entrySet()) {
+            long start = entry.getValue();
+            if (endTime > start) {
+                ranges.add(new TimeRange(Math.max(start, startTime), endTime));
+            }
+        }
+
+        return ranges;
+    }
+
     public static Map<String, Long> getUsageTimePerPackage(Context context, long startTime, long endTime) {
         Map<String, Long> usageMap = new HashMap<>();
         if (!hasUsageAccessPermission(context) || startTime >= endTime) {
@@ -108,7 +207,7 @@ public class  UsageStatsHelper {
             if (Thread.currentThread().isInterrupted()) throw new CancellationException();
             usageEvents.getNextEvent(currentEvent);
             String pkg = currentEvent.getPackageName();
-            if (pkg == null) continue;
+            if (pkg == null || isIgnoredPackage(pkg)) continue;
 
             int eventType = currentEvent.getEventType();
             long timestamp = currentEvent.getTimeStamp();
@@ -138,13 +237,8 @@ public class  UsageStatsHelper {
     }
 
     public static long getTotalScreenTimeMs(Context context, long startTime, long endTime) {
-        /// Calculates total screen time
-        Map<String, Long> packageUsage = getUsageTimePerPackage(context, startTime, endTime);
-        long total = 0;
-        for (long duration : packageUsage.values()) {
-            total += duration;
-        }
-        return total;
+        List<TimeRange> ranges = getActiveTimeRanges(context, startTime, endTime);
+        return calculateUnionDuration(ranges);
     }
 
     public static int getDeviceUnlockCount(Context context, long startTime, long endTime) {
@@ -171,82 +265,42 @@ public class  UsageStatsHelper {
 
     public static long[] getHourlyUsageArray(Context context, long startTime, long endTime) {
         long[] hourlyUsageMs = new long[24];
-        if (!hasUsageAccessPermission(context) || startTime >= endTime) return hourlyUsageMs;
-        UsageStatsManager usageStatsManager = (UsageStatsManager) context.getSystemService(Context.USAGE_STATS_SERVICE);
-        if (usageStatsManager == null) return hourlyUsageMs;
+        List<TimeRange> activeRanges = getActiveTimeRanges(context, startTime, endTime);
+        if (activeRanges.isEmpty()) return hourlyUsageMs;
 
-        UsageEvents usageEvents = usageStatsManager.queryEvents(startTime, endTime);
-        if (usageEvents == null) return hourlyUsageMs;
+        @SuppressWarnings("unchecked")
+        List<TimeRange>[] hourBuckets = new List[24];
+        for (int i = 0; i < 24; i++) {
+            hourBuckets[i] = new ArrayList<>();
+        }
 
-        UsageEvents.Event currentEvent = new UsageEvents.Event();
-        Map<String, Long> lastAppStart = new HashMap<>();
         Calendar cal = Calendar.getInstance();
 
-        while (usageEvents.hasNextEvent()) {
-            if (Thread.currentThread().isInterrupted()) throw new CancellationException();
-            usageEvents.getNextEvent(currentEvent);
-            String pkg = currentEvent.getPackageName();
-            if (pkg == null) continue;
+        for (TimeRange range : activeRanges) {
+            long cursor = range.start;
+            while (cursor < range.end) {
+                cal.setTimeInMillis(cursor);
+                int hour = cal.get(Calendar.HOUR_OF_DAY);
 
-            int eventType = currentEvent.getEventType();
-            long timestamp = currentEvent.getTimeStamp();
+                cal.set(Calendar.MINUTE, 59);
+                cal.set(Calendar.SECOND, 59);
+                cal.set(Calendar.MILLISECOND, 999);
+                long endOfHour = cal.getTimeInMillis() + 1;
 
-            if (eventType == UsageEvents.Event.ACTIVITY_RESUMED) {
-                lastAppStart.put(pkg, timestamp);
-            } else if (eventType == UsageEvents.Event.ACTIVITY_PAUSED) {
-                Long start = lastAppStart.remove(pkg);
-                if (start != null && timestamp > start) {
-                    addDurationToHourlyUsage(hourlyUsageMs, start, timestamp, cal);
+                long sliceEnd = Math.min(range.end, endOfHour);
+                if (hour >= 0 && hour < 24) {
+                    hourBuckets[hour].add(new TimeRange(cursor, sliceEnd));
                 }
+                cursor = sliceEnd;
             }
         }
 
-        // Account for any app that doesn't have an endtime
-        for (Map.Entry<String, Long> entry : lastAppStart.entrySet()) {
-            if (endTime > entry.getValue()) {
-                addDurationToHourlyUsage(hourlyUsageMs, entry.getValue(), endTime, cal);
-            }
+        for (int h = 0; h < 24; h++) {
+            long unionMs = calculateUnionDuration(hourBuckets[h]);
+            hourlyUsageMs[h] = Math.min(unionMs, 3600000L);
         }
 
         return hourlyUsageMs;
-    }
-
-    private static void addDurationToHourlyUsage(long[] usageArray, long startMs, long endMs, Calendar cal) {
-        if (startMs >= endMs) return;
-
-        cal.setTimeInMillis(startMs);
-        int startHour = cal.get(Calendar.HOUR_OF_DAY);
-
-        cal.setTimeInMillis(endMs);
-        int endHour = cal.get(Calendar.HOUR_OF_DAY);
-
-        if (startHour == endHour) {
-            usageArray[startHour] += (endMs - startMs);
-        } else {
-            // Split across hour boundaries
-            cal.setTimeInMillis(startMs);
-            cal.set(Calendar.MINUTE, 59);
-            cal.set(Calendar.SECOND, 59);
-            cal.set(Calendar.MILLISECOND, 999);
-            long endOfFirstHour = Math.min(cal.getTimeInMillis() + 1, endMs);
-            usageArray[startHour] += (endOfFirstHour - startMs);
-
-            long cursor = endOfFirstHour;
-            while (cursor < endMs) {
-                cal.setTimeInMillis(cursor);
-                int curHour = cal.get(Calendar.HOUR_OF_DAY);
-                cal.add(Calendar.HOUR_OF_DAY, 1);
-                cal.set(Calendar.MINUTE, 0);
-                cal.set(Calendar.SECOND, 0);
-                cal.set(Calendar.MILLISECOND, 0);
-                long nextBoundary = Math.min(cal.getTimeInMillis(), endMs);
-
-                if (curHour >= 0 && curHour < 24) {
-                    usageArray[curHour] += (nextBoundary - cursor);
-                }
-                cursor = nextBoundary;
-            }
-        }
     }
 
 
@@ -314,12 +368,7 @@ public class  UsageStatsHelper {
         for (Map.Entry<String, Long> entry : packageUsage.entrySet()) {
             String pkg = entry.getKey();
             long timeMs = entry.getValue();
-            if (timeMs <= 0 || pkg == null) continue;
-
-            // Filter internal system apps
-            if (pkg.equals("android") || pkg.equals("com.google.android.gms") || pkg.equals("com.google.android.googlequicksearchbox:search")) {
-                continue;
-            }
+            if (timeMs <= 0 || pkg == null || isIgnoredPackage(pkg)) continue;
 
             String appName = null;
             Drawable icon = null;

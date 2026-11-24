@@ -448,8 +448,7 @@ public class LocationService extends Service {
                 dao.endStillLocation(id, endTime);
             }
             else {
-                MovementActivity movement = new MovementActivity();
-                movement.setActivityTypeName(resolved);
+                MovementActivity movement = MovementActivity.createFromTypeName(resolved);
                 movement.setStartLat(startLat);
                 movement.setStartLng(startLng);
                 movement.setEndLat(currentLocation.getLatitude());
@@ -493,8 +492,7 @@ public class LocationService extends Service {
         }
 
         Location currentLocation = locationProvider.getLocationOnceBlocking();
-        MovementActivity movement = new MovementActivity();
-        movement.setActivityTypeName(activityName);
+        MovementActivity movement = MovementActivity.createFromTypeName(activityName);
         if(currentLocation != null) movement.setStartLat(currentLocation.getLatitude()); else movement.setStartLat(null);
         if(currentLocation != null) movement.setStartLng(currentLocation.getLongitude()); else movement.setStartLng(null);
         movement.setStartTimeDate(startTime);

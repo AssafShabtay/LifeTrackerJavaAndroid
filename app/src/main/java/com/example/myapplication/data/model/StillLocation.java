@@ -10,12 +10,10 @@ import android.util.Log;
 import androidx.room.ColumnInfo;
 import androidx.room.Entity;
 import androidx.room.ForeignKey;
-import androidx.room.PrimaryKey;
 
 import com.example.myapplication.util.ErrorLogger;
 import com.example.myapplication.util.Logger;
 
-import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 @Entity(tableName = "still_locations",
@@ -26,14 +24,10 @@ import java.util.Objects;
                 onDelete = ForeignKey.SET_NULL
         )
 )
-public class StillLocation implements TimelineItem {
-    @PrimaryKey(autoGenerate = true)
-    private long id;
+public class StillLocation extends BaseActivity {
 
     private Double lat;
     private Double lng;
-    private Date startTimeDate;
-    private Date endTimeDate;
     private String wasSupposedToBeActivity;
 
     @ColumnInfo(index = true)
@@ -51,13 +45,9 @@ public class StillLocation implements TimelineItem {
 
     public StillLocation copy() {
         StillLocation copy = new StillLocation();
-        copy.id = this.id;
+        copyBaseTo(copy);
         copy.lat = this.lat;
         copy.lng = this.lng;
-        copy.startTimeDate = (this.startTimeDate != null) ? new Date(this.startTimeDate.getTime())
-                                                          : null;
-        copy.endTimeDate = (this.endTimeDate != null) ? new Date(this.endTimeDate.getTime())
-                                                      : null;
         copy.wasSupposedToBeActivity = this.wasSupposedToBeActivity;
         copy.placeId = this.placeId;
         copy.placeName = this.placeName;
@@ -91,14 +81,6 @@ public class StillLocation implements TimelineItem {
     }
 
 
-    public long getId() {
-        return id;
-    }
-
-    public void setId(long id) {
-        this.id = id;
-    }
-
     public Double getLat() {
         return lat;
     }
@@ -113,24 +95,6 @@ public class StillLocation implements TimelineItem {
 
     public void setLng(Double lng) {
         this.lng = lng;
-    }
-
-    @Override
-    public Date getStartTimeDate() {
-        return startTimeDate;
-    }
-
-    public void setStartTimeDate(Date startTimeDate) {
-        this.startTimeDate = startTimeDate;
-    }
-
-    @Override
-    public Date getEndTimeDate() {
-        return endTimeDate;
-    }
-
-    public void setEndTimeDate(Date endTimeDate) {
-        this.endTimeDate = endTimeDate;
     }
 
     public String getWasSupposedToBeActivity() {

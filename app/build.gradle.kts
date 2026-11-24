@@ -52,6 +52,10 @@ android {
     }
 }
 
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
+}
+
 dependencies {
     implementation("com.google.firebase:firebase-ai")
     implementation("com.google.firebase:firebase-auth")

@@ -1,5 +1,6 @@
 package com.example.myapplication.data.db;
 import com.example.myapplication.data.model.MovementActivity;
+import java.util.ArrayList;
 import com.example.myapplication.data.model.RoutePoint;
 import com.example.myapplication.data.model.StillLocation;
 
@@ -65,16 +66,39 @@ public interface ActivityDao {
     void resumeMovementActivity(long id);
 
     @Query("SELECT * FROM movement_activities WHERE id = :id LIMIT 1")
-    MovementActivity getMovementActivityById(long id);
+    MovementActivity getMovementActivityByIdRows(long id);
+
+    default MovementActivity getMovementActivityById(long id) {
+        MovementActivity rows = getMovementActivityByIdRows(id);
+        return rows == null ? null : rows.toActivity();
+    }
 
     @NonNull
     @Query("SELECT * FROM movement_activities WHERE endTimeDate IS NULL")
-    List<MovementActivity> getActiveMovementActivities();
+    List<MovementActivity> getActiveMovementActivitiesRows();
+
+    @NonNull
+    default List<MovementActivity> getActiveMovementActivities() {
+        List<MovementActivity> rows = getActiveMovementActivitiesRows();
+        List<MovementActivity> activities = new ArrayList<>(rows.size());
+        for (MovementActivity row : rows) activities.add(row.toActivity());
+        return activities;
+    }
     @Query("SELECT * FROM movement_activities WHERE activityTypeName = :type AND endTimeDate IS NULL ORDER BY startTimeDate DESC LIMIT 1")
-    MovementActivity getActiveMovementActivityByType(String type);
+    MovementActivity getActiveMovementActivityByTypeRows(String type);
+
+    default MovementActivity getActiveMovementActivityByType(String type) {
+        MovementActivity rows = getActiveMovementActivityByTypeRows(type);
+        return rows == null ? null : rows.toActivity();
+    }
 
     @Query("SELECT * FROM movement_activities WHERE activityTypeName = :type AND endTimeDate IS NOT NULL ORDER BY endTimeDate DESC LIMIT 1")
-    MovementActivity getLastCompletedMovementActivity(String type);
+    MovementActivity getLastCompletedMovementActivityRows(String type);
+
+    default MovementActivity getLastCompletedMovementActivity(String type) {
+        MovementActivity rows = getLastCompletedMovementActivityRows(type);
+        return rows == null ? null : rows.toActivity();
+    }
 
 
     @NonNull
@@ -83,7 +107,15 @@ public interface ActivityDao {
 
     @NonNull
     @Query("SELECT * FROM movement_activities WHERE startTimeDate <= :end AND (endTimeDate IS NULL OR endTimeDate >= :start)")
-    List<MovementActivity> getMovementsFromRange(Date start, Date end);
+    List<MovementActivity> getMovementsFromRangeRows(Date start, Date end);
+
+    @NonNull
+    default List<MovementActivity> getMovementsFromRange(Date start, Date end) {
+        List<MovementActivity> rows = getMovementsFromRangeRows(start, end);
+        List<MovementActivity> activities = new ArrayList<>(rows.size());
+        for (MovementActivity row : rows) activities.add(row.toActivity());
+        return activities;
+    }
 
     @Query("SELECT COUNT(*) FROM movement_activities WHERE (startTimeDate < :endTime AND (endTimeDate IS NULL OR endTimeDate > :startTime))")
     int countMovementActivitiesBetween(Date startTime, Date endTime);

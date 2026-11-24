@@ -56,8 +56,7 @@ public class AddCustomMovementActivitySheet extends BaseMovementActivitySheet {
         final String activityNameToSave = finalActivityName;
 
         app.getBackgroundWriteExecutor().execute(() -> {
-            MovementActivity newMovement = new MovementActivity();
-            newMovement.setActivityTypeName(activityNameToSave);
+            MovementActivity newMovement = MovementActivity.createFromTypeName(activityNameToSave);
             newMovement.setStartTimeDate(editedStartTime);
             newMovement.setEndTimeDate(editedEndTime);
 

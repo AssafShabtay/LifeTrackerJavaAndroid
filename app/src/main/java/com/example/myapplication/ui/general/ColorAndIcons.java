@@ -76,26 +76,6 @@ public class ColorAndIcons {
         }
     }
 
-    public static int[] getMovementColorAndIcon(String type){
-        int colorRes = R.color.activity_walking;
-        int iconRes = R.drawable.ic_walk;
-
-
-        if (type.contains("driving")) {
-            colorRes = R.color.activity_vehicle;
-            iconRes = R.drawable.ic_car;
-        } else if (type.contains("running")) {
-            colorRes = R.color.activity_running;
-            iconRes = R.drawable.sprint_24px;
-        } else if (type.contains("cycling")) {
-            colorRes = R.color.activity_cycling;
-            iconRes = R.drawable.ic_bike;
-        } else if (type.contains("walking") || type.contains("foot")) {
-            colorRes = R.color.activity_walking;
-            iconRes = R.drawable.ic_walk;
-        }
-        return new int[]{colorRes, iconRes};
-    }
     public static int getStillIconRes(StillLocation still) {
         int iconXml = R.drawable.ic_still;
         if (still.getIcon() != null) {

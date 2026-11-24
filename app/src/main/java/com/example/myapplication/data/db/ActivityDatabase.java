@@ -14,7 +14,7 @@ import androidx.room.TypeConverters;
 @Database(
         entities = {StillLocation.class, MovementActivity.class, Place.class, RoutePoint.class},
         version = 4 ,
-        exportSchema = false
+        exportSchema = true
 )
 @TypeConverters({Converters.class})
 public abstract class ActivityDatabase extends RoomDatabase {

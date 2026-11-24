@@ -241,9 +241,32 @@ public class LocationProvider {
         if (!isValidAccuracy(loc, STILL_RADIUS_THRESHOLD * 1.6f)) {
             String msg = String.format(TAG + ": Fresh locations failed. Attempting getLastLocation fallback.");
             Logger.saveLog(context, msg);
+            Location lastKnown = getLastKnownLocation();
+            if (lastKnown != null) {
+                loc = lastKnown;
+            }
         }
 
         return loc;
+    }
+
+    @WorkerThread
+    private Location getLastKnownLocation() {
+        try {
+            if (ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                return null;
+            }
+            return Tasks.await(
+                    fusedLocationClient.getLastLocation(),
+                    5,
+                    TimeUnit.SECONDS
+            );
+        } catch (Exception e) {
+            String msg = TAG + ": Exception in getLastLocation";
+            ErrorLogger.logError(context, TAG, msg, e);
+            Logger.saveLog(context, msg);
+        }
+        return null;
     }
 
     @WorkerThread

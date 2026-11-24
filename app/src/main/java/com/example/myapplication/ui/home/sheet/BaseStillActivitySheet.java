@@ -189,7 +189,7 @@ public abstract class BaseStillActivitySheet extends BottomSheetDialogFragment {
     protected void setupAddressValidation() {
         // address validation logic
         if (btnSave != null) {
-            btnSave.setEnabled(false);
+            btnSave.setEnabled(true);
         }
         addressValidationHandler = mainHandler;
         addressValidationRunnable = () -> {

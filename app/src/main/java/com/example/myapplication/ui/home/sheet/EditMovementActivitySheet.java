@@ -70,7 +70,7 @@ public class EditMovementActivitySheet extends BaseMovementActivitySheet {
     @Override
     protected void onSaveClicked() {
         // Save updated visit details
-        movement.setActivityTypeName(actvActivityType.getText().toString());
+        movement = movement.copyWithTypeName(actvActivityType.getText().toString());
         movement.setStartTimeDate(editedStartTime);
         movement.setEndTimeDate(editedEndTime);
         if (listener != null) {

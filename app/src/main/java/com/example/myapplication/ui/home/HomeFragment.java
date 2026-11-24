@@ -232,8 +232,12 @@ public class HomeFragment extends Fragment {
 
             // Sort by start time, from earliest to latest
             rawCombined.sort((a, b) -> {
-                if (a.getStartTimeDate() == null || b.getStartTimeDate() == null) return 0;
-                return a.getStartTimeDate().compareTo(b.getStartTimeDate());
+                Date da = a.getStartTimeDate();
+                Date db = b.getStartTimeDate();
+                if (da == null && db == null) return 0;
+                if (da == null) return -1;
+                if (db == null) return 1;
+                return da.compareTo(db);
             });
 
             // check which stills are stops and add them to movement activities

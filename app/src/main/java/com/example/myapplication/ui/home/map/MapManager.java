@@ -257,23 +257,6 @@ public class MapManager implements OnMapReadyCallback {
     }
 
 
-    private int getMovementIconRes(String type) {
-        int iconRes = R.drawable.ic_walk;
-        if (type == null) return iconRes;
-
-        String t = type.toLowerCase();
-        if (t.contains("driving") || t.contains("vehicle")) {
-            iconRes = R.drawable.ic_car;
-        } else if (t.contains("running")) {
-            iconRes = R.drawable.ic_walk;
-        } else if (t.contains("cycling") || t.contains("bicycle")) {
-            iconRes = R.drawable.ic_bike;
-        } else if (t.contains("walking") || t.contains("foot")) {
-            iconRes = R.drawable.ic_walk;
-        }
-        return iconRes;
-    }
-
     private void addStillToMap(StillLocation still, int number, boolean useIcon) {
         if (still.getLat() != null && still.getLng() != null) {
             LatLng pos = new LatLng(still.getLat(), still.getLng());
@@ -367,7 +350,7 @@ public class MapManager implements OnMapReadyCallback {
 
         LatLngBounds.Builder builder = new LatLngBounds.Builder();
         boolean hasPoints = false;
-        int color = getMovementColor(movement.getActivityTypeName());
+        int color = ContextCompat.getColor(fragment.requireContext(), movement.getColorRes());
 
         // Add marker for start position
         if (movement.getStartLat() != null && movement.getStartLng() != null) {
@@ -375,7 +358,7 @@ public class MapManager implements OnMapReadyCallback {
 
             BitmapDescriptor icon;
             if (useIcon) {
-                icon = getMarkerIcon(null, getMovementIconRes(movement.getActivityTypeName()), color);
+                icon = getMarkerIcon(null, movement.getIconRes(), color);
             } else {
                 icon = getMarkerIcon(number, null, color);
             }
@@ -441,7 +424,7 @@ public class MapManager implements OnMapReadyCallback {
 
             BitmapDescriptor icon;
             if (useIcon) {
-                icon = getMarkerIcon(null, getMovementIconRes(movement.getActivityTypeName()), color);
+                icon = getMarkerIcon(null, movement.getIconRes(), color);
             } else {
                 icon = getMarkerIcon(number,null, color);
             }
@@ -457,18 +440,6 @@ public class MapManager implements OnMapReadyCallback {
         return hasPoints ? builder.build()
                          : null;
     }
-
-    private int getMovementColor(String type) {
-        if (type == null) return Color.BLUE;
-        String t = type.toLowerCase();
-        if (t.contains("driving") || t.contains("vehicle")) return Color.parseColor("#4285F4"); // Blue
-        if (t.contains("walking") || t.contains("foot")) return Color.parseColor("#0F9D58"); // Green
-        if (t.contains("running")) return Color.parseColor("#DB4437"); // Red
-        if (t.contains("cycling") || t.contains("bicycle")) return Color.parseColor("#F4B400"); // Yellow
-        return Color.GRAY;
-    }
-
-
 
     private void updateMyLocationEnabled() {
         // Enable location on map if permission is granted

@@ -274,10 +274,7 @@ public class DetailedPhoneUsageCardManager {
 
                 //extract package usage in the stay time
                 Map<String, Long> pkgUsage = UsageStatsHelper.getUsageTimePerPackage(context, stayStart, stayEnd);
-                long stayScreenTimeMs = 0;
-                for (long duration : pkgUsage.values()) {
-                    stayScreenTimeMs += duration;
-                }
+                long stayScreenTimeMs = UsageStatsHelper.getTotalScreenTimeMs(context, stayStart, stayEnd);
 
                 // finds the most suitable unique identifier for the location place(id, placeName, placeAddress, or lat/lng)
                 String key;

@@ -1,6 +1,5 @@
 package com.example.myapplication.ui.home.timeline;
 
-import static com.example.myapplication.ui.general.ColorAndIcons.getMovementColorAndIcon;
 import static com.example.myapplication.ui.general.ColorAndIcons.getStillColor;
 import static com.example.myapplication.ui.general.ColorAndIcons.getStillIconRes;
 import static com.example.myapplication.util.UiFormatters.category;
@@ -186,9 +185,8 @@ public class TimelineAdapter extends ListAdapter<TimelineItem, RecyclerView.View
             movementHolder.itemDuration.setText(UiFormatters.duration(movement.getStartTimeDate(), movement.getEndTimeDate()));
 
             // Get movement color and icon
-            int[] colorAndIcon = getMovementColorAndIcon(type.toLowerCase());
-            int colorRes = colorAndIcon[0];
-            int iconRes = colorAndIcon[1];
+            int colorRes = movement.getColorRes();
+            int iconRes = movement.getIconRes();
 
             // Color and icon
             int movementColor = ContextCompat.getColor(movementHolder.itemView.getContext(), colorRes);

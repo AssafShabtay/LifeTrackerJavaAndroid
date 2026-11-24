@@ -1,79 +1,96 @@
 package com.example.myapplication.data.model;
 
+import androidx.room.ColumnInfo;
 import androidx.room.Entity;
 import androidx.room.Ignore;
-import androidx.room.PrimaryKey;
+
+import com.example.myapplication.R;
 
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 
 @Entity(tableName = "movement_activities")
-public class MovementActivity implements TimelineItem {
-    @PrimaryKey(autoGenerate = true)
-    private long id;
-
-    private String activityTypeName;
+public class MovementActivity extends BaseActivity {
     private Double startLat;
     private Double startLng;
     private Double endLat;
     private Double endLng;
 
-    private Date startTimeDate;
-    private Date endTimeDate;
-
     @Ignore
     private List<StillLocation> stops = new ArrayList<>();
 
     public MovementActivity copy() {
-        MovementActivity copy = new MovementActivity();
-        copy.id = this.id;
-        copy.activityTypeName = this.activityTypeName;
-        copy.startLat = this.startLat;
-        copy.startLng = this.startLng;
-        copy.endLat = this.endLat;
-        copy.endLng = this.endLng;
-        copy.startTimeDate = (this.startTimeDate != null) ? new Date(this.startTimeDate.getTime())
-                                                          : null;
-        copy.endTimeDate = (this.endTimeDate != null) ? new Date(this.endTimeDate.getTime())
-                                                      : null;
-        if (this.stops != null) {
-            List<StillLocation> copiedStops = new ArrayList<>();
-            for (StillLocation stop : this.stops) {
-                copiedStops.add(stop.copy());
-            }
-            copy.stops = copiedStops;
-        }
-        return copy;
+        return copyWithTypeName(getStoredTypeName());
     }
 
     @Override
     public boolean equals(Object o) {
         if (o == null || getClass() != o.getClass()) return false;
         MovementActivity that = (MovementActivity) o;
-        return id == that.id && Objects.equals(activityTypeName, that.activityTypeName) && Objects.equals(startLat, that.startLat) && Objects.equals(startLng, that.startLng) && Objects.equals(endLat, that.endLat) && Objects.equals(endLng, that.endLng) && Objects.equals(startTimeDate, that.startTimeDate) && Objects.equals(endTimeDate, that.endTimeDate) && Objects.equals(stops, that.stops);
+        return id == that.id && Objects.equals(getStoredTypeName(), that.getStoredTypeName()) && Objects.equals(startLat, that.startLat) && Objects.equals(startLng, that.startLng) && Objects.equals(endLat, that.endLat) && Objects.equals(endLng, that.endLng) && Objects.equals(startTimeDate, that.startTimeDate) && Objects.equals(endTimeDate, that.endTimeDate) && Objects.equals(stops, that.stops);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, activityTypeName, startLat, startLng, endLat, endLng, startTimeDate, endTimeDate, stops);
-    }
-
-    public long getId() {
-        return id;
-    }
-
-    public void setId(long id) {
-        this.id = id;
+        return Objects.hash(id, getStoredTypeName(), startLat, startLng, endLat, endLng, startTimeDate, endTimeDate, stops);
     }
 
     public String getActivityTypeName() {
-        return activityTypeName;
+        return storedTypeName;
     }
 
-    public void setActivityTypeName(String activityTypeName) {
-        this.activityTypeName = activityTypeName;
+
+    @androidx.annotation.ColorRes
+    public int getColorRes() {
+        return R.color.activity_walking;
+    }
+
+    @androidx.annotation.DrawableRes
+    public int getIconRes() {
+        return R.drawable.ic_walk;
+    }
+
+    public static MovementActivity createFromTypeName(String name) {
+        String type = name == null ? "" : name.toLowerCase(java.util.Locale.ROOT);
+        MovementActivity activity;
+        if (type.contains("driving") || type.contains("vehicle")) activity = new DrivingActivity();
+        else if (type.contains("running")) activity = new RunningActivity();
+        else if (type.contains("cycling") || type.contains("bicycle")) activity = new CyclingActivity();
+        else if (type.contains("walking") || type.contains("foot")) activity = new WalkingActivity();
+        else return new UnknownMovementActivity(name);
+        // Preserve legacy spellings/aliases for existing SQL equality queries.
+        if (!Objects.equals(name, activity.getActivityTypeName())) activity.storedTypeName = name;
+        return activity;
+    }
+    @ColumnInfo(name = "activityTypeName")
+    private String storedTypeName;
+
+    public final String getStoredTypeName() {
+        return storedTypeName == null ? getActivityTypeName() : storedTypeName;
+    }
+
+    public void setStoredTypeName(String name) {
+        storedTypeName = name;
+    }
+
+    public MovementActivity toActivity() {
+        return copyWithTypeName(getStoredTypeName());
+    }
+
+    public MovementActivity copyWithTypeName(String name) {
+        MovementActivity target = createFromTypeName(name);
+        copyBaseTo(target);
+        target.startLat = startLat;
+        target.startLng = startLng;
+        target.endLat = endLat;
+        target.endLng = endLng;
+        if (stops == null) target.stops = null;
+        else {
+            target.stops = new ArrayList<>();
+            for (StillLocation stop : stops) target.stops.add(stop.copy());
+        }
+        return target;
     }
 
     public Double getStartLat() {
@@ -106,22 +123,6 @@ public class MovementActivity implements TimelineItem {
 
     public void setEndLng(Double endLng) {
         this.endLng = endLng;
-    }
-
-    public Date getStartTimeDate() {
-        return startTimeDate;
-    }
-
-    public void setStartTimeDate(Date startTimeDate) {
-        this.startTimeDate = startTimeDate;
-    }
-
-    public Date getEndTimeDate() {
-        return endTimeDate;
-    }
-
-    public void setEndTimeDate(Date endTimeDate) {
-        this.endTimeDate = endTimeDate;
     }
 
     public List<StillLocation> getStops() {
