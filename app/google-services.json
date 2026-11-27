@@ -7,15 +7,15 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:38815641718:android:4660458b3db06184a7ef57",
+        "mobilesdk_app_id": "1:38815641718:android:5eb060d4b1f236f4a7ef57",
         "android_client_info": {
-          "package_name": "com.example.lifetracker"
+          "package_name": "com.trace"
         }
       },
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyDbS-ppwEbdVk_5sefdvq3h6zwzi9eXHbo"
+          "current_key": "AIzaSyBHAYRkyEWy-cn8tfw9W0NVuPbElCrkVoY"
         }
       ],
       "services": {

@@ -1,0 +1,455 @@
+package com.trace.ui.home.map;
+
+import static com.trace.ui.general.ColorAndIcons.getStillColor;
+import static com.trace.ui.general.ColorAndIcons.getStillIconRes;
+
+import android.Manifest;
+import android.content.Context;
+import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.Rect;
+import android.graphics.drawable.Drawable;
+import android.location.Address;
+import android.location.Geocoder;
+import android.view.MotionEvent;
+import android.view.View;
+
+import androidx.annotation.NonNull;
+import androidx.fragment.app.Fragment;
+import androidx.core.content.ContextCompat;
+import androidx.core.graphics.drawable.DrawableCompat;
+
+import com.trace.R;
+import com.trace.data.db.ActivityDao;
+import com.trace.data.db.ActivityDatabase;
+import com.trace.data.model.MovementActivity;
+import com.trace.data.model.RoutePoint;
+import com.trace.data.model.StillLocation;
+import com.trace.data.model.TimelineItem;
+import com.trace.util.ErrorLogger;
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.maps.CameraUpdateFactory;
+import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.OnMapReadyCallback;
+import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptor;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
+import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.LatLngBounds;
+import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.maps.model.PolylineOptions;
+
+import java.util.List;
+import com.trace.TraceApp;
+
+public class MapManager implements OnMapReadyCallback {
+    private static final String TAG = "MapManager";
+    private final Fragment fragment;
+    private final int fragmentId;
+    private final TraceApp app;
+    private GoogleMap mMap;
+
+    public MapManager(Fragment fragment, int fragmentId) {
+        this.fragment = fragment;
+        this.fragmentId = fragmentId;
+        this.app = (TraceApp) fragment.requireContext().getApplicationContext();
+    }
+
+    public void init() {
+        SupportMapFragment mapFragment = (SupportMapFragment) fragment.getChildFragmentManager()
+                .findFragmentById(fragmentId);
+        if (mapFragment != null) {
+            mapFragment.getMapAsync(this); // Initialize the map
+        }
+
+        View touchOverlay = fragment.requireView().findViewById(R.id.map_touch_overlay);
+
+        if (touchOverlay != null) { // Set a touch listener
+            touchOverlay.setOnTouchListener((v, event) -> {
+                if (v.getParent() != null) {
+                    switch (event.getAction()) {
+                        case MotionEvent.ACTION_DOWN:
+                            v.getParent().requestDisallowInterceptTouchEvent(true);
+                            break;
+                        case MotionEvent.ACTION_UP:
+                            v.performClick();
+                            v.getParent().requestDisallowInterceptTouchEvent(false);
+                            break;
+                        case MotionEvent.ACTION_CANCEL:
+                            v.getParent().requestDisallowInterceptTouchEvent(false);
+                            break;
+                    }
+                }
+                // Return false so the touch event still reaches the map underneath
+                return false;
+            });
+        }
+
+        View view = fragment.getView();
+        if (view != null) {
+            View btnZoomIn = view.findViewById(R.id.btn_zoom_in);
+            View btnZoomOut = view.findViewById(R.id.btn_zoom_out);
+            View btnMyLocation = view.findViewById(R.id.btn_my_location);
+
+            // zoom in button
+            if (btnZoomIn != null) {
+                btnZoomIn.setOnClickListener(v -> {
+                    if (mMap != null) {
+                        mMap.animateCamera(CameraUpdateFactory.zoomIn());
+                    }
+                });
+            }
+
+            // zoom out button
+            if (btnZoomOut != null) {
+                btnZoomOut.setOnClickListener(v -> {
+                    if (mMap != null) {
+                        mMap.animateCamera(CameraUpdateFactory.zoomOut());
+                    }
+                });
+            }
+
+            // center location button
+            if (btnMyLocation != null) {
+                btnMyLocation.setOnClickListener(v -> {
+                    if (mMap != null && ContextCompat.checkSelfPermission(fragment.requireContext(), Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                        FusedLocationProviderClient fusedClient = LocationServices.getFusedLocationProviderClient(fragment.requireContext());
+                        fusedClient.getLastLocation().addOnSuccessListener(location -> {
+                            if (location != null) {
+                                mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(
+                                        new LatLng(location.getLatitude(), location.getLongitude()), 16f));
+                            }
+                        });
+                    }
+                });
+            }
+        }
+    }
+
+    @Override
+    public void onMapReady(@NonNull GoogleMap googleMap) {
+        mMap = googleMap;
+
+        mMap.getUiSettings().setAllGesturesEnabled(true);
+        mMap.getUiSettings().setZoomControlsEnabled(false);
+        mMap.getUiSettings().setMyLocationButtonEnabled(false);
+        mMap.getUiSettings().setScrollGesturesEnabled(true);
+        mMap.getUiSettings().setZoomGesturesEnabled(true);
+        mMap.getUiSettings().setTiltGesturesEnabled(true);
+        mMap.getUiSettings().setRotateGesturesEnabled(true);
+
+        updateMyLocationEnabled();
+    }
+
+    public void onResume() {
+        updateMyLocationEnabled();
+    }
+
+
+    public void focusOnItem(TimelineItem item) {
+        /// focus map on still locations/movement activities
+        if (mMap == null) return;
+
+        // Clear existing markers
+        mMap.clear();
+
+        if (item instanceof StillLocation) {
+            addStillToMap((StillLocation) item, 1, true);
+            StillLocation still = (StillLocation) item;
+            // Use coords if available
+            if (still.getLat() != null && still.getLng() != null) {
+                mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(still.getLat(), still.getLng()), 15f));
+            } else if (still.getPlaceAddress() != null && fragment.getContext() != null) {
+                Context context = fragment.getContext();
+                // If cords are not available, try using the address
+                Geocoder coder = new Geocoder(context);
+                try {
+                    List<Address> addresses = coder.getFromLocationName(still.getPlaceAddress(), 1);
+                    if (addresses != null && !addresses.isEmpty()) {
+                        Address address = addresses.get(0);
+                        double latitude = address.getLatitude();
+                        double longitude = address.getLongitude();
+                        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(latitude, longitude), 15f));
+                    } else {
+                        ErrorLogger.logError(context ,TAG + "ERROR: Could not find coordinates for still location address: ", still.getPlaceAddress());
+                    }
+                } catch (Exception e) {
+                    ErrorLogger.logError(context, TAG, "Error", e);
+                }
+            }
+        } else if (item instanceof MovementActivity) {
+            MovementActivity movement = (MovementActivity) item;
+            Context context = fragment.getContext();
+            if (context == null) return;
+            Context appContext = context.getApplicationContext();
+
+            app.getBackgroundWriteExecutor().execute(() -> {
+                ActivityDao dao = ActivityDatabase.getDatabase(appContext).activityDao();
+                List<RoutePoint> points = dao.getRoutePointsForMovement(movement.getId());
+
+                if (fragment.getActivity() != null) {
+                    fragment.getActivity().runOnUiThread(() -> {
+                        if (!fragment.isAdded()) return;
+                        LatLngBounds bounds = drawMovementOnMap(movement, points, 1, true);
+                        if (bounds != null) {
+                            try {
+                                mMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 100));
+                            } catch (IllegalStateException e) {
+                                ErrorLogger.logError(appContext, TAG, "Error", e);
+                                if (movement.getStartLat() != null) {
+                                    mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(movement.getStartLat(), movement.getStartLng()), 15f));
+                                }
+                            }
+                        }
+                    });
+                }
+            });
+        }
+    }
+
+    private BitmapDescriptor getMarkerIcon(Integer number, Integer iconResId, int color) {
+        int size = 90;
+        Bitmap bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(bitmap);
+        Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+
+        // Circle background
+        paint.setColor(color);
+        canvas.drawCircle(size / 2f, size / 2f, size / 2f, paint);
+
+        // White border
+        paint.setStyle(Paint.Style.STROKE);
+        paint.setColor(Color.WHITE);
+        paint.setStrokeWidth(4);
+        canvas.drawCircle(size / 2f, size / 2f, (size / 2f) - 2, paint);
+
+        if (number != null) {
+            // Draw number
+            paint.setStyle(Paint.Style.FILL);
+            paint.setColor(Color.WHITE);
+            paint.setTextSize(36);
+            paint.setFakeBoldText(true);
+            paint.setTextAlign(Paint.Align.CENTER);
+
+            String text = String.valueOf(number);
+            Rect bounds = new Rect();
+            paint.getTextBounds(text, 0, text.length(), bounds);
+            float y = (size / 2f) - bounds.exactCenterY();
+            canvas.drawText(text, size / 2f, y, paint);
+
+        } else if (iconResId != null) {
+            // Draw icon
+            Drawable drawable = ContextCompat.getDrawable(fragment.requireContext(), iconResId);
+            if (drawable != null) {
+                Drawable wrappedDrawable = DrawableCompat.wrap(drawable).mutate();
+                DrawableCompat.setTint(wrappedDrawable, Color.WHITE);
+                int padding = 20;
+                wrappedDrawable.setBounds(padding, padding, size - padding, size - padding);
+                wrappedDrawable.draw(canvas);
+            }
+        }
+
+        return BitmapDescriptorFactory.fromBitmap(bitmap);
+    }
+
+
+    private void addStillToMap(StillLocation still, int number, boolean useIcon) {
+        if (still.getLat() != null && still.getLng() != null) {
+            LatLng pos = new LatLng(still.getLat(), still.getLng());
+            String title = (still.getPlaceName() != null) ? still.getPlaceName()
+                                                          : "Still Location";
+
+            // Determine the color for the still location
+            int color = getStillColor(still, fragment.requireContext());
+
+            if (still.getIsStop()) {
+                title = "Stop: " + title;
+            }
+
+            BitmapDescriptor icon;
+            if (useIcon) {
+                icon = getMarkerIcon(null, getStillIconRes(still), color);
+            } else {
+                icon = getMarkerIcon(number,null, color);
+            }
+
+            mMap.addMarker(new MarkerOptions()
+                    .position(pos)
+                    .title(((useIcon) ? "" : (number + ". ")) + title)
+                    .icon(icon));
+        }
+    }
+
+    public void showFullDay(List<TimelineItem> items) {
+        if (mMap == null || items == null || items.isEmpty()) return;
+        mMap.clear();
+
+        LatLngBounds.Builder totalBounds = new LatLngBounds.Builder();
+
+        app.getBackgroundWriteExecutor().execute(() -> {
+            ActivityDao dao = ActivityDatabase.getDatabase(fragment.requireContext()).activityDao();
+
+            for (int i = 0; i < items.size(); i++) {
+                TimelineItem item = items.get(i);
+                final int number = i + 1;
+
+                if (item instanceof StillLocation) {
+                    StillLocation still = (StillLocation) item;
+                    fragment.requireActivity().runOnUiThread(() -> {
+                        addStillToMap(still, number, false);
+                    });
+                    // add all points to bounds so the camera will know how much to zoom and where
+                    if (still.getLat() != null && still.getLng() != null) {
+                        totalBounds.include(new LatLng(still.getLat(), still.getLng()));
+                    }
+                } else if (item instanceof MovementActivity) {
+                    MovementActivity movement = (MovementActivity) item;
+                    List<RoutePoint> points = dao.getRoutePointsForMovement(movement.getId());
+
+                    fragment.requireActivity().runOnUiThread(() -> {
+                        drawMovementOnMap(movement, points, number, false);
+                    });
+
+                    // add all points to bounds so the camera will know how much to zoom and where
+                    if (movement.getStartLat() != null && movement.getStartLng() != null) {
+                        totalBounds.include(new LatLng(movement.getStartLat(), movement.getStartLng()));
+                    }
+                    if (movement.getEndLat() != null && movement.getEndLng() != null) {
+                        totalBounds.include(new LatLng(movement.getEndLat(), movement.getEndLng()));
+                    }
+                    if (!points.isEmpty()) {
+                        for (RoutePoint p : points) {
+                            totalBounds.include(new LatLng(p.getLat(), p.getLng()));
+                        }
+                    }
+                    if (movement.getStops() != null) {
+                        for (StillLocation stop : movement.getStops()) {
+                            if (stop.getLat() != null && stop.getLng() != null) {
+                                totalBounds.include(new LatLng(stop.getLat(), stop.getLng()));
+                            }
+                        }
+                    }
+                }
+            }
+
+            fragment.requireActivity().runOnUiThread(() -> {
+                try {
+                    mMap.animateCamera(CameraUpdateFactory.newLatLngBounds(totalBounds.build(), 100));
+                } catch (Exception e) {
+                    ErrorLogger.logError(fragment.requireContext(), TAG, "Error", e);}
+            });
+        });
+    }
+
+    private LatLngBounds drawMovementOnMap(MovementActivity movement, List<RoutePoint> routePoints, int number, boolean useIcon) {
+        if (mMap == null) return null;
+
+        LatLngBounds.Builder builder = new LatLngBounds.Builder();
+        boolean hasPoints = false;
+        int color = ContextCompat.getColor(fragment.requireContext(), movement.getColorRes());
+
+        // Add marker for start position
+        if (movement.getStartLat() != null && movement.getStartLng() != null) {
+            LatLng start = new LatLng(movement.getStartLat(), movement.getStartLng());
+
+            BitmapDescriptor icon;
+            if (useIcon) {
+                icon = getMarkerIcon(null, movement.getIconRes(), color);
+            } else {
+                icon = getMarkerIcon(number, null, color);
+            }
+
+            mMap.addMarker(new MarkerOptions()
+                    .position(start)
+                    .title(((useIcon) ? "" : (number + ". ")) + "Start: " + movement.getActivityTypeName())
+                    .icon(icon));
+            builder.include(start);
+            hasPoints = true;
+        }
+
+        // Draw Polyline
+        PolylineOptions polylines = new PolylineOptions()
+                .color(color)
+                .width(10)
+                .geodesic(true);
+
+        if (routePoints != null && !routePoints.isEmpty()) {
+            for (RoutePoint p : routePoints) {
+                LatLng latLng = new LatLng(p.getLat(), p.getLng());
+                polylines.add(latLng);
+                builder.include(latLng);
+                hasPoints = true;
+            }
+        } else if (movement.getStartLat() != null && movement.getStartLng() != null && movement.getEndLat() != null && movement.getEndLng() != null) {
+            // Straight line if no route points
+            polylines.add(new LatLng(movement.getStartLat(), movement.getStartLng()));
+            polylines.add(new LatLng(movement.getEndLat(), movement.getEndLng()));
+            hasPoints = true;
+        }
+
+        if (hasPoints) {
+            mMap.addPolyline(polylines);
+        }
+
+        // Add markers for nested stops
+        if (movement.getStops() != null && !movement.getStops().isEmpty()) {
+            for (StillLocation stop : movement.getStops()) {
+                if (stop.getLat() != null && stop.getLng() != null) {
+                    LatLng stopPos = new LatLng(stop.getLat(), stop.getLng());
+                    String stopTitle = (stop.getPlaceName() != null) ? stop.getPlaceName()
+                                                                     : "Stop";
+
+                    // Determine the color for the stop location
+                    int stopColor = getStillColor(stop, fragment.requireContext());
+
+                    BitmapDescriptor stopIcon = getMarkerIcon(null, getStillIconRes(stop), stopColor);
+
+                    mMap.addMarker(new MarkerOptions()
+                            .position(stopPos)
+                            .title("Stop: " + stopTitle)
+                            .icon(stopIcon));
+                    builder.include(stopPos);
+                    hasPoints = true;
+                }
+            }
+        }
+
+        // Add marker for end position
+        if (movement.getEndLat() != null && movement.getEndLng() != null) {
+            LatLng end = new LatLng(movement.getEndLat(), movement.getEndLng());
+
+            BitmapDescriptor icon;
+            if (useIcon) {
+                icon = getMarkerIcon(null, movement.getIconRes(), color);
+            } else {
+                icon = getMarkerIcon(number,null, color);
+            }
+
+            mMap.addMarker(new MarkerOptions()
+                    .position(end)
+                    .title(((useIcon) ? "" : (number + ". ")) + "End: " + movement.getActivityTypeName())
+                    .icon(icon));
+            builder.include(end);
+            hasPoints = true;
+        }
+
+        return hasPoints ? builder.build()
+                         : null;
+    }
+
+    private void updateMyLocationEnabled() {
+        // Enable location on map if permission is granted
+        if (mMap != null && ContextCompat.checkSelfPermission(fragment.requireContext(), Manifest.permission.ACCESS_FINE_LOCATION)
+                == PackageManager.PERMISSION_GRANTED) {
+            try {
+                mMap.setMyLocationEnabled(true);
+            } catch (SecurityException e) {
+                ErrorLogger.logError(fragment.requireContext(), TAG, "Error", e);
+            }
+        }
+    }
+}

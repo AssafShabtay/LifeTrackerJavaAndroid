@@ -10,11 +10,11 @@ secrets {
     defaultPropertiesFileName = "local.defaults.properties"
 }
 android {
-    namespace = "com.example.lifetracker"
+    namespace = "com.trace"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.example.lifetracker"
+        applicationId = "com.trace"
         minSdk = 24
         targetSdk = 36
         versionCode = 1
@@ -30,7 +30,8 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

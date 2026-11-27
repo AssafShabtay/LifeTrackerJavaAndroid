@@ -6,7 +6,6 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
     <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.INTERNET" />
@@ -24,11 +23,11 @@
     </queries>
 
     <application
-        android:name=".LifeTrackerApp"
+        android:name=".TraceApp"
         android:allowBackup="true"
         android:label="@string/app_name"
         android:supportsRtl="true"
-        android:theme="@style/Theme.LifeTracker">
+        android:theme="@style/Theme.Trace">
 
 
         <meta-data
@@ -38,19 +37,19 @@
         <activity
             android:name=".ui.home.map.MapPickerActivity"
             android:exported="false"
-            android:theme="@style/Theme.LifeTracker"
+            android:theme="@style/Theme.Trace"
             android:label="Pick Location" />
 
         <activity
             android:name=".ui.auth.LoginActivity"
             android:exported="false"
-            android:theme="@style/Theme.LifeTracker"
+            android:theme="@style/Theme.Trace"
             android:windowSoftInputMode="adjustResize" />
 
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:theme="@style/Theme.LifeTracker">
+            android:theme="@style/Theme.Trace">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -63,6 +62,10 @@
 
         <receiver
             android:name=".tracking.receiver.GeofenceBroadcastReceiver"
+            android:exported="false" />
+
+        <receiver
+            android:name=".tracking.receiver.SleepReceiver"
             android:exported="false" />
 
         <receiver

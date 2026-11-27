@@ -1,6 +1,6 @@
-package com.example.lifetracker.data.model;
+package com.trace.data.model;
 
-import com.example.lifetracker.R;
+import com.trace.R;
 import org.junit.Test;
 import java.util.Date;
 import java.util.Locale;
