@@ -19,13 +19,13 @@
             android:layout_marginTop="32dp"
             android:src="@drawable/ic_location_on"
             app:tint="?attr/colorPrimary"
-            android:contentDescription="LifeTracker Logo" />
+            android:contentDescription="Trace Logo" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:text="Welcome to LifeTracker"
+            android:text="Welcome to Trace"
             android:textAppearance="@style/TextAppearance.Material3.HeadlineSmall"
             android:textColor="?attr/colorOnSurface"
             android:textStyle="bold" />

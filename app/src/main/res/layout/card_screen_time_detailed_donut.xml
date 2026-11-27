@@ -20,7 +20,7 @@
             android:layout_height="90dp"
             android:layout_marginEnd="16dp">
 
-            <com.example.lifetracker.ui.home.phoneUsage.PhoneUsageDonutView
+            <com.trace.ui.home.phoneUsage.PhoneUsageDonutView
                 android:id="@+id/screen_time_donut_view"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent" />
@@ -119,13 +119,13 @@
         </com.google.android.material.card.MaterialCardView>
     </LinearLayout>
 
-    <com.example.lifetracker.ui.statistics.screenTime.DailyUsageGraphView
+    <com.trace.ui.statistics.screenTime.DailyUsageGraphView
         android:id="@+id/graph_daily_hourly_usage"
         android:layout_width="match_parent"
         android:layout_height="130dp"
         android:layout_marginTop="12dp" />
 
-    <com.example.lifetracker.ui.statistics.screenTime.WeeklyUsageGraphView
+    <com.trace.ui.statistics.screenTime.WeeklyUsageGraphView
         android:id="@+id/graph_weekly_daily_usage"
         android:layout_width="match_parent"
         android:layout_height="130dp"

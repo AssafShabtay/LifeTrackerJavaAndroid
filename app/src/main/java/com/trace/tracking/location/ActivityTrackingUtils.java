@@ -1,0 +1,162 @@
+package com.trace.tracking.location;
+
+import android.content.Context;
+import android.location.Address;
+import android.location.Geocoder;
+import android.location.Location;
+import android.util.Log;
+
+import com.trace.data.model.RoutePoint;
+import com.trace.util.ErrorLogger;
+import com.trace.util.Logger;
+import com.google.android.gms.location.DetectedActivity;
+
+import java.io.IOException;
+import java.util.Date;
+import java.util.List;
+import java.util.Locale;
+
+public class ActivityTrackingUtils {
+
+    private static final String TAG = "ActivityTrackingUtils";
+
+    private static final double ALLOWED_RADIUS_METERS = 50.0;
+    private static final double MIN_REQUIRED_INSIDE_RATIO = 0.50; // percentage of points inside the radius
+    public static final float STILL_RADIUS_THRESHOLD = 75.0f;
+
+    public static boolean isValidAccuracy(Location location, float maxAllowedMeters) {
+        if (location == null) return false;
+        // Some devices occasionally return locations without accuracy details
+        if (!location.hasAccuracy()) return true;
+        return location.getAccuracy() <= maxAllowedMeters;
+    }
+
+    public static boolean checkIfMovementIsStill(List<RoutePoint> routePoints, double startLat, double startLng, double endLat, double endLng) {
+
+        if (routePoints == null || routePoints.size() <= 1) {
+            if (distanceInMeters(startLat, startLng, endLat, endLng) <  STILL_RADIUS_THRESHOLD){
+                return true;
+            }
+            return false;
+        }
+        // finds the center of all the route points
+        // Calculate the centroid (Average lat and lng)
+        double sumLat = 0;
+        double sumLng = 0;
+        for (RoutePoint point : routePoints) {
+            sumLat += point.getLat();
+            sumLng += point.getLng();
+        }
+        double centroidLat = sumLat / routePoints.size();
+        double centroidLng = sumLng / routePoints.size();
+
+        int pointsInsideRadius = 0;
+
+        // Iterate through points to calculate route distance and max radius
+        for (int i = 0; i < routePoints.size(); i++) {
+            RoutePoint currentPoint = routePoints.get(i);
+            // Calculate radius (Distance from centroid to current point)
+            double distanceFromCentroid = distanceInMeters(centroidLat, centroidLng, currentPoint.getLat(), currentPoint.getLng());
+
+            if (distanceFromCentroid <= ALLOWED_RADIUS_METERS) {
+                pointsInsideRadius++;
+            }
+        }
+
+        double insideRatio = (double) pointsInsideRadius / routePoints.size();
+        return insideRatio >= MIN_REQUIRED_INSIDE_RATIO; // returns true if the ratio is above the threshold, which concludes the activity is a still-**
+
+    }
+    public static String checkIfStillIsMovement(double startLat, double startLng, Date startTime, Date endTime, double endLat, double endLng, Context context) {
+
+        if (startTime == null || endTime == null) {
+            return "Still";
+        }
+
+        float distance = distanceInMeters(startLat, startLng, endLat, endLng);
+        long durationMs = endTime.getTime() - startTime.getTime();
+        float durationSec = durationMs / 1000f;
+
+        // Prevent division by zero
+        if (durationSec <= 0) return "Still";
+
+        float speed = distance / durationSec;
+        final float MAX_WALK_SPEED = 2.2f;
+        final float MAX_RUN_SPEED = 7.5f;
+        final float MAX_REALISTIC_SPEED = 50.0f;
+
+        // gps drift
+        if (speed > MAX_REALISTIC_SPEED) {
+            String msg = String.format(Locale.US, "Sanity check failed: Speed %.2f m/s exceeds realistic limits. Flagged as drift.", speed);
+
+            if (context != null) {
+                Logger.saveLog(context, msg);
+            }
+            return "Still";
+        }
+
+        if (distance < 75f || speed < 0.5f) {
+            return "Still";
+        }
+
+        if (speed <= MAX_WALK_SPEED) return "Walking";
+        if (speed <= MAX_RUN_SPEED) return "Running";
+
+        return "Driving";
+    }
+
+    public static float distanceInMeters(double startLat, double startLng, double endLat, double endLng) {
+        float[] results = new float[1];
+        Location.distanceBetween(startLat, startLng, endLat, endLng, results);
+        return results[0];
+    }
+    public static double[] getCoordinatesFromAddress(String address, Context context) {
+        if (context == null || address == null) return null;
+        Geocoder geocoder = new Geocoder(context, Locale.getDefault());
+        try {
+            List<Address> addresses = geocoder.getFromLocationName(address, 1);
+            if (addresses != null && !addresses.isEmpty()) {
+                Address location = addresses.get(0);
+                return new double[]{location.getLatitude(), location.getLongitude()};
+            }
+        } catch (Exception e) {
+            ErrorLogger.logError(context, TAG, "Error geocoding address", e);
+        }
+        return null;
+    }
+    public static double[] calculateRadiusBox(double lat, double lng, double radiusInMeters) {
+        // some shitty math I wont try to understand to calculate the radius
+        double latDelta = radiusInMeters / 111320.0;
+        double lngDelta = radiusInMeters / (111320.0 * Math.cos(Math.toRadians(lat)));
+
+        double minLat = lat - latDelta;
+        double maxLat = lat + latDelta;
+        double minLng = lng - lngDelta;
+        double maxLng = lng + lngDelta;
+
+        return new double[]{minLat, maxLat, minLng, maxLng};
+    }
+    public static String getActivityName(int activityType) {
+        return switch (activityType) {
+            case DetectedActivity.IN_VEHICLE -> "Driving";
+            case DetectedActivity.ON_BICYCLE -> "Cycling";
+            case DetectedActivity.ON_FOOT, DetectedActivity.WALKING -> "Walking";
+            case DetectedActivity.RUNNING -> "Running";
+            case DetectedActivity.STILL -> "Still";
+            default -> "Unknown";
+        };
+    }
+    public static int getActivityTypeFromName(String name) {
+        if (name == null) return DetectedActivity.UNKNOWN;
+        return switch (name) {
+            case "Driving" -> DetectedActivity.IN_VEHICLE;
+            case "Cycling" -> DetectedActivity.ON_BICYCLE;
+            case "Running" -> DetectedActivity.RUNNING;
+            case "Walking" -> DetectedActivity.WALKING;
+            case "On Foot" -> DetectedActivity.ON_FOOT;
+            case "Still" -> DetectedActivity.STILL;
+            default -> DetectedActivity.UNKNOWN;
+        };
+    }
+
+}

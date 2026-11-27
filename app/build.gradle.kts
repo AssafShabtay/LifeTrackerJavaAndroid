@@ -9,16 +9,22 @@ secrets {
     propertiesFileName = "secrets.properties"
     defaultPropertiesFileName = "local.defaults.properties"
 }
+
+ksp {
+    // Exported Room schemas are required for safe, testable migrations.
+    arg("room.schemaLocation", "$projectDir/schemas")
+}
+
 android {
-    namespace = "com.example.lifetracker"
+    namespace = "com.trace"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.example.lifetracker"
+        applicationId = "com.trace"
         minSdk = 24
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "2.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -30,7 +36,8 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -50,6 +57,13 @@ android {
         buildConfig = true
         viewBinding = true
     }
+    sourceSets {
+        // Room MigrationTestHelper reads exported schemas from assets.
+        getByName("androidTest").assets.srcDirs("$projectDir/schemas")
+    }
+    testOptions {
+        unitTests.isReturnDefaultValues = true
+    }
 }
 
 dependencies {
@@ -59,9 +73,16 @@ dependencies {
     implementation("com.google.firebase:firebase-appcheck-debug")
     implementation(platform("com.google.firebase:firebase-bom:34.16.0"))
     implementation("com.google.firebase:firebase-analytics")
-    implementation("androidx.work:work-runtime:2.9.1")
+    implementation(libs.work.runtime)
     implementation(libs.appcompat)
     implementation(libs.material)
+    implementation(libs.recyclerview)
+    implementation(libs.viewpager2)
+    implementation(libs.swiperefreshlayout)
+    implementation(libs.lifecycle.livedata)
+    implementation(libs.lifecycle.viewmodel)
+    implementation(libs.exifinterface)
+    implementation(libs.glide)
     implementation(libs.play.services.location)
     implementation(libs.play.services.maps)
     implementation(libs.places)
@@ -71,4 +92,5 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)
+    androidTestImplementation(libs.room.testing)
 }
